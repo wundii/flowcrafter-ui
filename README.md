@@ -14,11 +14,11 @@ Web-Frontend für [FlowCrafter](../flowcrafter) — visualisiert Flow-Instanzen,
 
 ## Voraussetzungen
 
-| Anforderung | Version |
-|---|---|
-| Node.js | >= 20 |
-| npm | >= 10 |
-| PHP | >= 8.1 (für die API) |
+| Anforderung | Version              |
+| ----------- | -------------------- |
+| Node.js     | >= 20                |
+| npm         | >= 10                |
+| PHP         | >= 8.1 (für die API) |
 
 > Im Projekt wird Node/npm über den Docker-Container `default-php-wundiiii` bereitgestellt.
 > Das Projektverzeichnis ist als Volume eingebunden — Dateiänderungen auf dem Host sind sofort im Container sichtbar.
@@ -67,10 +67,10 @@ Frontend erreichbar unter: **http://localhost:5173**
 
 ## Verfügbare Scripts
 
-| Befehl | Beschreibung |
-|---|---|
-| `npm run dev` | Dev-Server mit Hot-Reload starten |
-| `npm run build` | Produktions-Build nach `dist/` |
+| Befehl            | Beschreibung                       |
+| ----------------- | ---------------------------------- |
+| `npm run dev`     | Dev-Server mit Hot-Reload starten  |
+| `npm run build`   | Produktions-Build nach `dist/`     |
 | `npm run preview` | Produktions-Build lokal vorschauen |
 
 Alle Befehle über Docker ausführen:
@@ -110,12 +110,12 @@ flowcrafter-ui/
 
 Die PHP-API (`flowcrafter/service/index.php`) stellt folgende Routen bereit:
 
-| Methode | Pfad | Parameter | Beschreibung |
-|---|---|---|---|
-| GET | `/` | — | Health Check |
-| GET | `/api/flows` | `sort`, `top`, `source` | Alle Flow-Instanzen |
-| GET | `/api/flows/detail` | `hash` | Flow mit Messages & Exceptions |
-| GET | `/api/exceptions` | `sort`, `top`, `flowHash` | Alle Exceptions |
+| Methode | Pfad                | Parameter                 | Beschreibung                   |
+| ------- | ------------------- | ------------------------- | ------------------------------ |
+| GET     | `/`                 | —                         | Health Check                   |
+| GET     | `/api/flows`        | `sort`, `top`, `source`   | Alle Flow-Instanzen            |
+| GET     | `/api/flows/detail` | `hash`                    | Flow mit Messages & Exceptions |
+| GET     | `/api/exceptions`   | `sort`, `top`, `flowHash` | Alle Exceptions                |
 
 ---
 
