@@ -116,7 +116,19 @@ export class FcFlowDetail extends BaseElement {
                                 : html`<span class="badge badge-success badge-sm">OK</span>`}
                         </div>
                     </div>
-                    <div class="mt-1 text-xs font-mono text-base-content/40 truncate">${f.flowHash}</div>
+                    <div class="mt-1 flex items-center gap-1">
+                        <span class="text-xs font-mono text-base-content/40 truncate">${f.flowHash}</span>
+                        <button
+                            class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
+                            title="Hash kopieren"
+                            @click=${() => navigator.clipboard.writeText(f.flowHash)}
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
 

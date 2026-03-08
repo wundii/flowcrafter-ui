@@ -18,6 +18,7 @@ export class FcApp extends BaseElement {
         activeTab: { state: true },
         selectedSource: { state: true },
         selectedFlowHash: { state: true },
+        _searchQuery: { state: true },
     }
 
     constructor() {
@@ -28,6 +29,7 @@ export class FcApp extends BaseElement {
         this.activeTab = 'flows'
         this.selectedSource = null
         this.selectedFlowHash = null
+        this._searchQuery = ''
     }
 
     async connectedCallback() {
@@ -98,7 +100,7 @@ export class FcApp extends BaseElement {
     }
 
     _onFlowLoaded(e) {
-        if (!this.selectedSource) this.selectedSource = e.detail.source
+        this.selectedSource = e.detail.source
     }
 
     _onBackToSchema() {
@@ -108,6 +110,16 @@ export class FcApp extends BaseElement {
 
     _onBackToList() {
         this.selectedFlowHash = null
+    }
+
+    _onSearch(e) {
+        if (e.type === 'keydown' && e.key !== 'Enter') return
+        const q = this._searchQuery.trim()
+        if (!q) return
+        this.activeTab = 'flows'
+        this.selectedSource = null
+        this.selectedFlowHash = q
+        this._searchQuery = ''
     }
 
     _breadcrumb() {
@@ -165,8 +177,19 @@ export class FcApp extends BaseElement {
         return html`
             <div class="min-h-screen bg-base-100">
                 <div class="navbar bg-base-200 shadow-sm px-4">
-                    <div class="flex-1">
+                    <div class="flex-1 flex items-center gap-3">
                         <span class="text-xl font-bold tracking-tight">⚡ FlowCrafter UI</span>
+                        <div class="join">
+                            <input
+                                type="text"
+                                class="input input-sm input-bordered join-item w-64 font-mono text-xs"
+                                placeholder="Flow-Hash suchen…"
+                                .value=${this._searchQuery}
+                                @input=${e => (this._searchQuery = e.target.value)}
+                                @keydown=${this._onSearch}
+                            />
+                            <button class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50 join-item" @click=${this._onSearch}>↵</button>
+                        </div>
                     </div>
 
                     <div class="flex-none absolute left-1/2 -translate-x-1/2">
