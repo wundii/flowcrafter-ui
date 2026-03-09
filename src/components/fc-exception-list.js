@@ -2,6 +2,8 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 
+const PAGE_SIZE = 10
+
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
 }
@@ -18,7 +20,9 @@ export class FcExceptionList extends BaseElement {
         exceptions: { state: true },
         loading: { state: true },
         error: { state: true },
-        expanded: { state: true }, // Set of expanded row IDs
+        expanded: { state: true },
+        _page: { state: true },
+        _hasMore: { state: true },
     }
 
     constructor() {
@@ -27,6 +31,8 @@ export class FcExceptionList extends BaseElement {
         this.loading = true
         this.error = null
         this.expanded = new Set()
+        this._page = 0
+        this._hasMore = false
     }
 
     connectedCallback() {
@@ -38,7 +44,9 @@ export class FcExceptionList extends BaseElement {
         this.loading = true
         this.error = null
         try {
-            this.exceptions = await api.getExceptions({ sort: 'desc', top: 20 })
+            const res = await api.getExceptions({ sort: 'desc', top: PAGE_SIZE, skip: this._page * PAGE_SIZE })
+            this.exceptions = res.items ?? []
+            this._hasMore = res.hasMore ?? false
         } catch (err) {
             this.error = err.message
         } finally {
@@ -62,6 +70,16 @@ export class FcExceptionList extends BaseElement {
         )
     }
 
+    _onPrev() {
+        this._page = Math.max(0, this._page - 1)
+        this._load()
+    }
+
+    _onNext() {
+        this._page += 1
+        this._load()
+    }
+
     render() {
         if (this.loading)
             return html`
@@ -78,23 +96,18 @@ export class FcExceptionList extends BaseElement {
                 </div>
             `
 
-        if (this.exceptions.length === 0) return html` <div class="alert alert-success"><span>Keine Exceptions gefunden.</span></div> `
+        if (this.exceptions.length === 0 && this._page === 0)
+            return html` <div class="alert alert-success"><span>Keine Exceptions gefunden.</span></div> `
 
-        // Group by flowHash for the summary badge
-        const byFlow = new Map()
-        for (const ex of this.exceptions) {
-            byFlow.set(ex.flowHash, (byFlow.get(ex.flowHash) ?? 0) + 1)
-        }
+        const from = this._page * PAGE_SIZE + 1
+        const to = this._page * PAGE_SIZE + this.exceptions.length
 
         return html`
             <!-- Toolbar -->
             <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <span class="text-sm text-base-content/60">
-                        Letzte
-                        <span class="font-semibold">${this.exceptions.length}</span> Exceptions
-                    </span>
-                </div>
+                <span class="text-sm text-base-content/60">
+                    ${from}–${to} Exceptions
+                </span>
                 <button class="btn btn-sm btn-ghost" @click=${this._load}>↻ Reload</button>
             </div>
 
@@ -107,21 +120,13 @@ export class FcExceptionList extends BaseElement {
 
                     return html`
                         <div class="rounded-box border border-error/25 bg-base-200 overflow-hidden">
-                            <!-- Main row -->
                             <div class="grid grid-cols-[1fr_auto] gap-2 px-4 py-3">
-                                <!-- Left: headline + subtitle + meta -->
                                 <div class="min-w-0">
-                                    <!-- Headline: stub name -->
                                     <div class="font-semibold text-sm text-base-content leading-tight mb-0.5" title="${ex.stubSource}">
                                         ${shortClass(ex.stubSource)}
                                     </div>
-
-                                    <!-- Subtitle: exception message -->
                                     <div class="text-sm text-error leading-snug break-words mb-2">${ex.message}</div>
-
-                                    <!-- Meta row -->
                                     <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-base-content/50">
-                                        <!-- File:line -->
                                         ${ex.file
                                             ? html`
                                                   <span title="${ex.file}">
@@ -131,15 +136,11 @@ export class FcExceptionList extends BaseElement {
                                                   </span>
                                               `
                                             : ''}
-
-                                        <!-- Timestamp -->
                                         <span>${formatDate(ex.time)}</span>
                                     </div>
                                 </div>
 
-                                <!-- Right: flow link + expand -->
                                 <div class="flex flex-col items-end justify-between gap-2 flex-shrink-0">
-                                    <!-- Flow-Hash Link -->
                                     <button
                                         class="btn btn-xs btn-ghost font-mono text-primary/70 hover:text-primary"
                                         title="Flow ${ex.flowHash} öffnen"
@@ -147,8 +148,6 @@ export class FcExceptionList extends BaseElement {
                                     >
                                         ⤢ ${ex.flowHash.slice(0, 10)}…
                                     </button>
-
-                                    <!-- Stacktrace toggle -->
                                     ${hasTrace
                                         ? html`
                                               <button class="btn btn-xs btn-ghost text-base-content/40" @click=${() => this._toggleRow(id)}>
@@ -159,7 +158,6 @@ export class FcExceptionList extends BaseElement {
                                 </div>
                             </div>
 
-                            <!-- Stacktrace (collapsible) -->
                             ${open && hasTrace
                                 ? html`
                                       <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
@@ -172,6 +170,21 @@ export class FcExceptionList extends BaseElement {
                         </div>
                     `
                 })}
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex items-center justify-center gap-2 mt-4">
+                <button
+                    class="btn btn-sm btn-ghost border border-base-content/30"
+                    ?disabled=${this._page === 0}
+                    @click=${this._onPrev}
+                >← Zurück</button>
+                <span class="text-sm text-base-content/50">Seite ${this._page + 1}</span>
+                <button
+                    class="btn btn-sm btn-ghost border border-base-content/30"
+                    ?disabled=${!this._hasMore}
+                    @click=${this._onNext}
+                >Weiter →</button>
             </div>
         `
     }

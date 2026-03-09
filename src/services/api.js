@@ -32,9 +32,9 @@ function postJson(path, body) {
 }
 
 export const api = {
-    /** @param {{ sort?: 'asc'|'desc', top?: number, source?: string }} [opts] */
-    getFlows({ sort = 'desc', top = 1000, source } = {}) {
-        const p = new URLSearchParams({ sort, top })
+    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, source?: string }} [opts] */
+    getFlows({ sort = 'desc', top = 1000, skip = 0, source } = {}) {
+        const p = new URLSearchParams({ sort, top, skip })
         if (source) p.set('source', source)
         return fetchJson(`/api/flows?${p}`)
     },
@@ -49,9 +49,9 @@ export const api = {
         return fetchJson(`/api/flows/detail?runtimeHash=${encodeURIComponent(runtimeHash)}`)
     },
 
-    /** @param {{ sort?: 'asc'|'desc', top?: number, flowHash?: string }} [opts] */
-    getExceptions({ sort = 'desc', top = 1000, flowHash } = {}) {
-        const p = new URLSearchParams({ sort, top })
+    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, flowHash?: string }} [opts] */
+    getExceptions({ sort = 'desc', top = 1000, skip = 0, flowHash } = {}) {
+        const p = new URLSearchParams({ sort, top, skip })
         if (flowHash) p.set('flowHash', flowHash)
         return fetchJson(`/api/exceptions?${p}`)
     },

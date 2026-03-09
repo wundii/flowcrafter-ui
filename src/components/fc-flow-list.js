@@ -2,6 +2,8 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 
+const PAGE_SIZE = 10
+
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
 }
@@ -15,10 +17,12 @@ function formatDate(iso) {
 
 export class FcFlowList extends BaseElement {
     static properties = {
-        source: { type: String }, // filter by flowSource (FQN)
+        source: { type: String },
         flows: { state: true },
         loading: { state: true },
         error: { state: true },
+        _page: { state: true },
+        _hasMore: { state: true },
     }
 
     constructor() {
@@ -27,6 +31,8 @@ export class FcFlowList extends BaseElement {
         this.flows = []
         this.loading = true
         this.error = null
+        this._page = 0
+        this._hasMore = false
     }
 
     connectedCallback() {
@@ -35,14 +41,19 @@ export class FcFlowList extends BaseElement {
     }
 
     updated(changed) {
-        if (changed.has('source')) this._load()
+        if (changed.has('source')) {
+            this._page = 0
+            this._load()
+        }
     }
 
     async _load() {
         this.loading = true
         this.error = null
         try {
-            this.flows = await api.getFlows({ source: this.source ?? undefined })
+            const res = await api.getFlows({ source: this.source ?? undefined, top: PAGE_SIZE, skip: this._page * PAGE_SIZE })
+            this.flows = res.items ?? []
+            this._hasMore = res.hasMore ?? false
         } catch (err) {
             this.error = err.message
         } finally {
@@ -64,6 +75,16 @@ export class FcFlowList extends BaseElement {
         this.dispatchEvent(new CustomEvent('back', { bubbles: true, composed: true }))
     }
 
+    _onPrev() {
+        this._page = Math.max(0, this._page - 1)
+        this._load()
+    }
+
+    _onNext() {
+        this._page += 1
+        this._load()
+    }
+
     render() {
         if (this.loading)
             return html`
@@ -80,7 +101,11 @@ export class FcFlowList extends BaseElement {
                 </div>
             `
 
-        if (this.flows.length === 0) return html` <div class="alert alert-info"><span>Keine Flows gefunden.</span></div> `
+        if (this.flows.length === 0 && this._page === 0)
+            return html` <div class="alert alert-info"><span>Keine Flows gefunden.</span></div> `
+
+        const from = this._page * PAGE_SIZE + 1
+        const to = this._page * PAGE_SIZE + this.flows.length
 
         return html`
             <!-- Toolbar -->
@@ -90,8 +115,7 @@ export class FcFlowList extends BaseElement {
                 </button>
                 <div class="flex items-center gap-3">
                     <span class="text-sm text-base-content/60">
-                        <span class="font-semibold">${this.flows.length}</span>
-                        Flow${this.flows.length !== 1 ? 's' : ''}
+                        ${from}–${to}
                     </span>
                     <button class="btn btn-sm btn-ghost" @click=${this._load}>↻ Reload</button>
                 </div>
@@ -111,18 +135,13 @@ export class FcFlowList extends BaseElement {
                             <div class="grid grid-cols-[1fr_auto] gap-2 px-4 py-3">
                                 <!-- Left: name + subtitle + meta -->
                                 <div class="min-w-0">
-                                    <!-- Headline: flow source name -->
                                     <div class="font-semibold text-sm text-base-content leading-tight mb-0.5">
                                         ${shortClass(flow.flowSource)}
                                     </div>
-
-                                    <!-- Subtitle: subject or hash -->
                                     <div class="text-sm text-base-content/50 leading-snug break-words mb-2">
                                         ${flow.flowSubject ||
                                         html`<span class="font-mono" style="font-size:11px;">${flow.flowHash.slice(0, 20)}…</span>`}
                                     </div>
-
-                                    <!-- Meta row -->
                                     <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-base-content/50">
                                         <span class="badge badge-outline badge-xs text-base-content/50">${flow.flowType}</span>
                                         <span>${formatDate(flow.time)}</span>
@@ -140,6 +159,21 @@ export class FcFlowList extends BaseElement {
                         </div>
                     `
                 })}
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex items-center justify-center gap-2 mt-4">
+                <button
+                    class="btn btn-sm btn-ghost border border-base-content/30"
+                    ?disabled=${this._page === 0}
+                    @click=${this._onPrev}
+                >← Zurück</button>
+                <span class="text-sm text-base-content/50">Seite ${this._page + 1}</span>
+                <button
+                    class="btn btn-sm btn-ghost border border-base-content/30"
+                    ?disabled=${!this._hasMore}
+                    @click=${this._onNext}
+                >Weiter →</button>
             </div>
         `
     }

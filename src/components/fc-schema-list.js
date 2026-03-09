@@ -29,7 +29,9 @@ export class FcSchemaList extends BaseElement {
         this.loading = true
         this.error = null
         try {
-            const [flows, exceptions] = await Promise.all([api.getFlows({ sort: 'desc', top: 1000 }), api.getExceptions({ top: 1000 })])
+            const [flowsRes, exceptionsRes] = await Promise.all([api.getFlows({ sort: 'desc', top: 1000 }), api.getExceptions({ top: 1000 })])
+            const flows = flowsRes.items ?? []
+            const exceptions = exceptionsRes.items ?? []
 
             // Hashes of flows that have at least one exception
             const failedHashes = new Set(exceptions.map(e => e.flowHash))
