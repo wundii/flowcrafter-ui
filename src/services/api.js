@@ -65,6 +65,10 @@ export const api = {
         return postJson('/api/flows/run', { flowHash, messageSource, message })
     },
 
+    queueFlow(flowHash, messageSource, message) {
+        return postJson('/api/queue', { flowHash, messageSource, message })
+    },
+
     getQueueCount() {
         return fetchJson('/api/queue/count')
     },

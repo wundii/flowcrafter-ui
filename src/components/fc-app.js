@@ -264,9 +264,10 @@ export class FcApp extends BaseElement {
                                 ${logoIcon(24)}
                                 <div class="flex flex-col leading-tight text-left">
                                     <span class="text-base font-bold tracking-tight whitespace-nowrap">FlowCrafter UI</span>
-                                    ${this._serverDescription
-                                        ? html`<span class="text-xs text-base-content/40 truncate max-w-48">${this._serverDescription}</span>`
-                                        : ''}
+                                    ${(this._serverDescription || this._serverInfo) ? html`
+                                    <span class="text-xs truncate max-w-48 ${this._serverInfo?.observerRunning ? 'text-base-content/40' : 'text-error/70 animate-pulse'}">
+                                        ${this._serverDescription || (!this._serverInfo?.observerRunning ? 'Observer stopped' : '')}
+                                    </span>` : ''}
                                 </div>
                             </button>
 
@@ -278,6 +279,12 @@ export class FcApp extends BaseElement {
                                         <div class="flex items-baseline justify-between gap-3">
                                             <span class="text-xs text-base-content/50 shrink-0">Service URL</span>
                                             <span class="font-mono text-xs text-right break-all text-base-content/60">${connection.getUrl()}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="text-xs text-base-content/50 shrink-0">Observer</span>
+                                            ${this._serverInfo?.observerRunning
+                                                ? html`<span class="flex items-center gap-1.5 text-xs text-success"><span class="inline-block w-1.5 h-1.5 rounded-full bg-success"></span>running</span>`
+                                                : html`<span class="flex items-center gap-1.5 text-xs text-error"><span class="inline-block w-1.5 h-1.5 rounded-full bg-error"></span>stopped</span>`}
                                         </div>
                                     </div>
                                 </div>

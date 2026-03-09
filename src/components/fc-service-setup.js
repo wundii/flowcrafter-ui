@@ -56,7 +56,7 @@ export class FcServiceSetup extends BaseElement {
             <div class="min-h-screen bg-base-100 flex items-center justify-center p-4">
                 <div class="w-full max-w-sm">
                     <div class="text-center mb-8">
-                        <div class="mb-3">${logoIcon(48)}</div>
+                        <div class="flex justify-center mb-3">${logoIcon(48)}</div>
                         <h1 class="text-2xl font-bold tracking-tight">FlowCrafter UI</h1>
                         <p class="text-sm text-base-content/40 mt-1">
                             ${isEdit ? 'Verbindung bearbeiten.' : 'Verbinde dich mit dem FlowCrafter Service.'}

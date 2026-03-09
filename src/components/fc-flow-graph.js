@@ -247,6 +247,7 @@ export class FcFlowGraph extends BaseElement {
         _sending: { state: true },
         _sendError: { state: true },
         _tooltip: { state: true }, // { x, y, label, data } | null
+        _observerRunning: { state: true },
     }
 
     constructor() {
@@ -260,6 +261,7 @@ export class FcFlowGraph extends BaseElement {
         this._sending = false
         this._sendError = null
         this._tooltip = null
+        this._observerRunning = false
         injectAnimation()
     }
 
@@ -287,6 +289,7 @@ export class FcFlowGraph extends BaseElement {
             payload: msgData?.message !== null && msgData?.message !== undefined ? JSON.stringify(msgData.message, null, 2) : '{}',
             valid: true,
         }
+        api.getInfo().then(info => { this._observerRunning = !!info?.observerRunning }).catch(() => { this._observerRunning = false })
         this.updateComplete.then(() => {
             this.querySelector('#fc-stub-input-modal')?.showModal()
         })
@@ -302,16 +305,22 @@ export class FcFlowGraph extends BaseElement {
         this._modalMsg = { ...this._modalMsg, payload: e.detail.value, valid: e.detail.valid }
     }
 
-    async _onSend() {
+    async _onSend(queued = false) {
         if (!this._modalMsg?.valid || this._sending) return
         this._sending = true
         this._sendError = null
         try {
             const message = JSON.parse(this._modalMsg.payload)
-            const result = await api.runFlow(this.flow.flowHash, this._modalMsg.messageClass, message)
+            let runtimeHash = null
+            if (queued) {
+                await api.queueFlow(this.flow.flowHash, this._modalMsg.messageClass, message)
+            } else {
+                const result = await api.runFlow(this.flow.flowHash, this._modalMsg.messageClass, message)
+                runtimeHash = result?.runtimeHash ?? null
+            }
             this._closeModal()
             this.dispatchEvent(new CustomEvent('run-complete', {
-                detail: { runtimeHash: result.runtimeHash },
+                detail: { queued, runtimeHash },
                 bubbles: true,
                 composed: true,
             }))
@@ -563,7 +572,7 @@ export class FcFlowGraph extends BaseElement {
                                                                   <div class="rounded-lg bg-base-300 p-3 mb-1">
                                                                       <div class="flex items-center gap-2 mb-2">
                                                                           <span
-                                                                              class="badge badge-xs ${m.messageType === 'finish'
+                                                                              class="badge badge-xs leading-none ${m.messageType === 'finish'
                                                                                   ? 'badge-success'
                                                                                   : m.messageType === 'process'
                                                                                     ? 'badge-info'
@@ -622,7 +631,7 @@ export class FcFlowGraph extends BaseElement {
                                                               ${outData
                                                                   ? html`<div class="rounded-lg bg-base-300 p-3 mb-1">
                                                                         <div class="flex items-center gap-2 mb-2">
-                                                                            <span class="badge badge-xs ${outData.messageType === 'finish' ? 'badge-success' : outData.messageType === 'process' ? 'badge-info' : 'badge-warning'}">${outData.messageType}</span>
+                                                                            <span class="badge badge-xs leading-none ${outData.messageType === 'finish' ? 'badge-success' : outData.messageType === 'process' ? 'badge-info' : 'badge-warning'}">${outData.messageType}</span>
                                                                             <span class="text-xs text-base-content/40">${fmtDate(outData.time)}</span>
                                                                         </div>
                                                                         <pre class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto">${JSON.stringify(outData.message, null, 2)}</pre>
@@ -690,12 +699,21 @@ export class FcFlowGraph extends BaseElement {
                                   <div class="flex gap-2 flex-shrink-0">
                                       <button class="btn btn-ghost btn-sm" @click=${this._closeModal} ?disabled=${this._sending}>Abbrechen</button>
                                       <button
-                                          class="btn btn-primary btn-sm"
-                                          ?disabled=${!this._modalMsg?.valid || this._sending}
-                                          @click=${this._onSend}
+                                          class="btn btn-outline btn-sm"
+                                          ?disabled=${!this._modalMsg?.valid || this._sending || !this._observerRunning}
+                                          title=${this._observerRunning ? 'In Queue legen' : 'Observer ist nicht aktiv'}
+                                          @click=${() => this._onSend(true)}
                                       >
                                           ${this._sending ? html`<span class="loading loading-spinner loading-xs"></span>` : ''}
-                                          Senden
+                                          In Queue
+                                      </button>
+                                      <button
+                                          class="btn btn-primary btn-sm"
+                                          ?disabled=${!this._modalMsg?.valid || this._sending}
+                                          @click=${() => this._onSend(false)}
+                                      >
+                                          ${this._sending ? html`<span class="loading loading-spinner loading-xs"></span>` : ''}
+                                          Direkt ausführen
                                       </button>
                                   </div>
                               </div>

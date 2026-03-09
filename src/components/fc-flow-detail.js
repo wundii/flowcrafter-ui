@@ -24,6 +24,7 @@ export class FcFlowDetail extends BaseElement {
         selectedRunId: { state: true },
         _hoveredRunId: { state: true },
         _toast: { state: true },
+        _refreshCountdown: { state: true },
     }
 
     constructor() {
@@ -38,24 +39,40 @@ export class FcFlowDetail extends BaseElement {
         this._hoveredRunId = null
         this._toast = null
         this._toastTimer = null
+        this._refreshTimer = null
+        this._refreshCountdown = null
+        this._countdownInterval = null
     }
 
     updated(changed) {
         if (changed.has('hash') && this.hash) this._load()
     }
 
-    async _load() {
+    disconnectedCallback() {
+        super.disconnectedCallback()
+        clearTimeout(this._toastTimer)
+        clearTimeout(this._refreshTimer)
+        clearInterval(this._countdownInterval)
+    }
+
+    async _load(preserveSelection = false) {
         this.loading = true
         this.error = null
         this.flow = null
         this.runs = []
-        this.selectedRunId = null
+        if (!preserveSelection) this.selectedRunId = null
         try {
             this.flow = await api.getFlow(this.hash)
             this.runs = buildRuns(this.flow)
-            // If opened via runtimeHash search, pre-select that run; otherwise default to most recent
-            const preselect = this.initialRuntimeHash && this.runs.find(r => r.runId === this.initialRuntimeHash)
-            this.selectedRunId = preselect ? this.initialRuntimeHash : (this.runs.at(-1)?.runId ?? null)
+            if (!preserveSelection) {
+                const preselect = this.initialRuntimeHash && this.runs.find(r => r.runId === this.initialRuntimeHash)
+                this.selectedRunId = preselect ? this.initialRuntimeHash : (this.runs.at(-1)?.runId ?? null)
+            } else {
+                // keep selection if still valid, otherwise select latest
+                if (!this.runs.find(r => r.runId === this.selectedRunId)) {
+                    this.selectedRunId = this.runs.at(-1)?.runId ?? null
+                }
+            }
             this.dispatchEvent(
                 new CustomEvent('flow-loaded', {
                     detail: { source: this.flow.flowSource },
@@ -74,14 +91,41 @@ export class FcFlowDetail extends BaseElement {
         this.dispatchEvent(new CustomEvent('back', { bubbles: true, composed: true }))
     }
 
-    async _onRunComplete(e) {
-        const runtimeHash = e.detail?.runtimeHash
-        await this._load()
-        if (runtimeHash) {
-            const run = this.runs.find(r => r.runId === runtimeHash)
-            if (run) this.selectedRunId = runtimeHash
+    _onRunComplete(e) {
+        const msg = e.detail?.queued
+            ? 'Flow wurde in die Queue eingereiht'
+            : 'Flow wurde direkt ausgeführt'
+        this._showToast(msg, 'success')
+        if (e.detail?.queued) {
+            clearTimeout(this._refreshTimer)
+            clearInterval(this._countdownInterval)
+            const delay = 5
+            this._refreshCountdown = delay
+            this._countdownInterval = setInterval(() => {
+                this._refreshCountdown -= 1
+                if (this._refreshCountdown <= 0) {
+                    clearInterval(this._countdownInterval)
+                    this._refreshCountdown = null
+                }
+            }, 1000)
+            this._refreshTimer = setTimeout(() => {
+                clearInterval(this._countdownInterval)
+                this._refreshCountdown = null
+                this._load(false)
+            }, delay * 1000)
+        } else {
+            this._loadAndSelect(e.detail?.runtimeHash ?? null)
         }
-        this._showToast('Run erfolgreich ausgeführt', 'success')
+    }
+
+    async _loadAndSelect(runtimeHash) {
+        await this._load(true)
+        if (runtimeHash) {
+            const match = this.runs.find(r => r.runId === runtimeHash)
+            if (match) this.selectedRunId = runtimeHash
+        } else {
+            this.selectedRunId = this.runs.at(-1)?.runId ?? null
+        }
     }
 
     _showToast(message, type = 'success') {
@@ -106,9 +150,26 @@ export class FcFlowDetail extends BaseElement {
                     </div>
                 ` : ''}
 
-                <button class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50 mb-4" @click=${this._onBack}>
-                    ← Zurück zur Flow-Liste
-                </button>
+                <!-- Refresh countdown -->
+                ${this._refreshCountdown !== null ? html`
+                    <div class="toast toast-top toast-end z-50" style="margin-top:${this._toast ? '3.5rem' : '0'}">
+                        <div class="alert bg-slate-700/90 border border-slate-500/50 shadow-lg text-sm py-2 px-4 flex items-center gap-2">
+                            <span class="loading loading-spinner loading-xs text-slate-300"></span>
+                            <span class="text-slate-200">Refresh in ${this._refreshCountdown}s…</span>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div class="flex items-center gap-2 mb-4">
+                    <button class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50" @click=${this._onBack}>
+                        ← Zurück zur Flow-Liste
+                    </button>
+                    <button class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50" @click=${() => this._load(true)} title="Neu laden">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </button>
+                </div>
 
                 ${this.loading
                     ? html`<div class="flex justify-center py-16">
@@ -147,8 +208,8 @@ export class FcFlowDetail extends BaseElement {
                         <div>
                             <div class="text-base-content/50 text-xs mb-1">Status</div>
                             ${hasExceptions
-                                ? html`<span class="badge badge-error badge-sm">Failed</span>`
-                                : html`<span class="badge badge-success badge-sm">OK</span>`}
+                                ? html`<span class="badge badge-error badge-sm leading-none">Failed</span>`
+                                : html`<span class="badge badge-success badge-sm leading-none">OK</span>`}
                         </div>
                     </div>
                     <div class="mt-1 flex items-center gap-1">
@@ -215,7 +276,7 @@ export class FcFlowDetail extends BaseElement {
                                     <span class="font-semibold text-xs ${selected ? 'text-primary' : 'text-base-content/70'}">
                                         ${run.label}
                                     </span>
-                                    <span class="badge badge-xs ${run.status === 'error' ? 'badge-error' : 'badge-success'}">
+                                    <span class="badge badge-xs leading-none ${run.status === 'error' ? 'badge-error' : 'badge-success'}">
                                         ${run.status === 'error' ? 'Error' : 'OK'}
                                     </span>
                                 </div>
