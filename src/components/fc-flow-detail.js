@@ -163,7 +163,7 @@ export class FcFlowDetail extends BaseElement {
                 </div>
 
                 <div class="flex gap-2 overflow-x-auto pb-1">
-                    ${[...this.runs].reverse().map(run => {
+                    ${this.runs.map(run => {
                         const selected = run.runId === this.selectedRunId
                         return html`
                             <button

@@ -1,12 +1,15 @@
-const BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
+import { connection } from './connection.js'
 
-async function fetchJson(path) {
-    const res = await fetch(`${BASE_URL}${path}`)
-    if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? `HTTP ${res.status}`)
-    }
-    return res.json()
+function fetchJson(path) {
+    const secret = connection.getSecret()
+    const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
+    return fetch(`${connection.getUrl()}${path}`, { headers }).then(async res => {
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}))
+            throw new Error(body.error ?? `HTTP ${res.status}`)
+        }
+        return res.json()
+    })
 }
 
 export const api = {

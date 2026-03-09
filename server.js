@@ -1,11 +1,13 @@
 import { createServer } from 'node:http'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, createReadStream } from 'node:fs'
 import { join, extname, dirname } from 'node:path'
-import { scryptSync, randomBytes, timingSafeEqual, createHash } from 'node:crypto'
+import { scryptSync, randomBytes, timingSafeEqual, createHash, createCipheriv, createDecipheriv } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 
 const PORT = Number(process.env.PORT ?? 3000)
 const DB_FILE = './data/auth.json'
+const CONNECTION_FILE = './data/connection.json'
+const KEY_FILE = './data/.key'
 const DIST = join(dirname(fileURLToPath(import.meta.url)), 'dist')
 
 const MIME = {
@@ -29,6 +31,54 @@ function loadDb() {
 function saveDb(db) {
     mkdirSync(dirname(DB_FILE), { recursive: true })
     writeFileSync(DB_FILE, JSON.stringify(db, null, 2))
+}
+
+// ─── Encryption key ───────────────────────────────────────────────────────────
+function loadOrCreateKey() {
+    if (existsSync(KEY_FILE)) {
+        return Buffer.from(readFileSync(KEY_FILE, 'utf8').trim(), 'hex')
+    }
+    const key = randomBytes(32)
+    mkdirSync(dirname(KEY_FILE), { recursive: true })
+    writeFileSync(KEY_FILE, key.toString('hex'), { mode: 0o600 })
+    return key
+}
+
+function encryptSecret(plaintext) {
+    const key = loadOrCreateKey()
+    const iv = randomBytes(12)
+    const cipher = createCipheriv('aes-256-gcm', key, iv)
+    const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
+    return {
+        iv: iv.toString('hex'),
+        tag: cipher.getAuthTag().toString('hex'),
+        data: encrypted.toString('hex'),
+    }
+}
+
+function decryptSecret(enc) {
+    const key = loadOrCreateKey()
+    const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(enc.iv, 'hex'))
+    decipher.setAuthTag(Buffer.from(enc.tag, 'hex'))
+    return Buffer.concat([decipher.update(Buffer.from(enc.data, 'hex')), decipher.final()]).toString('utf8')
+}
+
+// ─── Connection store ─────────────────────────────────────────────────────────
+function loadConnection() {
+    if (!existsSync(CONNECTION_FILE)) return { url: null, encryptedSecret: null }
+    return JSON.parse(readFileSync(CONNECTION_FILE, 'utf8'))
+}
+
+function saveConnection(url, secret) {
+    mkdirSync(dirname(CONNECTION_FILE), { recursive: true })
+    writeFileSync(
+        CONNECTION_FILE,
+        JSON.stringify({ url, encryptedSecret: secret ? encryptSecret(secret) : null }, null, 2)
+    )
+}
+
+function clearConnection() {
+    if (existsSync(CONNECTION_FILE)) writeFileSync(CONNECTION_FILE, JSON.stringify({ url: null, encryptedSecret: null }, null, 2))
 }
 
 // ─── Crypto ───────────────────────────────────────────────────────────────────
@@ -98,13 +148,13 @@ createServer(async (req, res) => {
     if (method === 'OPTIONS') {
         res.writeHead(204, {
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         })
         return res.end()
     }
 
-    // ── Auth API ────────────────────────────────────────────────────────────────
+    // ── Auth API ─────────────────────────────────────────────────────────────
     if (path.startsWith('/api/auth')) {
         const db = loadDb()
 
@@ -138,8 +188,7 @@ createServer(async (req, res) => {
             if (!newPassword || newPassword.length < 6) return json(res, { error: 'Min. 6 Zeichen.' }, 400)
             db.passwordHash = hashPassword(newPassword)
             db.sessions = {} // invalidate all sessions
-            const token = createToken(db)
-            return json(res, { token })
+            return json(res, { token: createToken(db) })
         }
 
         if (method === 'POST' && path === '/api/auth/logout') {
@@ -154,7 +203,37 @@ createServer(async (req, res) => {
         return json(res, { error: 'Not found.' }, 404)
     }
 
-    // ── Static files ────────────────────────────────────────────────────────────
+    // ── Connection API ───────────────────────────────────────────────────────
+    if (path === '/api/connection') {
+        const db = loadDb()
+        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+
+        if (method === 'GET') {
+            const conn = loadConnection()
+            const configured = !!conn.url
+            return json(res, {
+                configured,
+                url: conn.url ?? '',
+                secret: configured && conn.encryptedSecret ? decryptSecret(conn.encryptedSecret) : '',
+            })
+        }
+
+        if (method === 'POST') {
+            const { url: serviceUrl, secret } = await readBody(req)
+            if (!serviceUrl) return json(res, { error: 'url fehlt.' }, 400)
+            saveConnection(serviceUrl.replace(/\/$/, ''), secret || null)
+            return json(res, { ok: true })
+        }
+
+        if (method === 'DELETE') {
+            clearConnection()
+            return json(res, { ok: true })
+        }
+
+        return json(res, { error: 'Not found.' }, 404)
+    }
+
+    // ── Static files ─────────────────────────────────────────────────────────
     let filePath = join(DIST, path === '' ? '/index.html' : path)
     if (!existsSync(filePath)) filePath = join(DIST, 'index.html') // SPA fallback
 

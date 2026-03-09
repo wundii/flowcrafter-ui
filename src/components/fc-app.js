@@ -1,8 +1,10 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { auth } from '../services/auth.js'
+import { connection } from '../services/connection.js'
 import { theme } from '../services/theme.js'
 import './fc-login.js'
+import './fc-service-setup.js'
 import './fc-schema-list.js'
 import './fc-flow-list.js'
 import './fc-flow-detail.js'
@@ -13,6 +15,8 @@ const TABS = ['flows', 'exceptions']
 export class FcApp extends BaseElement {
     static properties = {
         _authed: { state: true },
+        _serviceReady: { state: true },
+        _editingConnection: { state: true },
         _isDark: { state: true },
         _pwModal: { state: true },
         activeTab: { state: true },
@@ -24,6 +28,8 @@ export class FcApp extends BaseElement {
     constructor() {
         super()
         this._authed = false
+        this._serviceReady = false
+        this._editingConnection = false
         this._isDark = theme.get() === 'dark'
         this._pwModal = null
         this.activeTab = 'flows'
@@ -37,11 +43,30 @@ export class FcApp extends BaseElement {
         if (auth.isAuthenticated()) {
             const s = await auth.status()
             this._authed = s.authenticated
+            if (this._authed) {
+                await connection.load()
+                this._serviceReady = connection.isConfigured()
+            }
         }
     }
 
-    _onAuthenticated() {
+    async _onAuthenticated() {
         this._authed = true
+        await connection.load()
+        this._serviceReady = connection.isConfigured()
+    }
+
+    _onConnected() {
+        this._serviceReady = true
+        this._editingConnection = false
+    }
+
+    _onCancelConnection() {
+        this._editingConnection = false
+    }
+
+    _onEditConnection() {
+        this._editingConnection = true
     }
 
     async _onLogout() {
@@ -174,6 +199,15 @@ export class FcApp extends BaseElement {
             return html` <fc-login @authenticated=${this._onAuthenticated}></fc-login> `
         }
 
+        if (!this._serviceReady || this._editingConnection) {
+            return html`
+                <fc-service-setup
+                    @connected=${this._onConnected}
+                    @cancel=${this._onCancelConnection}
+                ></fc-service-setup>
+            `
+        }
+
         return html`
             <div class="min-h-screen bg-base-100">
                 <div class="navbar bg-base-200 shadow-sm px-4">
@@ -227,6 +261,17 @@ export class FcApp extends BaseElement {
                                 />
                             </svg>
                         </label>
+
+                        <!-- Edit connection -->
+                        <button class="btn btn-ghost btn-sm btn-square" title="Verbindung bearbeiten" @click=${this._onEditConnection}>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"
+                                />
+                            </svg>
+                        </button>
 
                         <!-- Change password -->
                         <button class="btn btn-ghost btn-sm btn-square" title="Passwort ändern" @click=${this._openPwModal}>

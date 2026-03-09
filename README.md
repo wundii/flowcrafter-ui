@@ -33,20 +33,7 @@ Web-Frontend für [FlowCrafter](../flowcrafter) — visualisiert Flow-Instanzen,
 docker exec default-php-wundiiii bash -c "cd /var/www/flowcrafter-ui && npm install"
 ```
 
-### 2. Umgebungsvariablen konfigurieren
-
-```bash
-cp .env.example .env
-```
-
-`.env` anpassen:
-
-```env
-# URL zur FlowCrafter PHP-API
-VITE_API_URL=http://localhost:8000
-```
-
-### 3. PHP-API starten
+### 2. PHP-API starten
 
 Die API liegt im FlowCrafter-Hauptprojekt:
 
