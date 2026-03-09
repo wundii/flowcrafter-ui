@@ -22,6 +22,9 @@ export class FcApp extends BaseElement {
         _editingConnection: { state: true },
         _isDark: { state: true },
         _pwModal: { state: true },
+        _serverDescription: { state: true },
+        _serverInfo: { state: true },
+        _toolboxOpen: { state: true },
         activeTab: { state: true },
         selectedSource: { state: true },
         selectedFlowHash: { state: true },
@@ -36,6 +39,9 @@ export class FcApp extends BaseElement {
         this._editingConnection = false
         this._isDark = theme.get() === 'dark'
         this._pwModal = null
+        this._serverDescription = null
+        this._serverInfo = null
+        this._toolboxOpen = false
         this.activeTab = 'flows'
         this.selectedSource = null
         this.selectedFlowHash = null
@@ -51,6 +57,7 @@ export class FcApp extends BaseElement {
             if (this._authed) {
                 await connection.load()
                 this._serviceReady = connection.isConfigured()
+                if (this._serviceReady) this._loadInfo()
             }
         }
     }
@@ -59,11 +66,23 @@ export class FcApp extends BaseElement {
         this._authed = true
         await connection.load()
         this._serviceReady = connection.isConfigured()
+        if (this._serviceReady) this._loadInfo()
+    }
+
+    async _loadInfo() {
+        try {
+            const info = await api.getInfo()
+            this._serverInfo = info
+            this._serverDescription = info.description ?? null
+        } catch {
+            // optional — ignore errors
+        }
     }
 
     _onConnected() {
         this._serviceReady = true
         this._editingConnection = false
+        this._loadInfo()
     }
 
     _onCancelConnection() {
@@ -234,8 +253,39 @@ export class FcApp extends BaseElement {
                 <div class="navbar bg-base-200 shadow-sm px-2 sm:px-4 min-h-12">
                     <!-- Left: logo + title + search -->
                     <div class="flex-1 flex items-center gap-2 sm:gap-3 min-w-0">
-                        ${logoIcon(24)}
-                        <span class="hidden sm:inline text-base font-bold tracking-tight whitespace-nowrap">FlowCrafter UI</span>
+                        <!-- Toolbox dropdown -->
+                        <div class="relative hidden sm:block"
+                            @mouseenter=${() => (this._toolboxOpen = true)}
+                            @mouseleave=${() => (this._toolboxOpen = false)}
+                        >
+                            <button
+                                class="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-base-content/8 transition-colors cursor-pointer"
+                            >
+                                ${logoIcon(24)}
+                                <div class="flex flex-col leading-tight text-left">
+                                    <span class="text-base font-bold tracking-tight whitespace-nowrap">FlowCrafter UI</span>
+                                    ${this._serverDescription
+                                        ? html`<span class="text-xs text-base-content/40 truncate max-w-48">${this._serverDescription}</span>`
+                                        : ''}
+                                </div>
+                            </button>
+
+                            ${this._toolboxOpen ? html`
+                                <!-- Dropdown card -->
+                                <div class="absolute left-0 top-full mt-2 z-50 w-72 rounded-box border border-base-300 bg-base-200 shadow-lg p-4">
+                                    <div class="text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-3">Server Info</div>
+                                    <div class="flex flex-col gap-2.5">
+                                        <div class="flex items-baseline justify-between gap-3">
+                                            <span class="text-xs text-base-content/50 shrink-0">Service URL</span>
+                                            <span class="font-mono text-xs text-right break-all text-base-content/60">${connection.getUrl()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <!-- Mobile: logo only (no dropdown) -->
+                        <div class="sm:hidden">${logoIcon(24)}</div>
                         <div class="join min-w-0">
                             <input
                                 type="text"

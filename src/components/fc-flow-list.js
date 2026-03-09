@@ -124,7 +124,7 @@ export class FcFlowList extends BaseElement {
 
                                     <!-- Meta row -->
                                     <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-base-content/50">
-                                        <span class="badge badge-outline badge-xs">${flow.flowType}</span>
+                                        <span class="badge badge-outline badge-xs text-base-content/50">${flow.flowType}</span>
                                         <span>${formatDate(flow.time)}</span>
                                     </div>
                                 </div>

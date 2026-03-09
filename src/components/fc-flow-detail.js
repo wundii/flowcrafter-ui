@@ -134,7 +134,7 @@ export class FcFlowDetail extends BaseElement {
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         <div>
                             <div class="text-base-content/50 text-xs mb-1">Typ</div>
-                            <span class="badge badge-outline badge-sm">${f.flowType}</span>
+                            <span class="badge badge-outline badge-xs text-base-content/50">${f.flowType}</span>
                         </div>
                         <div>
                             <div class="text-base-content/50 text-xs mb-1">Source</div>
@@ -174,7 +174,7 @@ export class FcFlowDetail extends BaseElement {
             <h3 class="font-semibold mb-2 text-sm uppercase tracking-wide text-base-content/50">
                 Flow Graph
                 <span class="normal-case font-normal ml-1 text-base-content/30"
-                    >— Stub anklicken für Details · Message-Input anklicken zum Editieren</span
+                    >— Stub anklicken für Details</span
                 >
             </h3>
             <fc-flow-graph

@@ -68,4 +68,8 @@ export const api = {
     getQueueCount() {
         return fetchJson('/api/queue/count')
     },
+
+    getInfo() {
+        return fetchJson('/api/info')
+    },
 }

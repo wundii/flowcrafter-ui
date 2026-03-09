@@ -123,7 +123,7 @@ export class FcSchemaList extends BaseElement {
                                 <div class="font-mono text-xs text-base-content/35 truncate mb-2" title="${schema.flowSource}">
                                     ${schema.flowSource}
                                 </div>
-                                <span class="badge badge-outline badge-xs font-mono" title="${schema.flowType}">${schema.flowType}</span>
+                                <span class="badge badge-outline badge-xs text-base-content/50" title="${schema.flowType}">${schema.flowType}</span>
                             </div>
 
                             <!-- Stats row -->
