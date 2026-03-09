@@ -48,6 +48,7 @@ export class FcApp extends BaseElement {
         this.selectedFlowHash = null
         this.selectedRuntimeHash = null
         this._searchQuery = ''
+        this._infoTimer = null
     }
 
     async connectedCallback() {
@@ -58,16 +59,21 @@ export class FcApp extends BaseElement {
             if (this._authed) {
                 await connection.load()
                 this._serviceReady = connection.isConfigured()
-                if (this._serviceReady) this._loadInfo()
+                if (this._serviceReady) { this._loadInfo(); this._startInfoPolling() }
             }
         }
+    }
+
+    disconnectedCallback() {
+        super.disconnectedCallback()
+        this._stopInfoPolling()
     }
 
     async _onAuthenticated() {
         this._authed = true
         await connection.load()
         this._serviceReady = connection.isConfigured()
-        if (this._serviceReady) this._loadInfo()
+        if (this._serviceReady) { this._loadInfo(); this._startInfoPolling() }
     }
 
     async _loadInfo() {
@@ -80,10 +86,23 @@ export class FcApp extends BaseElement {
         }
     }
 
+    _startInfoPolling() {
+        this._stopInfoPolling()
+        this._infoTimer = setInterval(() => this._loadInfo(), 15000)
+    }
+
+    _stopInfoPolling() {
+        if (this._infoTimer !== null) {
+            clearInterval(this._infoTimer)
+            this._infoTimer = null
+        }
+    }
+
     _onConnected() {
         this._serviceReady = true
         this._editingConnection = false
         this._loadInfo()
+        this._startInfoPolling()
     }
 
     _onCancelConnection() {
