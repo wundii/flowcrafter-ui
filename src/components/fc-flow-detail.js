@@ -1,7 +1,7 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
-import { generateDummyRuns } from '../services/dummy-runs.js'
+import { buildRuns } from '../services/runs.js'
 import './fc-flow-graph.js'
 
 function shortClass(fqn) {
@@ -16,21 +16,25 @@ function formatDate(iso) {
 export class FcFlowDetail extends BaseElement {
     static properties = {
         hash: { type: String },
+        initialRuntimeHash: { type: String },
         flow: { state: true },
         loading: { state: true },
         error: { state: true },
         runs: { state: true },
         selectedRunId: { state: true },
+        _hoveredRunId: { state: true },
     }
 
     constructor() {
         super()
         this.hash = ''
+        this.initialRuntimeHash = null
         this.flow = null
         this.loading = true
         this.error = null
         this.runs = []
         this.selectedRunId = null
+        this._hoveredRunId = null
     }
 
     updated(changed) {
@@ -45,8 +49,10 @@ export class FcFlowDetail extends BaseElement {
         this.selectedRunId = null
         try {
             this.flow = await api.getFlow(this.hash)
-            this.runs = generateDummyRuns(this.flow)
-            this.selectedRunId = this.runs.at(-1)?.runId ?? null // default: most recent
+            this.runs = buildRuns(this.flow)
+            // If opened via runtimeHash search, pre-select that run; otherwise default to most recent
+            const preselect = this.initialRuntimeHash && this.runs.find(r => r.runId === this.initialRuntimeHash)
+            this.selectedRunId = preselect ? this.initialRuntimeHash : (this.runs.at(-1)?.runId ?? null)
             this.dispatchEvent(
                 new CustomEvent('flow-loaded', {
                     detail: { source: this.flow.flowSource },
@@ -91,6 +97,7 @@ export class FcFlowDetail extends BaseElement {
         const f = this.flow
         const run = this._selectedRun
         const hasExceptions = run ? run.exceptions.length > 0 : f.flowExceptions?.length > 0
+        const graphRun = this.runs.find(r => r.runId === (this._hoveredRunId ?? this.selectedRunId)) ?? null
 
         return html`
             <!-- Meta -->
@@ -144,8 +151,8 @@ export class FcFlowDetail extends BaseElement {
             </h3>
             <fc-flow-graph
                 .flow=${f}
-                .runMessages=${run?.messages ?? null}
-                .runExceptions=${run?.exceptions ?? null}
+                .runMessages=${graphRun?.messages ?? null}
+                .runExceptions=${graphRun?.exceptions ?? null}
                 class="block mb-6"
             ></fc-flow-graph>
         `
@@ -159,19 +166,18 @@ export class FcFlowDetail extends BaseElement {
                 <div class="flex items-center gap-2 mb-2">
                     <h3 class="font-semibold text-sm uppercase tracking-wide text-base-content/50">Runs</h3>
                     <span class="badge badge-ghost badge-xs">${this.runs.length}</span>
-                    <span class="text-xs text-base-content/30 normal-case font-normal">(Dummy-Daten — API folgt)</span>
                 </div>
 
                 <div class="flex gap-2 overflow-x-auto pb-1">
                     ${this.runs.map(run => {
                         const selected = run.runId === this.selectedRunId
                         return html`
-                            <button
+                            <div
                                 class="flex-shrink-0 rounded-box border px-3 py-2 text-left cursor-pointer transition-all
                        ${selected ? 'border-primary bg-primary/10' : 'border-base-300 bg-base-200 hover:border-base-content/30'}"
-                                @click=${() => {
-                                    this.selectedRunId = run.runId
-                                }}
+                                @click=${() => { this.selectedRunId = run.runId }}
+                                @mouseenter=${() => { this._hoveredRunId = run.runId }}
+                                @mouseleave=${() => { this._hoveredRunId = null }}
                             >
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="font-semibold text-xs ${selected ? 'text-primary' : 'text-base-content/70'}">
@@ -181,8 +187,20 @@ export class FcFlowDetail extends BaseElement {
                                         ${run.status === 'error' ? 'Error' : 'OK'}
                                     </span>
                                 </div>
-                                <div class="text-xs text-base-content/40 font-mono">${formatDate(run.time)}</div>
-                            </button>
+                                <div class="flex items-center gap-1">
+                                    <span class="text-xs text-base-content/40 font-mono">${formatDate(run.time)}</span>
+                                    <button
+                                        class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
+                                        title="Runtime-Hash kopieren"
+                                        @click=${e => { e.stopPropagation(); navigator.clipboard.writeText(run.runId) }}
+                                    >
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
                         `
                     })}
                 </div>

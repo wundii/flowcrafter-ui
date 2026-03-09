@@ -25,6 +25,11 @@ export const api = {
         return fetchJson(`/api/flows/detail?hash=${encodeURIComponent(hash)}`)
     },
 
+    /** @param {string} runtimeHash */
+    getFlowByRuntimeHash(runtimeHash) {
+        return fetchJson(`/api/flows/detail?runtimeHash=${encodeURIComponent(runtimeHash)}`)
+    },
+
     /** @param {{ sort?: 'asc'|'desc', top?: number, flowHash?: string }} [opts] */
     getExceptions({ sort = 'desc', top = 1000, flowHash } = {}) {
         const p = new URLSearchParams({ sort, top })

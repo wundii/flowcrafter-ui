@@ -4,6 +4,7 @@ import { auth } from '../services/auth.js'
 import { connection } from '../services/connection.js'
 import { theme } from '../services/theme.js'
 import { logoIcon } from '../assets/logo.js'
+import { api } from '../services/api.js'
 import './fc-login.js'
 import './fc-service-setup.js'
 import './fc-schema-list.js'
@@ -23,6 +24,7 @@ export class FcApp extends BaseElement {
         activeTab: { state: true },
         selectedSource: { state: true },
         selectedFlowHash: { state: true },
+        selectedRuntimeHash: { state: true },
         _searchQuery: { state: true },
     }
 
@@ -36,6 +38,7 @@ export class FcApp extends BaseElement {
         this.activeTab = 'flows'
         this.selectedSource = null
         this.selectedFlowHash = null
+        this.selectedRuntimeHash = null
         this._searchQuery = ''
     }
 
@@ -132,20 +135,36 @@ export class FcApp extends BaseElement {
     _onBackToSchema() {
         this.selectedSource = null
         this.selectedFlowHash = null
+        this.selectedRuntimeHash = null
     }
 
     _onBackToList() {
         this.selectedFlowHash = null
+        this.selectedRuntimeHash = null
     }
 
-    _onSearch(e) {
+    async _onSearch(e) {
         if (e.type === 'keydown' && e.key !== 'Enter') return
         const q = this._searchQuery.trim()
         if (!q) return
+        this._searchQuery = ''
         this.activeTab = 'flows'
         this.selectedSource = null
+
+        // Try to resolve as runtimeHash first via API
+        try {
+            const flow = await api.getFlowByRuntimeHash(q)
+            if (flow?.flowHash) {
+                this.selectedFlowHash = flow.flowHash
+                this.selectedRuntimeHash = q
+                return
+            }
+        } catch {
+            // not a runtimeHash — fall through to flowHash search
+        }
+
+        this.selectedRuntimeHash = null
         this.selectedFlowHash = q
-        this._searchQuery = ''
     }
 
     _breadcrumb() {
@@ -179,7 +198,7 @@ export class FcApp extends BaseElement {
     _renderContent() {
         if (this.activeTab === 'flows') {
             if (this.selectedFlowHash) {
-                return html` <fc-flow-detail .hash=${this.selectedFlowHash} @back=${this._onBackToList}></fc-flow-detail> `
+                return html` <fc-flow-detail .hash=${this.selectedFlowHash} .initialRuntimeHash=${this.selectedRuntimeHash} @back=${this._onBackToList}></fc-flow-detail> `
             }
             if (this.selectedSource) {
                 return html`

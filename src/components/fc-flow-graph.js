@@ -358,13 +358,12 @@ export class FcFlowGraph extends BaseElement {
                                         return html`
                                             <div
                                                 style="height:${slotH}px; display:grid; grid-template-columns:1fr 1fr;
-                                  align-items:center; gap:4px;"
+                                  align-items:stretch; gap:4px;"
                                             >
                                                 <!-- IN port -->
                                                 <div
                                                     style="display:flex;flex-direction:column;justify-content:center;
-                                    padding-left:20px;padding-right:4px;overflow:hidden;
-                                    height:100%;"
+                                    padding-left:20px;padding-right:4px;overflow:hidden;"
                                                 >
                                                     ${inMsg
                                                         ? html`
@@ -389,7 +388,7 @@ export class FcFlowGraph extends BaseElement {
                                                 <!-- OUT port content -->
                                                 <div
                                                     style="display:flex;flex-direction:column;justify-content:center;
-                                    align-items:flex-end;padding-right:12px;overflow:hidden;"
+                                    align-items:flex-end;padding-right:12px;overflow:hidden;height:100%;"
                                                 >
                                                     ${i === 0 && excs.length > 0
                                                         ? html`
@@ -547,18 +546,18 @@ export class FcFlowGraph extends BaseElement {
                                                       const outData = outgoingOf(rt)
                                                       return html`
                                                           <div class="mb-3">
-                                                              <div class="font-mono text-xs font-semibold text-base-content/60 mb-1">
-                                                                  ${short(rt)}
+                                                              <div class="flex items-center gap-2 mb-1">
+                                                                  <span class="font-mono text-xs font-semibold text-base-content/60">${short(rt)}</span>
                                                               </div>
                                                               ${outData
-                                                                  ? html` <div class="rounded-lg bg-base-300 p-3">
-                                                                        <pre
-                                                                            class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"
-                                                                        >${JSON.stringify(outData.message, null, 2)}</pre>
+                                                                  ? html`<div class="rounded-lg bg-base-300 p-3 mb-1">
+                                                                        <div class="flex items-center gap-2 mb-2">
+                                                                            <span class="badge badge-xs ${outData.messageType === 'finish' ? 'badge-success' : outData.messageType === 'process' ? 'badge-info' : 'badge-warning'}">${outData.messageType}</span>
+                                                                            <span class="text-xs text-base-content/40">${fmtDate(outData.time)}</span>
+                                                                        </div>
+                                                                        <pre class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto">${JSON.stringify(outData.message, null, 2)}</pre>
                                                                     </div>`
-                                                                  : html`<div class="text-xs text-base-content/30 italic px-2">
-                                                                        nicht gesendet
-                                                                    </div>`}
+                                                                  : html`<div class="text-xs text-base-content/30 italic px-2">nicht gesendet</div>`}
                                                           </div>
                                                       `
                                                   })}
