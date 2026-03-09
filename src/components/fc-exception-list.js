@@ -74,7 +74,7 @@ export class FcExceptionList extends BaseElement {
             return html`
                 <div class="alert alert-error">
                     <span>Fehler beim Laden: ${this.error}</span>
-                    <button class="btn btn-sm ml-2" @click=${this._load}>Retry</button>
+                    <button class="btn btn-sm btn-ghost ml-2" @click=${this._load}>↻ Retry</button>
                 </div>
             `
 

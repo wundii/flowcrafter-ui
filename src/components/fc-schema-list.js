@@ -88,7 +88,7 @@ export class FcSchemaList extends BaseElement {
             return html`
                 <div class="alert alert-error">
                     <span>Fehler beim Laden: ${this.error}</span>
-                    <button class="btn btn-sm ml-2" @click=${this._load}>Retry</button>
+                    <button class="btn btn-sm btn-ghost ml-2" @click=${this._load}>↻ Retry</button>
                 </div>
             `
 
@@ -105,27 +105,25 @@ export class FcSchemaList extends BaseElement {
             </div>
 
             <!-- Schema grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                 ${this.schemas.map(schema => {
                     const hasFailed = schema.failed > 0
                     const rateColor = schema.successRate === 100 ? 'text-success' : schema.successRate >= 80 ? 'text-warning' : 'text-error'
 
                     return html`
                         <div
-                            class="rounded-box border-2 bg-base-200 cursor-pointer
-                     hover:bg-base-300 transition-colors flex flex-col
-                     ${hasFailed ? 'border-error/40' : 'border-base-300'}"
+                            class="rounded-box border bg-base-200 cursor-pointer
+                     hover:border-base-content/20 transition-colors flex flex-col
+                     ${hasFailed ? 'border-error/25' : 'border-base-300'}"
                             @click=${() => this._onSelect(schema)}
                         >
                             <!-- Card header -->
-                            <div class="px-5 pt-5 pb-3 border-b border-base-300 flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <div class="font-bold text-base leading-tight mb-1">${shortClass(schema.flowSource)}</div>
-                                    <div class="font-mono text-xs text-base-content/35 truncate" title="${schema.flowSource}">
-                                        ${schema.flowSource}
-                                    </div>
+                            <div class="px-4 pt-4 pb-3 border-b border-base-300">
+                                <div class="font-bold text-sm leading-tight mb-0.5 truncate" title="${shortClass(schema.flowSource)}">${shortClass(schema.flowSource)}</div>
+                                <div class="font-mono text-xs text-base-content/35 truncate mb-2" title="${schema.flowSource}">
+                                    ${schema.flowSource}
                                 </div>
-                                <span class="badge badge-outline badge-sm flex-shrink-0 mt-0.5">${schema.flowType}</span>
+                                <span class="badge badge-outline badge-xs font-mono" title="${schema.flowType}">${schema.flowType}</span>
                             </div>
 
                             <!-- Stats row -->
@@ -147,7 +145,7 @@ export class FcSchemaList extends BaseElement {
                             </div>
 
                             <!-- Footer -->
-                            <div class="px-5 py-3 border-t border-base-300 flex items-center justify-end">
+                            <div class="px-4 py-2.5 border-t border-base-300 flex items-center justify-end">
                                 <span class="text-xs text-primary/60 font-medium">Flows →</span>
                             </div>
                         </div>
