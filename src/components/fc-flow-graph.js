@@ -254,6 +254,7 @@ export class FcFlowGraph extends BaseElement {
         _modalMsg: { state: true }, // { stubSource, messageClass, payload, valid }
         _sending: { state: true },
         _sendError: { state: true },
+        _tooltip: { state: true }, // { x, y, label, data } | null
     }
 
     constructor() {
@@ -266,7 +267,25 @@ export class FcFlowGraph extends BaseElement {
         this._modalMsg = null
         this._sending = false
         this._sendError = null
+        this._tooltip = null
         injectAnimation()
+    }
+
+    _showTooltip(e, label, messageSource, data) {
+        if (!data) return
+        const hostRect = this.getBoundingClientRect()
+        const elRect = e.currentTarget.getBoundingClientRect()
+        this._tooltip = {
+            x: elRect.left - hostRect.left,
+            y: elRect.bottom - hostRect.top + 6,
+            label,
+            messageSource,
+            data,
+        }
+    }
+
+    _hideTooltip() {
+        this._tooltip = null
     }
 
     _openModal(stubSource, messageClass, msgData) {
@@ -334,6 +353,7 @@ export class FcFlowGraph extends BaseElement {
         const selExcs = this.selectedStub ? excsOf(this.selectedStub) : []
 
         return html`
+            <div style="position:relative;">
             <!-- ── Graph canvas ── -->
             <div class="rounded-box border border-base-300 overflow-auto bg-base-200">
                 <div style="position:relative; width:${svgW}px; height:${svgH}px; min-width:100%;">
@@ -404,14 +424,19 @@ export class FcFlowGraph extends BaseElement {
                                                               <span
                                                                   style="font-size:10px;color:${inColor};font-weight:600;
                                          font-family:monospace;white-space:nowrap;
-                                         overflow:hidden;text-overflow:ellipsis;"
+                                         overflow:hidden;text-overflow:ellipsis;
+                                         cursor:${inData ? 'pointer' : 'default'};"
                                                                   title="${inMsg}"
+                                                                  @mouseenter=${inData ? e => this._showTooltip(e, short(inMsg), inData.messageSource, inData.message) : null}
+                                                                  @mouseleave=${this._hideTooltip}
                                                                   >${short(inMsg)}</span
                                                               >
                                                               <span
                                                                   style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
-                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
-                                                                  title="${inData ? JSON.stringify(inData.message) : ''}"
+                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                                         cursor:${inData ? 'pointer' : 'default'};"
+                                                                  @mouseenter=${inData ? e => this._showTooltip(e, short(inMsg), inData.messageSource, inData.message) : null}
+                                                                  @mouseleave=${this._hideTooltip}
                                                               >
                                                                   ${inData ? fmtJson(inData.message) : '—'}
                                                               </span>
@@ -448,14 +473,19 @@ export class FcFlowGraph extends BaseElement {
                                                                 <span
                                                                     style="font-size:10px;color:#6b7280;font-weight:600;
                                          font-family:monospace;white-space:nowrap;
-                                         overflow:hidden;text-overflow:ellipsis;"
+                                         overflow:hidden;text-overflow:ellipsis;
+                                         cursor:${outData ? 'pointer' : 'default'};"
                                                                     title="${outRt}"
+                                                                    @mouseenter=${outData ? e => this._showTooltip(e, short(outRt), outData.messageSource, outData.message) : null}
+                                                                    @mouseleave=${this._hideTooltip}
                                                                     >${short(outRt)}</span
                                                                 >
                                                                 <span
                                                                     style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
-                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
-                                                                    title="${outData ? JSON.stringify(outData.message) : ''}"
+                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                                         cursor:${outData ? 'pointer' : 'default'};"
+                                                                    @mouseenter=${outData ? e => this._showTooltip(e, short(outRt), outData.messageSource, outData.message) : null}
+                                                                    @mouseleave=${this._hideTooltip}
                                                                 >
                                                                     ${outData ? fmtJson(outData.message) : '—'}
                                                                 </span>
@@ -481,6 +511,20 @@ export class FcFlowGraph extends BaseElement {
                     </svg>
                 </div>
             </div>
+
+            <!-- ── Message tooltip ── -->
+            ${this._tooltip ? html`
+                <div
+                    style="position:absolute; left:${this._tooltip.x}px; top:${this._tooltip.y}px;
+                           z-index:50; max-width:360px; pointer-events:none;"
+                    class="rounded-box border border-base-300 bg-base-100 shadow-xl p-3"
+                >
+                    <div class="font-semibold text-sm text-base-content mb-0.5">${this._tooltip.label}</div>
+                    <div class="text-xs font-mono text-base-content/40 mb-2">${this._tooltip.messageSource}</div>
+                    <pre class="text-xs font-mono text-base-content/90 whitespace-pre-wrap overflow-auto max-h-48"
+                    >${JSON.stringify(this._tooltip.data, null, 2)}</pre>
+                </div>
+            ` : ''}
 
             <!-- ── Detail panel ── -->
             ${selStub
@@ -671,6 +715,7 @@ export class FcFlowGraph extends BaseElement {
                       `
                     : ''}
             </dialog>
+            </div>
         `
     }
 }
