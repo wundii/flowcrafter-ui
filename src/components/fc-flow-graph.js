@@ -5,16 +5,16 @@ import { api } from '../services/api.js'
 import './fc-json-editor.js'
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
-const NODE_W = 270
-const HEADER_H = 40
-const PORT_ROW_H = 38
-const PORT_PAD_V = 10
-const PORT_R = 6
-const COL_GAP = 130
-const ROW_GAP = 24
-const PAD_X = 50
-const PAD_Y = 44
-const LONG_EDGE_AREA = 54 // extra canvas space at top for arced long edges
+const NODE_W = 220
+const HEADER_H = 28
+const PORT_ROW_H = 26
+const PORT_PAD_V = 5
+const PORT_R = 5
+const COL_GAP = 90
+const ROW_GAP = 12
+const PAD_X = 36
+const PAD_Y = 32
+const LONG_EDGE_AREA = 40 // extra canvas space at top for arced long edges
 
 // ─── Node sizing ──────────────────────────────────────────────────────────────
 function nodeHeight(stub) {
@@ -354,15 +354,15 @@ export class FcFlowGraph extends BaseElement {
                                     style="height:${HEADER_H}px; display:flex; align-items:center; gap:8px;
                             padding:0 10px; border-bottom:1px solid ${st.color}33;"
                                 >
-                                    <span style="font-size:15px; color:${st.color}; flex-shrink:0;">${st.label}</span>
+                                    <span style="font-size:12px; color:${st.color}; flex-shrink:0;">${st.label}</span>
                                     <span
-                                        style="font-weight:700; font-size:13px; color:#f3f4f6; flex:1;
+                                        style="font-weight:700; font-size:11px; color:#f3f4f6; flex:1;
                                overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
                                         title="${stub.source}"
                                         >${short(stub.source)}</span
                                     >
                                     <span
-                                        style="font-size:9px; color:#6b7280; text-transform:uppercase;
+                                        style="font-size:8px; color:#6b7280; text-transform:uppercase;
                                letter-spacing:.06em; flex-shrink:0;"
                                         >${stub.messageEnum}</span
                                     >
@@ -391,14 +391,14 @@ export class FcFlowGraph extends BaseElement {
                                                     ${inMsg
                                                         ? html`
                                                               <span
-                                                                  style="font-size:11px;color:${inColor};font-weight:600;
+                                                                  style="font-size:10px;color:${inColor};font-weight:600;
                                          font-family:monospace;white-space:nowrap;
                                          overflow:hidden;text-overflow:ellipsis;"
                                                                   title="${inMsg}"
                                                                   >${short(inMsg)}</span
                                                               >
                                                               <span
-                                                                  style="font-size:10px;color:#6b7280;font-family:monospace;
+                                                                  style="font-size:9px;color:#6b7280;font-family:monospace;
                                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
                                                                   title="${inData ? JSON.stringify(inData.message) : ''}"
                                                               >
@@ -416,14 +416,14 @@ export class FcFlowGraph extends BaseElement {
                                                     ${i === 0 && excs.length > 0
                                                         ? html`
                                                               <span
-                                                                  style="font-size:11px;color:#ef4444;font-weight:600;
+                                                                  style="font-size:10px;color:#ef4444;font-weight:600;
                                          font-family:monospace;white-space:nowrap;
                                          overflow:hidden;text-overflow:ellipsis;"
                                                                   title="${excs[0].message}"
                                                                   >✕ Exception</span
                                                               >
                                                               <span
-                                                                  style="font-size:10px;color:#ef4444;opacity:0.7;
+                                                                  style="font-size:9px;color:#ef4444;opacity:0.7;
                                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
                                                                   title="${excs[0].message}"
                                                               >
@@ -435,14 +435,14 @@ export class FcFlowGraph extends BaseElement {
                                                         : outRt
                                                           ? html`
                                                                 <span
-                                                                    style="font-size:11px;color:#6b7280;font-weight:600;
+                                                                    style="font-size:10px;color:#6b7280;font-weight:600;
                                          font-family:monospace;white-space:nowrap;
                                          overflow:hidden;text-overflow:ellipsis;"
                                                                     title="${outRt}"
                                                                     >${short(outRt)}</span
                                                                 >
                                                                 <span
-                                                                    style="font-size:10px;color:#6b7280;font-family:monospace;
+                                                                    style="font-size:9px;color:#6b7280;font-family:monospace;
                                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
                                                                     title="${outData ? JSON.stringify(outData.message) : ''}"
                                                                 >
