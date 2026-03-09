@@ -3,6 +3,7 @@ import { BaseElement } from '../base-element.js'
 import { auth } from '../services/auth.js'
 import { connection } from '../services/connection.js'
 import { theme } from '../services/theme.js'
+import { logoIcon } from '../assets/logo.js'
 import './fc-login.js'
 import './fc-service-setup.js'
 import './fc-schema-list.js'
@@ -212,7 +213,8 @@ export class FcApp extends BaseElement {
             <div class="min-h-screen bg-base-100">
                 <div class="navbar bg-base-200 shadow-sm px-4">
                     <div class="flex-1 flex items-center gap-3">
-                        <span class="text-xl font-bold tracking-tight">⚡ FlowCrafter UI</span>
+                        ${logoIcon(28)}
+                        <span class="text-xl font-bold tracking-tight">FlowCrafter UI</span>
                         <div class="join">
                             <input
                                 type="text"

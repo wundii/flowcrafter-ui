@@ -1,6 +1,7 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { auth } from '../services/auth.js'
+import { logoIcon } from '../assets/logo.js'
 
 export class FcLogin extends BaseElement {
     static properties = {
@@ -104,7 +105,7 @@ export class FcLogin extends BaseElement {
                 <div class="w-full max-w-sm">
                     <!-- Logo -->
                     <div class="text-center mb-8">
-                        <div class="text-4xl mb-3">⚡</div>
+                        <div class="mb-3">${logoIcon(48)}</div>
                         <h1 class="text-2xl font-bold tracking-tight">FlowCrafter UI</h1>
                         <p class="text-sm text-base-content/40 mt-1">
                             ${isSetup ? 'Lege ein Passwort fest, um fortzufahren.' : 'Bitte melde dich an.'}
