@@ -122,8 +122,18 @@ function buildLayout(stubs) {
     return { edges, positions, svgW, svgH, stubMap, colOf: col, topOffset }
 }
 
+// ─── Theme colors ─────────────────────────────────────────────────────────────
+function getThemeColors() {
+    const cs = getComputedStyle(document.documentElement)
+    return {
+        bg1: cs.getPropertyValue('--color-base-100').trim(),
+        bg2: cs.getPropertyValue('--color-base-200').trim(),
+        content: cs.getPropertyValue('--color-base-content').trim(),
+    }
+}
+
 // ─── SVG string builder ───────────────────────────────────────────────────────
-function buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExceptions, colOf, topOffset) {
+function buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExceptions, colOf, topOffset, bgColor, bg2Color) {
     const statusOf = src => getNodeStatus(src, flowMessages, flowExceptions)
     const colorOf = src => STATUS[statusOf(src)].color
 
@@ -188,7 +198,7 @@ function buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExce
         }
 
         parts.push(`<rect x="${mx - 44}" y="${my - 10}" width="88" height="16" rx="4"
-      fill="#0f1117" fill-opacity="0.8"/>`)
+      fill="${esc(bgColor)}" fill-opacity="0.9"/>`)
         parts.push(`<text x="${mx}" y="${my + 4}"
       text-anchor="middle" font-size="10" font-family="monospace"
       fill="${esc(col)}" fill-opacity="${run ? 0.9 : 0.5}">${esc(lbl)}</text>`)
@@ -199,11 +209,11 @@ function buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExce
         const col = colorOf(stub.source)
         for (let i = 0; i < stub.messages.length; i++) {
             parts.push(`<circle cx="${pos.x}" cy="${pos.y + inputPortY(stub, i)}"
-        r="${PORT_R}" fill="#1e2330" stroke="${esc(col)}" stroke-width="2"/>`)
+        r="${PORT_R}" fill="${esc(bg2Color)}" stroke="${esc(col)}" stroke-width="2"/>`)
         }
         for (let j = 0; j < stub.returnTypes.length; j++) {
             parts.push(`<circle cx="${pos.x + NODE_W}" cy="${pos.y + outputPortY(stub, j)}"
-        r="${PORT_R}" fill="#1e2330" stroke="${esc(col)}" stroke-width="2"/>`)
+        r="${PORT_R}" fill="${esc(bg2Color)}" stroke="${esc(col)}" stroke-width="2"/>`)
         }
     }
 
@@ -316,7 +326,8 @@ export class FcFlowGraph extends BaseElement {
         const excsOf = src => flowExceptions.filter(e => e.stubSource === src)
         const outgoingOf = rt => flowMessages.find(m => m.messageSource === rt)
 
-        const svgContent = buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExceptions, colOf, topOffset)
+        const theme = getThemeColors()
+        const svgContent = buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExceptions, colOf, topOffset, theme.bg1, theme.bg2)
 
         const selStub = this.selectedStub ? stubMap[this.selectedStub] : null
         const selMsgs = this.selectedStub ? msgsOf(this.selectedStub) : []
@@ -324,7 +335,7 @@ export class FcFlowGraph extends BaseElement {
 
         return html`
             <!-- ── Graph canvas ── -->
-            <div class="rounded-box border border-base-300 overflow-auto" style="background:#0f1117;">
+            <div class="rounded-box border border-base-300 overflow-auto bg-base-200">
                 <div style="position:relative; width:${svgW}px; height:${svgH}px; min-width:100%;">
                     ${stubs.map(stub => {
                         const pos = positions[stub.source]
@@ -356,13 +367,13 @@ export class FcFlowGraph extends BaseElement {
                                 >
                                     <span style="font-size:12px; color:${st.color}; flex-shrink:0;">${st.label}</span>
                                     <span
-                                        style="font-weight:700; font-size:11px; color:#f3f4f6; flex:1;
+                                        style="font-weight:700; font-size:11px; color:var(--color-base-content); flex:1;
                                overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
                                         title="${stub.source}"
                                         >${short(stub.source)}</span
                                     >
                                     <span
-                                        style="font-size:8px; color:#6b7280; text-transform:uppercase;
+                                        style="font-size:8px; color:oklch(from var(--color-base-content) l c h / 0.4); text-transform:uppercase;
                                letter-spacing:.06em; flex-shrink:0;"
                                         >${stub.messageEnum}</span
                                     >
@@ -398,7 +409,7 @@ export class FcFlowGraph extends BaseElement {
                                                                   >${short(inMsg)}</span
                                                               >
                                                               <span
-                                                                  style="font-size:9px;color:#6b7280;font-family:monospace;
+                                                                  style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
                                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
                                                                   title="${inData ? JSON.stringify(inData.message) : ''}"
                                                               >
@@ -442,7 +453,7 @@ export class FcFlowGraph extends BaseElement {
                                                                     >${short(outRt)}</span
                                                                 >
                                                                 <span
-                                                                    style="font-size:9px;color:#6b7280;font-family:monospace;
+                                                                    style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
                                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
                                                                     title="${outData ? JSON.stringify(outData.message) : ''}"
                                                                 >

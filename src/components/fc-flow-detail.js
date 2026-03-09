@@ -129,7 +129,7 @@ export class FcFlowDetail extends BaseElement {
 
         return html`
             <!-- Meta -->
-            <div class="card bg-base-200 mb-4">
+            <div class="card bg-base-200 border border-base-300 mb-4">
                 <div class="card-body py-3 px-4">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         <div>
