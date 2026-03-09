@@ -23,6 +23,7 @@ export class FcFlowList extends BaseElement {
         error: { state: true },
         _page: { state: true },
         _hasMore: { state: true },
+        _total: { state: true },
     }
 
     constructor() {
@@ -33,6 +34,7 @@ export class FcFlowList extends BaseElement {
         this.error = null
         this._page = 0
         this._hasMore = false
+        this._total = null
     }
 
     connectedCallback() {
@@ -54,6 +56,7 @@ export class FcFlowList extends BaseElement {
             const res = await api.getFlows({ source: this.source ?? undefined, top: PAGE_SIZE, skip: this._page * PAGE_SIZE })
             this.flows = res.items ?? []
             this._hasMore = res.hasMore ?? false
+            this._total = res.total ?? null
         } catch (err) {
             this.error = err.message
         } finally {
@@ -116,6 +119,7 @@ export class FcFlowList extends BaseElement {
                 <div class="flex items-center gap-3">
                     <span class="text-sm text-base-content/60">
                         ${from}–${to}
+                        ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                     </span>
                     <button class="btn btn-sm btn-ghost" @click=${this._load}>↻ Reload</button>
                 </div>

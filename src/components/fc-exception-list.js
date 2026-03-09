@@ -23,6 +23,7 @@ export class FcExceptionList extends BaseElement {
         expanded: { state: true },
         _page: { state: true },
         _hasMore: { state: true },
+        _total: { state: true },
     }
 
     constructor() {
@@ -33,6 +34,7 @@ export class FcExceptionList extends BaseElement {
         this.expanded = new Set()
         this._page = 0
         this._hasMore = false
+        this._total = null
     }
 
     connectedCallback() {
@@ -47,6 +49,7 @@ export class FcExceptionList extends BaseElement {
             const res = await api.getExceptions({ sort: 'desc', top: PAGE_SIZE, skip: this._page * PAGE_SIZE })
             this.exceptions = res.items ?? []
             this._hasMore = res.hasMore ?? false
+            this._total = res.total ?? null
         } catch (err) {
             this.error = err.message
         } finally {
@@ -106,7 +109,9 @@ export class FcExceptionList extends BaseElement {
             <!-- Toolbar -->
             <div class="flex items-center justify-between mb-4">
                 <span class="text-sm text-base-content/60">
-                    ${from}–${to} Exceptions
+                    ${from}–${to}
+                    ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
+                    Exceptions
                 </span>
                 <button class="btn btn-sm btn-ghost" @click=${this._load}>↻ Reload</button>
             </div>
