@@ -178,12 +178,9 @@ function buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExce
         const colSpan = (colOf[e.to] ?? 0) - (colOf[e.from] ?? 0)
         const isLong = colSpan > 1
         const d = isLong ? bezierLong(x1, y1, x2, y2) : bezierNormal(x1, y1, x2, y2)
-        const mx = (x1 + x2) / 2
-        const my = isLong ? topOffset / 2 : (y1 + y2) / 2
         const st = statusOf(e.from)
         const col = STATUS[st].color
         const run = st === 'success' || st === 'error'
-        const lbl = e.messageClass.split('\\').pop()
 
         parts.push(`<path d="${esc(d)}"
       stroke="${esc(col)}" stroke-width="${run ? 2 : 1.5}"
@@ -197,11 +194,6 @@ function buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExce
         stroke-dasharray="8 12" fill="none" class="fc-edge-flow"/>`)
         }
 
-        parts.push(`<rect x="${mx - 44}" y="${my - 10}" width="88" height="16" rx="4"
-      fill="${esc(bgColor)}" fill-opacity="0.9"/>`)
-        parts.push(`<text x="${mx}" y="${my + 4}"
-      text-anchor="middle" font-size="10" font-family="monospace"
-      fill="${esc(col)}" fill-opacity="${run ? 0.9 : 0.5}">${esc(lbl)}</text>`)
     }
 
     for (const stub of stubs) {

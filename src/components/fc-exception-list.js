@@ -38,7 +38,7 @@ export class FcExceptionList extends BaseElement {
         this.loading = true
         this.error = null
         try {
-            this.exceptions = await api.getExceptions({ sort: 'desc' })
+            this.exceptions = await api.getExceptions({ sort: 'desc', top: 20 })
         } catch (err) {
             this.error = err.message
         } finally {
