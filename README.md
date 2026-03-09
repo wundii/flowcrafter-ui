@@ -1,6 +1,6 @@
 # FlowCrafter UI
 
-Web-Frontend für [FlowCrafter](../flowcrafter) — visualisiert Flow-Instanzen, Messages und Exceptions aus dem PHP-Backend in Echtzeit.
+Web-Frontend für [FlowCrafter](../flowcrafter) — visualisiert Flow-Instanzen, Messages, Exceptions und Queue-Status aus dem PHP-Backend in Echtzeit.
 
 ## Stack
 
@@ -12,16 +12,29 @@ Web-Frontend für [FlowCrafter](../flowcrafter) — visualisiert Flow-Instanzen,
 
 ---
 
+## Architektur
+
+Das UI kommuniziert mit **zwei Backends**:
+
+| Backend | Port | Zweck |
+| ------- | ---- | ----- |
+| Node.js-Proxy | `3000` | Auth-Verwaltung, Verbindungskonfiguration (wird im Dev-Server via Vite-Proxy auf `/api/auth` und `/api/connection` weitergeleitet) |
+| FlowCrafter-API | konfigurierbar | Flow-Daten, Exceptions, Queue — URL wird im Node-Backend gespeichert |
+
+**Auth-Flow:**
+1. Beim ersten Start: Passwort über `fc-login` festlegen (`/api/auth/setup`)
+2. Bei jedem weiteren Start: Login → JWT-Token im `sessionStorage`
+3. Token wird als `Authorization: Bearer <token>` an alle Requests angehängt
+4. Nach dem Login: FlowCrafter-Service-URL über `fc-service-setup` konfigurieren
+
+---
+
 ## Voraussetzungen
 
-| Anforderung | Version              |
-| ----------- | -------------------- |
-| Node.js     | >= 20                |
-| npm         | >= 10                |
-| PHP         | >= 8.1 (für die API) |
-
-> Im Projekt wird Node/npm über den Docker-Container `default-php-wundiiii` bereitgestellt.
-> Das Projektverzeichnis ist als Volume eingebunden — Dateiänderungen auf dem Host sind sofort im Container sichtbar.
+| Anforderung | Version |
+| ----------- | ------- |
+| Node.js     | >= 20   |
+| npm         | >= 10   |
 
 ---
 
@@ -30,25 +43,16 @@ Web-Frontend für [FlowCrafter](../flowcrafter) — visualisiert Flow-Instanzen,
 ### 1. Abhängigkeiten installieren
 
 ```bash
-docker exec default-php-wundiiii bash -c "cd /var/www/flowcrafter-ui && npm install"
+npm install
 ```
 
-### 2. PHP-API starten
-
-Die API liegt im FlowCrafter-Hauptprojekt:
+### 2. Dev-Server starten
 
 ```bash
-cd ~/Projekte/flowcrafter
-php -S localhost:8000 service/index.php
+npm run dev
 ```
 
-### 4. Dev-Server starten
-
-```bash
-docker exec default-php-wundiiii bash -c "cd /var/www/flowcrafter-ui && npm run dev"
-```
-
-Frontend erreichbar unter: **http://localhost:5173**
+Frontend erreichbar unter: **http://localhost:8001**
 
 ---
 
@@ -63,7 +67,7 @@ Frontend erreichbar unter: **http://localhost:5173**
 Alle Befehle über Docker ausführen:
 
 ```bash
-docker exec default-php-wundiiii bash -c "cd /var/www/flowcrafter-ui && npm run <script>"
+npm run <script>
 ```
 
 ---
@@ -74,40 +78,54 @@ docker exec default-php-wundiiii bash -c "cd /var/www/flowcrafter-ui && npm run 
 flowcrafter-ui/
 ├── src/
 │   ├── components/
-│   │   ├── fc-app.js            # Root-Komponente, Navigation/Tabs
-│   │   ├── fc-flow-list.js      # Tabelle aller Flow-Instanzen
-│   │   ├── fc-flow-detail.js    # Detail-Ansicht inkl. Runs-Panel
-│   │   ├── fc-flow-graph.js     # SVG-Graph + Stub-Knoten + Modal
-│   │   ├── fc-json-editor.js    # CodeMirror JSON-Editor Wrapper
-│   │   └── fc-exception-list.js # Tabelle aller Exceptions
+│   │   ├── fc-app.js            # Root-Komponente: Navigation, Breadcrumb, Suche
+│   │   ├── fc-login.js          # Login / Ersteinrichtung (Passwort)
+│   │   ├── fc-service-setup.js  # FlowCrafter-Service-URL konfigurieren
+│   │   ├── fc-schema-list.js    # Übersichtskacheln pro Flow-Klasse (Schema)
+│   │   ├── fc-flow-list.js      # Tabelle aller Flow-Instanzen eines Schemas
+│   │   ├── fc-flow-detail.js    # Detail-Ansicht: Runs, Messages, Exceptions
+│   │   ├── fc-flow-graph.js     # SVG-Graph der Flow-Struktur + Stub-Input-Modal
+│   │   ├── fc-exception-list.js # Tabelle aller Exceptions
+│   │   ├── fc-queue-chart.js    # Live-Sparkline der Queue-Größe (Poll alle 3s)
+│   │   └── fc-json-editor.js    # CodeMirror JSON-Editor Wrapper
 │   ├── services/
-│   │   ├── api.js               # HTTP-Client für die PHP-API
-│   │   └── dummy-runs.js        # Dummy-Run-Generator (bis API-Endpoint fertig)
+│   │   ├── api.js               # HTTP-Client für die FlowCrafter-API
+│   │   ├── auth.js              # Login / Logout / Passwort-Verwaltung
+│   │   ├── connection.js        # FlowCrafter-Service-URL speichern & prüfen
+│   │   ├── runs.js              # Hilfsfunktion: Flows nach Runtime-Hash gruppieren
+│   │   └── theme.js             # Dark/Light-Theme (localStorage)
+│   ├── assets/
+│   │   └── logo.js              # SVG-Logo als Lit-Template
 │   ├── base-element.js          # Lit BaseElement (Shadow DOM deaktiviert)
 │   ├── main.js                  # Einstiegspunkt
 │   └── main.css                 # Tailwind + DaisyUI
 ├── index.html
-├── vite.config.js
-└── .env.example
+├── vite.config.js               # Tailwind-Plugin + Proxy /api/auth → :3000
+└── package.json
 ```
 
 ---
 
 ## API-Endpunkte
 
-Die PHP-API (`flowcrafter/service/index.php`) stellt folgende Routen bereit:
+### Node.js-Proxy (Auth & Verbindung)
 
-| Methode | Pfad                | Parameter                 | Beschreibung                   |
-| ------- | ------------------- | ------------------------- | ------------------------------ |
-| GET     | `/`                 | —                         | Health Check                   |
-| GET     | `/api/flows`        | `sort`, `top`, `source`   | Alle Flow-Instanzen            |
-| GET     | `/api/flows/detail` | `hash`                    | Flow mit Messages & Exceptions |
-| GET     | `/api/exceptions`   | `sort`, `top`, `flowHash` | Alle Exceptions                |
+| Methode | Pfad                        | Beschreibung                          |
+| ------- | --------------------------- | ------------------------------------- |
+| GET     | `/api/auth/status`          | Auth-Status + ob Passwort gesetzt ist |
+| POST    | `/api/auth/setup`           | Erstes Passwort festlegen             |
+| POST    | `/api/auth/login`           | Anmelden → JWT-Token                  |
+| POST    | `/api/auth/logout`          | Abmelden                              |
+| POST    | `/api/auth/change-password` | Passwort ändern                       |
+| GET     | `/api/connection`           | Gespeicherte Service-URL abrufen      |
+| POST    | `/api/connection`           | Service-URL & Secret speichern        |
+| DELETE  | `/api/connection`           | Verbindung zurücksetzen               |
 
 ---
 
 ## Hinweise
 
 - **Shadow DOM** ist in allen Komponenten deaktiviert (`BaseElement.createRenderRoot()` gibt `this` zurück), damit globale Tailwind/DaisyUI-Klassen greifen.
-- **Runs-Panel** zeigt aktuell Dummy-Daten — der echte API-Endpunkt für mehrere Runs pro Flow-Instanz ist in Entwicklung.
-- **Message-Input-Editor** (Stub-Input-Modal) ist vorbereitet, der Senden-Button wird aktiviert sobald der entsprechende API-Endpunkt verfügbar ist.
+- **Queue-Chart** pollt alle 3 Sekunden `/api/queue/count` und zeigt eine Live-Sparkline in der Navbar.
+- **Hash-Suche** in der Navbar akzeptiert sowohl `flowHash` als auch `runtimeHash` — bei `runtimeHash` wird automatisch der zugehörige Flow aufgelöst.
+- **Flow-Graph** (`fc-flow-graph`) stellt die Stub-Knoten des Flows als SVG-Diagram dar und erlaubt das manuelle Auslösen eines Stubs via JSON-Editor-Modal.
