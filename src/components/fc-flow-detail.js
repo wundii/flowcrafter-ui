@@ -3,6 +3,7 @@ import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { buildRuns } from '../services/runs.js'
 import './fc-flow-graph.js'
+import './fc-json-editor.js'
 
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
@@ -25,6 +26,7 @@ export class FcFlowDetail extends BaseElement {
         _hoveredRunId: { state: true },
         _toast: { state: true },
         _refreshCountdown: { state: true },
+        _rawModal: { state: true },
     }
 
     constructor() {
@@ -42,6 +44,7 @@ export class FcFlowDetail extends BaseElement {
         this._refreshTimer = null
         this._refreshCountdown = null
         this._countdownInterval = null
+        this._rawModal = false
     }
 
     updated(changed) {
@@ -177,7 +180,68 @@ export class FcFlowDetail extends BaseElement {
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                     </button>
+                    ${this.flow ? html`
+                        <button
+                            class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                            title="Raw JSON anzeigen"
+                            @click=${() => {
+                                this._rawModal = true
+                                this.updateComplete.then(() => this.querySelector('#fc-raw-modal')?.showModal())
+                            }}
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4-4 4M7 8l-4 4 4 4M14 4l-4 16" />
+                            </svg>
+                        </button>
+                    ` : ''}
                 </div>
+
+                <!-- Raw JSON Modal -->
+                <dialog id="fc-raw-modal" class="modal" @close=${() => { this._rawModal = false }}>
+                    ${this._rawModal && this.flow ? html`
+                        <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
+                            <!-- Header -->
+                            <div class="flex items-center justify-between px-5 pt-4 pb-3 border-b border-base-300 flex-shrink-0">
+                                <div>
+                                    <h3 class="font-bold text-base leading-tight">Raw JSON</h3>
+                                    <span class="font-mono text-xs text-base-content/50">${this.flow.flowHash}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        class="btn btn-ghost btn-sm"
+                                        title="JSON kopieren"
+                                        @click=${() => navigator.clipboard.writeText(JSON.stringify(this.flow, null, 2))}
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                        </svg>
+                                    </button>
+                                    <button class="btn btn-ghost btn-sm btn-square" @click=${() => this.querySelector('#fc-raw-modal')?.close()}>✕</button>
+                                </div>
+                            </div>
+
+                            <!-- Editor -->
+                            <div class="flex-1 overflow-hidden relative">
+                                <fc-json-editor
+                                    .value=${JSON.stringify(this.flow, null, 2)}
+                                    .readonly=${true}
+                                    .search=${true}
+                                    style="display:block; height:100%; overflow:hidden;"
+                                ></fc-json-editor>
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="flex justify-end px-4 py-3 border-t border-base-300 flex-shrink-0">
+                                <button class="btn btn-sm" @click=${() => this.querySelector('#fc-raw-modal')?.close()}>Schließen</button>
+                            </div>
+                        </div>
+
+                        <form method="dialog" class="modal-backdrop">
+                            <button>close</button>
+                        </form>
+                    ` : ''}
+                </dialog>
 
                 ${this.loading
                     ? html`<div class="flex justify-center py-16">

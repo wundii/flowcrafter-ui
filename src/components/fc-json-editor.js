@@ -1,9 +1,19 @@
 import { BaseElement } from '../base-element.js'
 import { EditorView, basicSetup } from 'codemirror'
-import { EditorState } from '@codemirror/state'
+import { EditorState, Prec } from '@codemirror/state'
+import { keymap } from '@codemirror/view'
 import { json, jsonParseLinter } from '@codemirror/lang-json'
 import { linter, lintGutter } from '@codemirror/lint'
 import { oneDark } from '@codemirror/theme-one-dark'
+
+// Block search & replace panel shortcuts (used when search is disabled)
+const noSearchKeymap = Prec.highest(
+    keymap.of([
+        { key: 'Mod-f', run: () => true },
+        { key: 'Mod-h', run: () => true },
+        { key: 'Mod-Alt-f', run: () => true },
+    ])
+)
 
 // ─── Extra theme overrides (fit container, match DaisyUI dark) ────────────────
 const fitTheme = EditorView.theme({
@@ -30,14 +40,91 @@ const fitTheme = EditorView.theme({
     '.cm-activeLineGutter': { background: '#23273a' },
     '.cm-activeLine': { background: '#23273a' },
     '.cm-selectionBackground': { background: '#3b4261 !important' },
+    // ─── Search panel styling ─────────────────────────────────────────────────
+    '.cm-panels': {
+        background: '#1e2130',
+        borderTop: '1px solid #2a2d3a',
+        color: '#c9d1d9',
+    },
+    '.cm-search': {
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '8px 12px',
+    },
+    '.cm-search input, .cm-search .cm-textfield': {
+        background: '#0d1117',
+        border: '1px solid #30363d',
+        borderRadius: '6px',
+        color: '#c9d1d9',
+        fontSize: '12px',
+        padding: '3px 8px',
+        outline: 'none',
+        height: '26px',
+    },
+    '.cm-search input:focus, .cm-search .cm-textfield:focus': {
+        borderColor: '#58a6ff',
+        boxShadow: '0 0 0 2px rgba(88,166,255,0.2)',
+    },
+    '.cm-button': {
+        background: '#21262d',
+        border: '1px solid #30363d',
+        borderRadius: '6px',
+        color: '#c9d1d9',
+        fontSize: '12px',
+        padding: '3px 10px',
+        cursor: 'pointer',
+        height: '26px',
+        lineHeight: '1',
+    },
+    '.cm-button:hover': {
+        background: '#30363d',
+        borderColor: '#8b949e',
+    },
+    '.cm-search label': {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        fontSize: '12px',
+        color: '#8b949e',
+        cursor: 'pointer',
+        userSelect: 'none',
+    },
+    '.cm-search input[type=checkbox]': {
+        border: '1px solid #30363d',
+        borderRadius: '3px',
+        background: '#0d1117',
+        width: '13px',
+        height: '13px',
+        padding: '0',
+        cursor: 'pointer',
+    },
+    '.cm-search .cm-search-close-button': {
+        background: 'transparent',
+        border: 'none',
+        color: '#8b949e',
+        fontSize: '16px',
+        padding: '0 4px',
+        cursor: 'pointer',
+        marginLeft: 'auto',
+    },
+    '.cm-search .cm-search-close-button:hover': {
+        color: '#c9d1d9',
+    },
+    '.cm-selectionMatch': {
+        background: '#3b4261',
+    },
 })
 
 /**
  * <fc-json-editor value="..." @change="..."></fc-json-editor>
  *
  * Properties:
- *   value   {string}  — JSON string to display/edit
- *   valid   {boolean} — (readonly, reflects out) whether current content is valid JSON
+ *   value    {string}  — JSON string to display/edit
+ *   valid    {boolean} — (readonly, reflects out) whether current content is valid JSON
+ *   readonly {boolean} — disables editing
+ *   search   {boolean} — enables search/replace panel (Mod-f)
  *
  * Events:
  *   change  — fired on every keystroke, detail: { value, valid }
@@ -46,12 +133,16 @@ export class FcJsonEditor extends BaseElement {
     static properties = {
         value: { type: String },
         valid: { type: Boolean, reflect: true },
+        readonly: { type: Boolean },
+        search: { type: Boolean },
     }
 
     constructor() {
         super()
         this.value = '{}'
         this.valid = true
+        this.readonly = false
+        this.search = false
         this._view = null
         this._skipUpdate = false
     }
@@ -109,6 +200,8 @@ export class FcJsonEditor extends BaseElement {
             doc: this.value ?? '{}',
             extensions: [
                 basicSetup,
+                ...(!this.search ? [noSearchKeymap] : []),
+                ...(this.readonly ? [EditorState.readOnly.of(true)] : []),
                 json(),
                 linter(jsonParseLinter(), { delay: 300 }),
                 lintGutter(),

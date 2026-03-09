@@ -65,6 +65,12 @@ export const api = {
         return postJson('/api/flows/run', { flowHash, messageSource, message })
     },
 
+    /** @param {{ sort?: 'asc'|'desc' }} [opts] */
+    getQueues({ sort = 'desc' } = {}) {
+        const p = new URLSearchParams({ sort })
+        return fetchJson(`/api/queues?${p}`)
+    },
+
     queueFlow(flowHash, messageSource, message) {
         return postJson('/api/queue', { flowHash, messageSource, message })
     },

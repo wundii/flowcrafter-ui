@@ -12,8 +12,9 @@ import './fc-flow-list.js'
 import './fc-flow-detail.js'
 import './fc-exception-list.js'
 import './fc-queue-chart.js'
+import './fc-queue-list.js'
 
-const TABS = ['flows', 'exceptions']
+const TABS = ['flows', 'exceptions', 'queues']
 
 export class FcApp extends BaseElement {
     static properties = {
@@ -231,6 +232,7 @@ export class FcApp extends BaseElement {
             }
             return html` <fc-schema-list @schema-selected=${this._onSchemaSelected}></fc-schema-list> `
         }
+        if (this.activeTab === 'queues') return html`<fc-queue-list></fc-queue-list>`
         return html`<fc-exception-list></fc-exception-list>`
     }
 
@@ -398,7 +400,7 @@ export class FcApp extends BaseElement {
                                         this.selectedFlowHash = null
                                     }}
                                 >
-                                    ${tab === 'flows' ? 'Flows' : 'Exceptions'}
+                                    ${{ flows: 'Flows', exceptions: 'Exceptions', queues: 'Queues' }[tab]}
                                 </a>
                             `
                         )}
