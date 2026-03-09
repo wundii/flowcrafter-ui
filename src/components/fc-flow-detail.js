@@ -23,6 +23,7 @@ export class FcFlowDetail extends BaseElement {
         runs: { state: true },
         selectedRunId: { state: true },
         _hoveredRunId: { state: true },
+        _toast: { state: true },
     }
 
     constructor() {
@@ -35,6 +36,8 @@ export class FcFlowDetail extends BaseElement {
         this.runs = []
         this.selectedRunId = null
         this._hoveredRunId = null
+        this._toast = null
+        this._toastTimer = null
     }
 
     updated(changed) {
@@ -71,13 +74,38 @@ export class FcFlowDetail extends BaseElement {
         this.dispatchEvent(new CustomEvent('back', { bubbles: true, composed: true }))
     }
 
+    async _onRunComplete(e) {
+        const runtimeHash = e.detail?.runtimeHash
+        await this._load()
+        if (runtimeHash) {
+            const run = this.runs.find(r => r.runId === runtimeHash)
+            if (run) this.selectedRunId = runtimeHash
+        }
+        this._showToast('Run erfolgreich ausgeführt', 'success')
+    }
+
+    _showToast(message, type = 'success') {
+        clearTimeout(this._toastTimer)
+        this._toast = { message, type }
+        this._toastTimer = setTimeout(() => { this._toast = null }, 3500)
+    }
+
     get _selectedRun() {
         return this.runs.find(r => r.runId === this.selectedRunId) ?? null
     }
 
     render() {
         return html`
-            <div>
+            <div @run-complete=${this._onRunComplete}>
+                <!-- Toast notification -->
+                ${this._toast ? html`
+                    <div class="toast toast-top toast-end z-50">
+                        <div class="alert ${this._toast.type === 'success' ? 'alert-success' : 'alert-error'} shadow-lg text-sm py-2 px-4">
+                            <span>${this._toast.message}</span>
+                        </div>
+                    </div>
+                ` : ''}
+
                 <button class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50 mb-4" @click=${this._onBack}>
                     ← Zurück zur Flow-Liste
                 </button>
@@ -151,6 +179,7 @@ export class FcFlowDetail extends BaseElement {
             </h3>
             <fc-flow-graph
                 .flow=${f}
+                .runId=${this.selectedRunId}
                 .runMessages=${graphRun?.messages ?? null}
                 .runExceptions=${graphRun?.exceptions ?? null}
                 class="block mb-6"
@@ -175,7 +204,10 @@ export class FcFlowDetail extends BaseElement {
                             <div
                                 class="flex-shrink-0 rounded-box border px-3 py-2 text-left cursor-pointer transition-all
                        ${selected ? 'border-primary bg-primary/10' : 'border-base-300 bg-base-200 hover:border-base-content/30'}"
-                                @click=${() => { this.selectedRunId = run.runId }}
+                                @click=${() => {
+                                    this.selectedRunId = run.runId
+                                    this.querySelector('fc-flow-graph').selectedStub = null
+                                }}
                                 @mouseenter=${() => { this._hoveredRunId = run.runId }}
                                 @mouseleave=${() => { this._hoveredRunId = null }}
                             >

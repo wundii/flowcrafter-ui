@@ -12,6 +12,25 @@ function fetchJson(path) {
     })
 }
 
+function postJson(path, body) {
+    const secret = connection.getSecret()
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(secret ? { Authorization: `Bearer ${secret}` } : {}),
+    }
+    return fetch(`${connection.getUrl()}${path}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+    }).then(async res => {
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}))
+            throw new Error(data.error ?? `HTTP ${res.status}`)
+        }
+        return res.json()
+    })
+}
+
 export const api = {
     /** @param {{ sort?: 'asc'|'desc', top?: number, source?: string }} [opts] */
     getFlows({ sort = 'desc', top = 1000, source } = {}) {
@@ -35,5 +54,14 @@ export const api = {
         const p = new URLSearchParams({ sort, top })
         if (flowHash) p.set('flowHash', flowHash)
         return fetchJson(`/api/exceptions?${p}`)
+    },
+
+    /**
+     * @param {string} flowHash
+     * @param {string} messageSource  fully-qualified class name
+     * @param {object} message        plain object (will be sent as JSON)
+     */
+    runFlow(flowHash, messageSource, message) {
+        return postJson('/api/flows/run', { flowHash, messageSource, message })
     },
 }

@@ -1,6 +1,7 @@
 import { html } from 'lit'
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js'
 import { BaseElement } from '../base-element.js'
+import { api } from '../services/api.js'
 import './fc-json-editor.js'
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
@@ -236,19 +237,25 @@ const fmtJson = (obj, max = 30) => {
 export class FcFlowGraph extends BaseElement {
     static properties = {
         flow: { type: Object },
+        runId: { type: String },
         runMessages: { type: Array }, // overrides flow.flowMessages for a specific run
         runExceptions: { type: Array }, // overrides flow.flowExceptions for a specific run
         selectedStub: { state: true },
-        _modalMsg: { state: true }, // { stubSource, messageClass, payload }
+        _modalMsg: { state: true }, // { stubSource, messageClass, payload, valid }
+        _sending: { state: true },
+        _sendError: { state: true },
     }
 
     constructor() {
         super()
         this.flow = null
+        this.runId = null
         this.runMessages = null
         this.runExceptions = null
         this.selectedStub = null
         this._modalMsg = null
+        this._sending = false
+        this._sendError = null
         injectAnimation()
     }
 
@@ -267,10 +274,31 @@ export class FcFlowGraph extends BaseElement {
     _closeModal() {
         this.querySelector('#fc-stub-input-modal')?.close()
         this._modalMsg = null
+        this._sendError = null
     }
 
     _onEditorChange(e) {
         this._modalMsg = { ...this._modalMsg, payload: e.detail.value, valid: e.detail.valid }
+    }
+
+    async _onSend() {
+        if (!this._modalMsg?.valid || this._sending) return
+        this._sending = true
+        this._sendError = null
+        try {
+            const message = JSON.parse(this._modalMsg.payload)
+            const result = await api.runFlow(this.flow.flowHash, this._modalMsg.messageClass, message)
+            this._closeModal()
+            this.dispatchEvent(new CustomEvent('run-complete', {
+                detail: { runtimeHash: result.runtimeHash },
+                bubbles: true,
+                composed: true,
+            }))
+        } catch (err) {
+            this._sendError = err.message
+        } finally {
+            this._sending = false
+        }
     }
 
     render() {
@@ -338,11 +366,6 @@ export class FcFlowGraph extends BaseElement {
                                letter-spacing:.06em; flex-shrink:0;"
                                         >${stub.messageEnum}</span
                                     >
-                                    ${excs.length
-                                        ? html` <span style="font-size:10px;color:#ef4444;font-weight:700;flex-shrink:0;">
-                                              ${excs.length}✕
-                                          </span>`
-                                        : ''}
                                 </div>
 
                                 <!-- Port rows -->
@@ -612,10 +635,21 @@ export class FcFlowGraph extends BaseElement {
 
                               <!-- Footer -->
                               <div class="flex items-center justify-between px-5 py-3 border-t border-base-300 flex-shrink-0">
-                                  <span class="text-xs text-base-content/30"> Senden wird in einem späteren Release implementiert. </span>
-                                  <div class="flex gap-2">
-                                      <button class="btn btn-ghost btn-sm" @click=${this._closeModal}>Abbrechen</button>
-                                      <button class="btn btn-primary btn-sm" disabled title="Noch nicht implementiert">Senden</button>
+                                  <div class="flex-1 mr-4">
+                                      ${this._sendError
+                                          ? html`<span class="text-xs text-error">${this._sendError}</span>`
+                                          : html`<span class="text-xs text-base-content/30 font-mono">${this.flow?.flowHash ?? ''}</span>`}
+                                  </div>
+                                  <div class="flex gap-2 flex-shrink-0">
+                                      <button class="btn btn-ghost btn-sm" @click=${this._closeModal} ?disabled=${this._sending}>Abbrechen</button>
+                                      <button
+                                          class="btn btn-primary btn-sm"
+                                          ?disabled=${!this._modalMsg?.valid || this._sending}
+                                          @click=${this._onSend}
+                                      >
+                                          ${this._sending ? html`<span class="loading loading-spinner loading-xs"></span>` : ''}
+                                          Senden
+                                      </button>
                                   </div>
                               </div>
                           </div>
