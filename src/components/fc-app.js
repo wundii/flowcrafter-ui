@@ -11,6 +11,7 @@ import './fc-schema-list.js'
 import './fc-flow-list.js'
 import './fc-flow-detail.js'
 import './fc-exception-list.js'
+import './fc-queue-chart.js'
 
 const TABS = ['flows', 'exceptions']
 
@@ -230,15 +231,16 @@ export class FcApp extends BaseElement {
 
         return html`
             <div class="min-h-screen bg-base-100">
-                <div class="navbar bg-base-200 shadow-sm px-4">
-                    <div class="flex-1 flex items-center gap-3">
-                        ${logoIcon(28)}
-                        <span class="text-xl font-bold tracking-tight">FlowCrafter UI</span>
-                        <div class="join">
+                <div class="navbar bg-base-200 shadow-sm px-2 sm:px-4 min-h-12">
+                    <!-- Left: logo + title + search -->
+                    <div class="flex-1 flex items-center gap-2 sm:gap-3 min-w-0">
+                        ${logoIcon(24)}
+                        <span class="hidden sm:inline text-base font-bold tracking-tight whitespace-nowrap">FlowCrafter UI</span>
+                        <div class="join min-w-0">
                             <input
                                 type="text"
-                                class="input input-sm input-bordered join-item w-64 font-mono text-xs"
-                                placeholder="Flow-Hash suchen…"
+                                class="input input-sm input-bordered join-item w-28 sm:w-48 md:w-64 font-mono text-xs"
+                                placeholder="Hash suchen…"
                                 .value=${this._searchQuery}
                                 @input=${e => (this._searchQuery = e.target.value)}
                                 @keydown=${this._onSearch}
@@ -247,12 +249,13 @@ export class FcApp extends BaseElement {
                         </div>
                     </div>
 
-                    <div class="flex-none absolute left-1/2 -translate-x-1/2">
+                    <!-- Center: GitHub (only on large screens) -->
+                    <div class="hidden lg:flex flex-none absolute left-1/2 -translate-x-1/2">
                         <a
                             href="https://github.com/wundii/flowcrafter"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="btn btn-ghost btn-sm gap-2 text-base-content/50 hover:text-base-content hover:bg-transparent"
+                            class="flex items-center gap-2 text-sm text-base-content/50 hover:text-base-content transition-colors px-2 py-1 rounded"
                         >
                             <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path
@@ -262,7 +265,14 @@ export class FcApp extends BaseElement {
                             wundii/flowcrafter
                         </a>
                     </div>
-                    <div class="flex items-center gap-2">
+
+                    <!-- Right: queue chart + actions -->
+                    <div class="flex items-center gap-1 sm:gap-2">
+                        <!-- Queue chart (only on medium+ screens) -->
+                        <div class="hidden md:flex mr-1 sm:mr-2 pl-3">
+                            <fc-queue-chart></fc-queue-chart>
+                        </div>
+
                         <!-- Theme toggle -->
                         <label
                             class="swap swap-rotate btn btn-ghost btn-sm btn-square"
@@ -284,7 +294,7 @@ export class FcApp extends BaseElement {
                         </label>
 
                         <!-- Edit connection -->
-                        <button class="btn btn-ghost btn-sm btn-square" title="Verbindung bearbeiten" @click=${this._onEditConnection}>
+                        <button class="hidden sm:flex btn btn-ghost btn-sm btn-square" title="Verbindung bearbeiten" @click=${this._onEditConnection}>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path
                                     stroke-linecap="round"
@@ -295,7 +305,7 @@ export class FcApp extends BaseElement {
                         </button>
 
                         <!-- Change password -->
-                        <button class="btn btn-ghost btn-sm btn-square" title="Passwort ändern" @click=${this._openPwModal}>
+                        <button class="hidden sm:flex btn btn-ghost btn-sm btn-square" title="Passwort ändern" @click=${this._openPwModal}>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path
                                     stroke-linecap="round"
