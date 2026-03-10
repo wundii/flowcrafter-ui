@@ -32,10 +32,12 @@ function postJson(path, body) {
 }
 
 export const api = {
-    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, source?: string }} [opts] */
-    getFlows({ sort = 'desc', top = 1000, skip = 0, source } = {}) {
+    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, source?: string, from?: string, to?: string }} [opts] */
+    getFlows({ sort = 'desc', top = 1000, skip = 0, source, from, to } = {}) {
         const p = new URLSearchParams({ sort, top, skip })
         if (source) p.set('source', source)
+        if (from) p.set('from', from)
+        if (to) p.set('to', to)
         return fetchJson(`/api/flows?${p}`)
     },
 
@@ -49,10 +51,12 @@ export const api = {
         return fetchJson(`/api/flows/detail?runtimeHash=${encodeURIComponent(runtimeHash)}`)
     },
 
-    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, flowHash?: string }} [opts] */
-    getExceptions({ sort = 'desc', top = 1000, skip = 0, flowHash } = {}) {
+    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, flowHash?: string, from?: string, to?: string }} [opts] */
+    getExceptions({ sort = 'desc', top = 1000, skip = 0, flowHash, from, to } = {}) {
         const p = new URLSearchParams({ sort, top, skip })
         if (flowHash) p.set('flowHash', flowHash)
+        if (from) p.set('from', from)
+        if (to) p.set('to', to)
         return fetchJson(`/api/exceptions?${p}`)
     },
 

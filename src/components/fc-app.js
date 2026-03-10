@@ -13,6 +13,8 @@ import './fc-flow-detail.js'
 import './fc-exception-list.js'
 import './fc-queue-chart.js'
 import './fc-queue-list.js'
+import './fc-exception-chart.js'
+import './fc-flow-chart.js'
 
 const TABS = ['flows', 'exceptions', 'queues']
 
@@ -254,17 +256,33 @@ export class FcApp extends BaseElement {
             }
             if (this.selectedSource) {
                 return html`
-                    <fc-flow-list
-                        .source=${this.selectedSource}
-                        @flow-selected=${this._onFlowSelected}
-                        @back=${this._onBackToSchema}
-                    ></fc-flow-list>
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="w-full md:w-1/3">
+                            <fc-flow-chart .source=${this.selectedSource}></fc-flow-chart>
+                        </div>
+                        <div class="w-full md:w-2/3">
+                            <fc-flow-list
+                                .source=${this.selectedSource}
+                                @flow-selected=${this._onFlowSelected}
+                                @back=${this._onBackToSchema}
+                            ></fc-flow-list>
+                        </div>
+                    </div>
                 `
             }
             return html` <fc-schema-list @schema-selected=${this._onSchemaSelected}></fc-schema-list> `
         }
         if (this.activeTab === 'queues') return html`<fc-queue-list></fc-queue-list>`
-        return html`<fc-exception-list></fc-exception-list>`
+        return html`
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="w-full md:w-1/3">
+                    <fc-exception-chart></fc-exception-chart>
+                </div>
+                <div class="w-full md:w-2/3">
+                    <fc-exception-list></fc-exception-list>
+                </div>
+            </div>
+        `
     }
 
     render() {
