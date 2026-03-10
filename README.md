@@ -1,6 +1,6 @@
 # FlowCrafter UI
 
-Web-Frontend für [FlowCrafter](../flowcrafter) — visualisiert Flow-Instanzen, Messages, Exceptions und Queue-Status aus dem PHP-Backend in Echtzeit.
+Web-Frontend für [FlowCrafter](https://github.com/wundii/flowcrafter) — visualisiert Flow-Instanzen, Messages, Exceptions und Queue-Status aus dem PHP-Backend in Echtzeit.
 
 ## Stack
 
