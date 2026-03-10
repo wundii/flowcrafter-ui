@@ -16,12 +16,13 @@ Web-Frontend für [FlowCrafter](../flowcrafter) — visualisiert Flow-Instanzen,
 
 Das UI kommuniziert mit **zwei Backends**:
 
-| Backend | Port | Zweck |
-| ------- | ---- | ----- |
-| Node.js-Proxy | `3000` | Auth-Verwaltung, Verbindungskonfiguration (wird im Dev-Server via Vite-Proxy auf `/api/auth` und `/api/connection` weitergeleitet) |
-| FlowCrafter-API | konfigurierbar | Flow-Daten, Exceptions, Queue — URL wird im Node-Backend gespeichert |
+| Backend         | Port           | Zweck                                                                                                                              |
+| --------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Node.js-Proxy   | `3000`         | Auth-Verwaltung, Verbindungskonfiguration (wird im Dev-Server via Vite-Proxy auf `/api/auth` und `/api/connection` weitergeleitet) |
+| FlowCrafter-API | konfigurierbar | Flow-Daten, Exceptions, Queue — URL wird im Node-Backend gespeichert                                                               |
 
 **Auth-Flow:**
+
 1. Beim ersten Start: Passwort über `fc-login` festlegen (`/api/auth/setup`)
 2. Bei jedem weiteren Start: Login → JWT-Token im `sessionStorage`
 3. Token wird als `Authorization: Bearer <token>` an alle Requests angehängt
@@ -120,6 +121,29 @@ flowcrafter-ui/
 | GET     | `/api/connection`           | Gespeicherte Service-URL abrufen      |
 | POST    | `/api/connection`           | Service-URL & Secret speichern        |
 | DELETE  | `/api/connection`           | Verbindung zurücksetzen               |
+
+---
+
+## Docker Compose
+
+Drei vorkonfigurierte Compose-Files starten den kompletten Stack (Storage + FlowCrafter API/Observer + UI) mit einem Befehl:
+
+```bash
+# Redis
+docker compose -f docker-compose.redis.yml up
+
+# MySQL
+docker compose -f docker-compose.mysql.yml up
+
+# EventSourcingDB
+docker compose -f docker-compose.esdb.yml up
+```
+
+| File                       | Storage            | Ports                                  |
+| -------------------------- | ------------------ | -------------------------------------- |
+| `docker-compose.redis.yml` | Redis (RediSearch) | Redis `:6379`, API `:8000`, UI `:3000` |
+| `docker-compose.mysql.yml` | MySQL 8.0          | MySQL `:3306`, API `:8000`, UI `:3000` |
+| `docker-compose.esdb.yml`  | EventSourcingDB    | ESDB `:3001`, API `:8000`, UI `:3000`  |
 
 ---
 
