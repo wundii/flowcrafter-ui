@@ -1,0 +1,37 @@
+# FlowCrafter Stack mit Redis Storage
+# Usage: docker compose -f docker-compose.redis.yml up
+services:
+  redis:
+    image: redis/redis-stack-server:latest
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+
+  flowcrafter:
+    image: php:8.2-cli
+    working_dir: /var/www/flowcrafter
+    volumes:
+      - ...:/var/www/flowcrafter
+    ports:
+      - '8000:8000'
+    depends_on:
+      - redis
+    environment:
+      FLOWCRAFTER_CONFIG: /var/www/flowcrafter/flowcrafter-redis.php
+    command: >
+      bash -c "
+        docker-php-ext-enable redis 2>/dev/null;
+        vendor/bin/flowcrafter serve --host 0.0.0.0 --port 8000
+      "
+
+  ui:
+    image: wundii/flowcrafter-ui:latest
+    ports:
+      - '3000:3000'
+    volumes:
+      - ui-data:/data
+
+volumes:
+  redis-data:
+  ui-data:

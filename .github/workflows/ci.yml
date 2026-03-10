@@ -68,4 +68,4 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: wundii/flowcrafter-ui:${{ needs.increment-version.outputs.VERSION }}, wundii/flowcrafter-ui:latest
+          tags: wundii/flowcrafter-ui:latest

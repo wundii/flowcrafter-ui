@@ -1,0 +1,43 @@
+# FlowCrafter Stack mit MySQL Storage
+# Usage: docker compose -f docker-compose.mysql.yml up
+services:
+  mysql:
+    image: mysql:8.0
+    ports:
+      - '3306:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: flowcrafter
+      MYSQL_USER: flowcrafter
+      MYSQL_PASSWORD: flowcrafter
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  flowcrafter:
+    image: php:8.2-cli
+    working_dir: /var/www/flowcrafter
+    volumes:
+      - ...:/var/www/flowcrafter
+    ports:
+      - '8000:8000'
+    depends_on:
+      - mysql
+    environment:
+      FLOWCRAFTER_CONFIG: /var/www/flowcrafter/flowcrafter-mysql.php
+    command: >
+      bash -c "
+        docker-php-ext-install pdo pdo_mysql 2>/dev/null;
+        vendor/bin/flowcrafter init;
+        vendor/bin/flowcrafter serve --host 0.0.0.0 --port 8000
+      "
+
+  ui:
+    image: wundii/flowcrafter-ui:latest
+    ports:
+      - '3000:3000'
+    volumes:
+      - ui-data:/data
+
+volumes:
+  mysql-data:
+  ui-data:

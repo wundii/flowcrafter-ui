@@ -1,0 +1,43 @@
+# FlowCrafter Stack mit EventSourcingDB Storage
+# Usage: docker compose -f docker-compose.esdb.yml up
+services:
+  esdb:
+    image: thenativeweb/eventsourcingdb:latest
+    ports:
+      - '3001:3000'
+    command: >
+      run
+      --api-token=secret
+      --data-directory=/var/lib/esdb
+      --http-enabled
+      --https-enabled=false
+    volumes:
+      - esdb-data:/var/lib/esdb
+
+  flowcrafter:
+    image: php:8.2-cli
+    working_dir: /var/www/flowcrafter
+    volumes:
+      - ...:/var/www/flowcrafter
+    ports:
+      - '8000:8000'
+    depends_on:
+      - esdb
+    environment:
+      FLOWCRAFTER_CONFIG: /var/www/flowcrafter/flowcrafter-esdb.php
+    command: >
+      bash -c "
+        vendor/bin/flowcrafter init;
+        vendor/bin/flowcrafter serve --host 0.0.0.0 --port 8000
+      "
+
+  ui:
+    image: wundii/flowcrafter-ui:latest
+    ports:
+      - '3000:3000'
+    volumes:
+      - ui-data:/data
+
+volumes:
+  esdb-data:
+  ui-data:
