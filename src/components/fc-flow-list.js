@@ -154,7 +154,7 @@ export class FcFlowList extends BaseElement {
                                 <!-- Right: status -->
                                 <div class="flex flex-col items-end justify-between gap-2 flex-shrink-0">
                                     ${hasFailed
-                                        ? html`<span class="badge badge-error badge-sm leading-none">Error</span>`
+                                        ? html`<span class="badge badge-error badge-sm leading-none">Failed</span>`
                                         : html`<span class="badge badge-success badge-sm leading-none">OK</span>`}
                                     <span class="text-xs text-primary/60">Details →</span>
                                 </div>

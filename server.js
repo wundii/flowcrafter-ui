@@ -136,7 +136,7 @@ function json(res, data, status = 200) {
 }
 
 // ─── Server ───────────────────────────────────────────────────────────────────
-createServer(async (req, res) => {
+const server = createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost`)
     const path = url.pathname.replace(/\/$/, '')
     const method = req.method
@@ -237,4 +237,15 @@ createServer(async (req, res) => {
     const mime = MIME[extname(filePath)] ?? 'application/octet-stream'
     res.writeHead(200, { 'Content-Type': mime })
     createReadStream(filePath).pipe(res)
-}).listen(PORT, () => console.log(`FlowCrafter UI → http://localhost:${PORT}`))
+})
+
+server.listen(PORT, () => console.log(`FlowCrafter UI → http://localhost:${PORT}`))
+
+process.on('SIGTERM', () => {
+    console.log('Received SIGTERM, shutting down…')
+    server.close(() => process.exit(0))
+})
+process.on('SIGINT', () => {
+    console.log('Received SIGINT, shutting down…')
+    server.close(() => process.exit(0))
+})
