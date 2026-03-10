@@ -24,6 +24,12 @@ export default [
                 CustomEvent: 'readonly',
                 Event: 'readonly',
                 URLSearchParams: 'readonly',
+                setTimeout: 'readonly',
+                clearTimeout: 'readonly',
+                setInterval: 'readonly',
+                clearInterval: 'readonly',
+                navigator: 'readonly',
+                getComputedStyle: 'readonly',
                 // Node globals (server.js)
                 process: 'readonly',
                 Buffer: 'readonly',

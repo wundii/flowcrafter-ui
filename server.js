@@ -71,10 +71,7 @@ function loadConnection() {
 
 function saveConnection(url, secret) {
     mkdirSync(dirname(CONNECTION_FILE), { recursive: true })
-    writeFileSync(
-        CONNECTION_FILE,
-        JSON.stringify({ url, encryptedSecret: secret ? encryptSecret(secret) : null }, null, 2)
-    )
+    writeFileSync(CONNECTION_FILE, JSON.stringify({ url, encryptedSecret: secret ? encryptSecret(secret) : null }, null, 2))
 }
 
 function clearConnection() {

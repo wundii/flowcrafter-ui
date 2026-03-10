@@ -118,8 +118,7 @@ export class FcFlowList extends BaseElement {
                 </button>
                 <div class="flex items-center gap-3">
                     <span class="text-sm text-base-content/60">
-                        ${from}–${to}
-                        ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
+                        ${from}–${to} ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                     </span>
                     <button class="btn btn-sm btn-ghost" @click=${this._load}>↻ Reload</button>
                 </div>
@@ -167,17 +166,13 @@ export class FcFlowList extends BaseElement {
 
             <!-- Pagination -->
             <div class="flex items-center justify-center gap-2 mt-4">
-                <button
-                    class="btn btn-sm btn-ghost border border-base-content/30"
-                    ?disabled=${this._page === 0}
-                    @click=${this._onPrev}
-                >← Zurück</button>
+                <button class="btn btn-sm btn-ghost border border-base-content/30" ?disabled=${this._page === 0} @click=${this._onPrev}>
+                    ← Zurück
+                </button>
                 <span class="text-sm text-base-content/50">Seite ${this._page + 1}</span>
-                <button
-                    class="btn btn-sm btn-ghost border border-base-content/30"
-                    ?disabled=${!this._hasMore}
-                    @click=${this._onNext}
-                >Weiter →</button>
+                <button class="btn btn-sm btn-ghost border border-base-content/30" ?disabled=${!this._hasMore} @click=${this._onNext}>
+                    Weiter →
+                </button>
             </div>
         `
     }

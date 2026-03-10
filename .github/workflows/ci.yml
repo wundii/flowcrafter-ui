@@ -2,9 +2,9 @@ name: 'CI Pipeline'
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ['main']
   pull_request:
-    branches: [ "main" ]
+    branches: ['main']
 
 permissions:
   contents: read
@@ -45,7 +45,7 @@ jobs:
           echo VERSION=${{ github.run_number }} >> $GITHUB_OUTPUT
 
   build-and-push:
-    needs: [ lint, increment-version ]
+    needs: [lint, increment-version]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     name: 'CI Pipeline - Build and push'

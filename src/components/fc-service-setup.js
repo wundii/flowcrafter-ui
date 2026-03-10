@@ -121,18 +121,14 @@ export class FcServiceSetup extends BaseElement {
                                                   class="btn btn-ghost btn-sm flex-1"
                                                   ?disabled=${this._loading}
                                                   @click=${() =>
-                                                      this.dispatchEvent(
-                                                          new CustomEvent('cancel', { bubbles: true, composed: true })
-                                                      )}
+                                                      this.dispatchEvent(new CustomEvent('cancel', { bubbles: true, composed: true }))}
                                               >
                                                   Abbrechen
                                               </button>
                                           `
                                         : ''}
                                     <button type="submit" class="btn btn-primary btn-sm flex-1" ?disabled=${this._loading}>
-                                        ${this._loading
-                                            ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                            : 'Verbinden'}
+                                        ${this._loading ? html`<span class="loading loading-spinner loading-xs"></span>` : 'Verbinden'}
                                     </button>
                                 </div>
                             </form>

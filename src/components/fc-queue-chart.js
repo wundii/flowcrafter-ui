@@ -78,31 +78,25 @@ export class FcQueueChart extends BaseElement {
                     <div class="text-sm font-mono font-semibold leading-none ${colorClass}">
                         ${this._error
                             ? html`<span class="text-base-content/30">—</span>`
-                            : this._current ?? html`<span class="text-base-content/30">…</span>`}
+                            : (this._current ?? html`<span class="text-base-content/30">…</span>`)}
                     </div>
                 </div>
 
                 <!-- SVG chart — currentColor is set by colorClass on the svg element -->
-                <svg
-                    width="${W}"
-                    height="${H}"
-                    viewBox="0 0 ${W} ${H}"
-                    class="rounded ${colorClass}"
-                >
+                <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" class="rounded ${colorClass}">
                     <!-- background -->
-                    <rect x="0" y="0" width="${W}" height="${H}" rx="4"
-                        style="fill: oklch(from var(--color-base-300) l c h / 0.6)"
-                    />
+                    <rect x="0" y="0" width="${W}" height="${H}" rx="4" style="fill: oklch(from var(--color-base-300) l c h / 0.6)" />
 
-                    ${hasData && area ? svg`
+                    ${hasData && area
+                        ? svg`
                         <path d="${area}" fill="currentColor" opacity="0.18" />
                         <path d="${path}" fill="none" stroke="currentColor" stroke-width="1.5"
                             stroke-linejoin="round" stroke-linecap="round" />
-                    ` : ''}
+                    `
+                        : ''}
 
                     <!-- baseline -->
-                    <line x1="0" y1="${H}" x2="${W}" y2="${H}"
-                        stroke="currentColor" stroke-width="1" opacity="0.15" />
+                    <line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="currentColor" stroke-width="1" opacity="0.15" />
                 </svg>
             </div>
         `

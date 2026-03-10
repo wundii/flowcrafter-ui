@@ -29,7 +29,10 @@ export class FcSchemaList extends BaseElement {
         this.loading = true
         this.error = null
         try {
-            const [flowsRes, exceptionsRes] = await Promise.all([api.getFlows({ sort: 'desc', top: 1000 }), api.getExceptions({ top: 1000 })])
+            const [flowsRes, exceptionsRes] = await Promise.all([
+                api.getFlows({ sort: 'desc', top: 1000 }),
+                api.getExceptions({ top: 1000 }),
+            ])
             const flows = flowsRes.items ?? []
             const exceptions = exceptionsRes.items ?? []
 
@@ -121,11 +124,15 @@ export class FcSchemaList extends BaseElement {
                         >
                             <!-- Card header -->
                             <div class="px-4 pt-4 pb-3 border-b border-base-300">
-                                <div class="font-bold text-sm leading-tight mb-0.5 truncate" title="${shortClass(schema.flowSource)}">${shortClass(schema.flowSource)}</div>
+                                <div class="font-bold text-sm leading-tight mb-0.5 truncate" title="${shortClass(schema.flowSource)}">
+                                    ${shortClass(schema.flowSource)}
+                                </div>
                                 <div class="font-mono text-xs text-base-content/35 truncate mb-2" title="${schema.flowSource}">
                                     ${schema.flowSource}
                                 </div>
-                                <span class="badge badge-outline badge-xs text-base-content/50" title="${schema.flowType}">${schema.flowType}</span>
+                                <span class="badge badge-outline badge-xs text-base-content/50" title="${schema.flowType}"
+                                    >${schema.flowType}</span
+                                >
                             </div>
 
                             <!-- Stats row -->

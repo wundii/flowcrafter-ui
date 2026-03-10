@@ -71,8 +71,7 @@ export class FcQueueList extends BaseElement {
                 </div>
             `
 
-        if (this._queues.length === 0)
-            return html`<div class="alert alert-success"><span>Queue ist leer.</span></div>`
+        if (this._queues.length === 0) return html`<div class="alert alert-success"><span>Queue ist leer.</span></div>`
 
         return html`
             <!-- Toolbar -->
@@ -101,9 +100,7 @@ export class FcQueueList extends BaseElement {
                                     <div class="text-xs text-base-content/50 mb-1" title="${item.messageSource}">
                                         ${shortClass(item.messageSource)}
                                     </div>
-                                    ${item.queueId
-                                        ? html`<div class="font-mono text-xs text-base-content/30">#${item.queueId}</div>`
-                                        : ''}
+                                    ${item.queueId ? html`<div class="font-mono text-xs text-base-content/30">#${item.queueId}</div>` : ''}
                                 </div>
 
                                 <!-- Right -->
@@ -133,7 +130,11 @@ export class FcQueueList extends BaseElement {
                             ${open && hasMessage
                                 ? html`
                                       <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
-                                          <pre class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed">${JSON.stringify(item.message, null, 2)}</pre>
+                                          <pre
+                                              class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
+                                          >
+${JSON.stringify(item.message, null, 2)}</pre
+                                          >
                                       </div>
                                   `
                                 : ''}

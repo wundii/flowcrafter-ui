@@ -109,8 +109,7 @@ export class FcExceptionList extends BaseElement {
             <!-- Toolbar -->
             <div class="flex items-center justify-between mb-4">
                 <span class="text-sm text-base-content/60">
-                    ${from}–${to}
-                    ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
+                    ${from}–${to} ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                     Exceptions
                 </span>
                 <button class="btn btn-sm btn-ghost" @click=${this._load}>↻ Reload</button>
@@ -168,7 +167,9 @@ export class FcExceptionList extends BaseElement {
                                       <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
                                           <pre
                                               class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
-                                          >${ex.traceString}</pre>
+                                          >
+${ex.traceString}</pre
+                                          >
                                       </div>
                                   `
                                 : ''}
@@ -179,17 +180,13 @@ export class FcExceptionList extends BaseElement {
 
             <!-- Pagination -->
             <div class="flex items-center justify-center gap-2 mt-4">
-                <button
-                    class="btn btn-sm btn-ghost border border-base-content/30"
-                    ?disabled=${this._page === 0}
-                    @click=${this._onPrev}
-                >← Zurück</button>
+                <button class="btn btn-sm btn-ghost border border-base-content/30" ?disabled=${this._page === 0} @click=${this._onPrev}>
+                    ← Zurück
+                </button>
                 <span class="text-sm text-base-content/50">Seite ${this._page + 1}</span>
-                <button
-                    class="btn btn-sm btn-ghost border border-base-content/30"
-                    ?disabled=${!this._hasMore}
-                    @click=${this._onNext}
-                >Weiter →</button>
+                <button class="btn btn-sm btn-ghost border border-base-content/30" ?disabled=${!this._hasMore} @click=${this._onNext}>
+                    Weiter →
+                </button>
             </div>
         `
     }
