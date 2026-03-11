@@ -48,8 +48,8 @@ export class FcExceptionChart extends BaseElement {
                 sort: 'desc',
                 top: 10000,
                 skip: 0,
-                from: from.toISOString().replace(/\.\d{3}Z$/, '+00:00'),
-                to: now.toISOString().replace(/\.\d{3}Z$/, '+00:00'),
+                from: from.toISOString().replace('Z', '+00:00'),
+                to: now.toISOString().replace('Z', '+00:00'),
             })
             const items = res.items ?? []
             this._data = this._aggregate(items)

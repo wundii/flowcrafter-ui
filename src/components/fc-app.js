@@ -298,7 +298,7 @@ export class FcApp extends BaseElement {
 
         return html`
             <div class="min-h-screen bg-base-100">
-                <div class="navbar bg-base-200 shadow-sm px-2 sm:px-4 min-h-12">
+                <div class="navbar bg-base-200 backdrop-blur-sm shadow-md border-b border-base-content/15 px-2 sm:px-4 min-h-12 sticky top-0 z-50">
                     <!-- Left: logo + title + search -->
                     <div class="flex-1 flex items-center gap-2 sm:gap-3 min-w-0">
                         <!-- Toolbox dropdown -->
@@ -364,14 +364,14 @@ export class FcApp extends BaseElement {
                         <div class="join min-w-0">
                             <input
                                 type="text"
-                                class="input input-sm input-bordered join-item w-28 sm:w-48 md:w-64 font-mono text-xs"
+                                class="fc-search-input input input-sm join-item w-28 sm:w-48 md:w-64 font-mono text-xs border-transparent bg-base-content/2"
                                 placeholder="Hash suchen…"
                                 .value=${this._searchQuery}
                                 @input=${e => (this._searchQuery = e.target.value)}
                                 @keydown=${this._onSearch}
                             />
                             <button
-                                class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50 join-item"
+                                class="btn btn-sm btn-ghost join-item border-transparent"
                                 @click=${this._onSearch}
                             >
                                 ↵
@@ -546,7 +546,7 @@ export class FcApp extends BaseElement {
                                       </div>
                                   </form>
                               </div>
-                              <form method="dialog" class="modal-backdrop">
+                              <form method="dialog" class="modal-backdrop backdrop-blur-sm">
                                   <button @click=${this._closePwModal}>close</button>
                               </form>
                           `

@@ -173,7 +173,19 @@ export class FcFlowList extends BaseElement {
                         <span class="text-sm text-base-content/60">
                             ${from}–${to} ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                         </span>
-                        <button class="btn btn-sm btn-ghost" @click=${this._load}>↻</button>
+                        <button
+                            class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                            title="Neu laden"
+                            @click=${this._load}
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                />
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
@@ -221,7 +233,19 @@ export class FcFlowList extends BaseElement {
                     <span class="text-sm text-base-content/60">
                         ${from}–${to} ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                     </span>
-                    <button class="btn btn-sm btn-ghost" @click=${this._load}>↻ Reload</button>
+                    <button
+                        class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                        title="Neu laden"
+                        @click=${this._load}
+                    >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
@@ -236,28 +260,27 @@ export class FcFlowList extends BaseElement {
                      ${hasFailed ? 'border-error/25' : 'border-base-300'}"
                             @click=${() => this._onSelect(flow)}
                         >
-                            <div class="grid grid-cols-[1fr_auto] gap-2 px-4 py-3">
-                                <!-- Left: name + subtitle + meta -->
-                                <div class="min-w-0">
-                                    <div class="font-semibold text-sm text-base-content leading-tight mb-0.5">
-                                        ${shortClass(flow.flowSource)}
+                            <div class="px-4 py-3 flex flex-col gap-1.5">
+                                <!-- Row 1: Source + Status -->
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        ${hasFailed
+                                            ? html`<span class="badge badge-error badge-sm leading-none">Failed</span>`
+                                            : html`<span class="badge badge-success badge-sm leading-none">OK</span>`}
+                                        <span class="font-semibold text-sm text-base-content truncate">
+                                            ${shortClass(flow.flowSource)}
+                                        </span>
                                     </div>
-                                    <div class="text-sm text-base-content/50 leading-snug break-words mb-2">
-                                        ${flow.flowSubject ||
-                                        html`<span class="font-mono" style="font-size:11px;">${flow.flowHash.slice(0, 20)}…</span>`}
-                                    </div>
-                                    <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-base-content/50">
-                                        <span class="badge badge-outline badge-xs text-base-content/50">${flow.flowType}</span>
-                                        <span>${formatDate(flow.time)}</span>
-                                    </div>
+                                    <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(flow.time)}</span>
                                 </div>
-
-                                <!-- Right: status -->
-                                <div class="flex flex-col items-end justify-between gap-2 flex-shrink-0">
-                                    ${hasFailed
-                                        ? html`<span class="badge badge-error badge-sm leading-none">Failed</span>`
-                                        : html`<span class="badge badge-success badge-sm leading-none">OK</span>`}
-                                    <span class="text-xs text-primary/60">Details →</span>
+                                <!-- Row 2: Hash -->
+                                <div class="font-mono text-xs text-base-content/40 truncate">${flow.flowHash}</div>
+                                <!-- Row 3: Subject + Type -->
+                                <div class="flex items-baseline justify-between gap-2">
+                                    <span class="text-sm text-base-content/50 truncate">
+                                        ${flow.flowSubject || ''}
+                                    </span>
+                                    <span class="badge badge-outline badge-xs text-base-content/50 flex-shrink-0">${flow.flowType}</span>
                                 </div>
                             </div>
                         </div>

@@ -188,38 +188,40 @@ export class FcFlowDetail extends BaseElement {
                     <button class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50" @click=${this._onBack}>
                         ← Zurück zur Flow-Liste
                     </button>
-                    <button
-                        class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
-                        @click=${async () => {
-                            await this._load(true)
-                            this._scrollToSelected()
-                        }}
-                        title="Neu laden"
-                    >
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                        </svg>
-                    </button>
-                    ${this.flow
-                        ? html`
-                              <button
-                                  class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
-                                  title="Raw JSON anzeigen"
-                                  @click=${() => {
-                                      this._rawModal = true
-                                      this.updateComplete.then(() => this.querySelector('#fc-raw-modal')?.showModal())
-                                  }}
-                              >
-                                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                      <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4-4 4M7 8l-4 4 4 4M14 4l-4 16" />
-                                  </svg>
-                              </button>
-                          `
-                        : ''}
+                    <div class="ml-auto flex items-center gap-2">
+                        ${this.flow
+                            ? html`
+                                  <button
+                                      class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                                      title="Raw JSON anzeigen"
+                                      @click=${() => {
+                                          this._rawModal = true
+                                          this.updateComplete.then(() => this.querySelector('#fc-raw-modal')?.showModal())
+                                      }}
+                                  >
+                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4-4 4M7 8l-4 4 4 4M14 4l-4 16" />
+                                      </svg>
+                                  </button>
+                              `
+                            : ''}
+                        <button
+                            class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                            title="Neu laden"
+                            @click=${async () => {
+                                await this._load(true)
+                                this._scrollToSelected()
+                            }}
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Raw JSON Modal -->

@@ -1,2 +1,10 @@
 @import 'tailwindcss';
 @plugin "daisyui";
+
+.fc-search-input,
+.fc-search-input:focus {
+    outline: none;
+    border-color: transparent;
+    border-bottom-color: var(--color-base-content);
+    box-shadow: none;
+}

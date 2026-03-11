@@ -198,9 +198,20 @@ export class FcExceptionList extends BaseElement {
                 <div class="flex items-center gap-3 flex-shrink-0 ml-auto">
                     <span class="text-sm text-base-content/60">
                         ${from}–${to} ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
-                        Exceptions
                     </span>
-                    <button class="btn btn-sm btn-ghost" @click=${this._load}>↻ Reload</button>
+                    <button
+                        class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                        title="Neu laden"
+                        @click=${this._load}
+                    >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
@@ -213,37 +224,44 @@ export class FcExceptionList extends BaseElement {
 
                     return html`
                         <div class="rounded-box border border-error/25 bg-base-200 overflow-hidden">
-                            <div class="grid grid-cols-[1fr_auto] gap-2 px-4 py-3">
-                                <div class="min-w-0">
-                                    <div class="font-semibold text-sm text-base-content leading-tight mb-0.5" title="${ex.stubSource}">
+                            <div class="px-4 py-3 flex flex-col gap-1.5">
+                                <!-- Row 1: Stub + Time -->
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="font-semibold text-sm text-base-content truncate" title="${ex.stubSource}">
                                         ${shortClass(ex.stubSource)}
-                                    </div>
-                                    <div class="text-sm text-error leading-snug break-words mb-2">${ex.message}</div>
-                                    <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-base-content/50">
+                                    </span>
+                                    <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>
+                                </div>
+                                <!-- Row 2: Error message -->
+                                <div class="text-sm text-error leading-snug break-words">${ex.message}</div>
+                                <!-- Row 3: File + FlowHash + Trace toggle -->
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="flex items-baseline gap-3 min-w-0 text-xs text-base-content/50">
                                         ${ex.file
                                             ? html`
-                                                  <span title="${ex.file}">
-                                                      <span class="font-mono" style="font-size:11px;">
-                                                          ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
-                                                      </span>
+                                                  <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
+                                                      ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
                                                   </span>
                                               `
                                             : ''}
-                                        <span>${formatDate(ex.time)}</span>
+                                        <button
+                                            class="font-mono text-primary/70 hover:text-primary flex-shrink-0"
+                                            style="font-size:11px;"
+                                            title="Flow ${ex.flowHash} öffnen"
+                                            @click=${e => {
+                                                e.stopPropagation()
+                                                this._navigateToFlow(ex.flowHash)
+                                            }}
+                                        >
+                                            ⤢ ${ex.flowHash}
+                                        </button>
                                     </div>
-                                </div>
-
-                                <div class="flex flex-col items-end justify-between gap-2 flex-shrink-0">
-                                    <button
-                                        class="btn btn-xs btn-ghost font-mono text-primary/70 hover:text-primary"
-                                        title="Flow ${ex.flowHash} öffnen"
-                                        @click=${() => this._navigateToFlow(ex.flowHash)}
-                                    >
-                                        ⤢ ${ex.flowHash.slice(0, 10)}…
-                                    </button>
                                     ${hasTrace
                                         ? html`
-                                              <button class="btn btn-xs btn-ghost text-base-content/40" @click=${() => this._toggleRow(id)}>
+                                              <button
+                                                  class="btn btn-xs btn-ghost text-base-content/40 flex-shrink-0"
+                                                  @click=${() => this._toggleRow(id)}
+                                              >
                                                   ${open ? '▲ Trace' : '▼ Trace'}
                                               </button>
                                           `
