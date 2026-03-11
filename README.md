@@ -85,9 +85,12 @@ flowcrafter-ui/
 │   │   ├── fc-schema-list.js    # Übersichtskacheln pro Flow-Klasse (Schema)
 │   │   ├── fc-flow-list.js      # Tabelle aller Flow-Instanzen eines Schemas
 │   │   ├── fc-flow-detail.js    # Detail-Ansicht: Runs, Messages, Exceptions
+│   │   ├── fc-flow-chart.js     # SVG-Balkendiagramm: Flows pro Tag (14 Tage)
 │   │   ├── fc-flow-graph.js     # SVG-Graph der Flow-Struktur + Stub-Input-Modal
 │   │   ├── fc-exception-list.js # Tabelle aller Exceptions
+│   │   ├── fc-exception-chart.js # SVG-Balkendiagramm: Exceptions pro Tag (14 Tage)
 │   │   ├── fc-queue-chart.js    # Live-Sparkline der Queue-Größe (Poll alle 3s)
+│   │   ├── fc-queue-list.js     # Tabelle aller Queues mit Details
 │   │   └── fc-json-editor.js    # CodeMirror JSON-Editor Wrapper
 │   ├── services/
 │   │   ├── api.js               # HTTP-Client für die FlowCrafter-API

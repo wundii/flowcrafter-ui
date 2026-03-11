@@ -30,7 +30,7 @@ services:
     ports:
       - '3000:3000'
     volumes:
-      - ui-data:/data
+      - ui-data:/flowcrafter/data
 
 volumes:
   redis-data:

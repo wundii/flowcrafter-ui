@@ -128,6 +128,13 @@ export class FcFlowChart extends BaseElement {
                 </div>
 
                 <svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <linearGradient id="flow-area-grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" class="[stop-color:oklch(var(--p))]" stop-opacity="0.3" />
+                            <stop offset="100%" class="[stop-color:oklch(var(--p))]" stop-opacity="0" />
+                        </linearGradient>
+                    </defs>
+
                     <!-- Y-axis grid + labels -->
                     ${yTicks.map(t => {
                         const y = PAD_TOP + chartH - (t / max) * chartH
@@ -139,8 +146,8 @@ export class FcFlowChart extends BaseElement {
                         `
                     })}
 
-                    <!-- Area fill -->
-                    <path d="${areaPath}" class="fill-primary/15" />
+                    <!-- Area fill with vertical gradient -->
+                    <path d="${areaPath}" fill="url(#flow-area-grad)" />
 
                     <!-- Line -->
                     <path
