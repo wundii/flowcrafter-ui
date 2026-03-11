@@ -7,7 +7,7 @@ import { logoIcon } from '../assets/logo.js'
 import { api } from '../services/api.js'
 import './fc-login.js'
 import './fc-service-setup.js'
-import './fc-schema-list.js'
+import './fc-type-list.js'
 import './fc-flow-list.js'
 import './fc-flow-detail.js'
 import './fc-exception-list.js'
@@ -15,8 +15,9 @@ import './fc-queue-chart.js'
 import './fc-queue-list.js'
 import './fc-exception-chart.js'
 import './fc-flow-chart.js'
+import './fc-overview.js'
 
-const TABS = ['flows', 'exceptions', 'queues']
+const TABS = ['overview', 'flows', 'exceptions', 'queues']
 
 export class FcApp extends BaseElement {
     static properties = {
@@ -45,7 +46,7 @@ export class FcApp extends BaseElement {
         this._serverDescription = null
         this._serverInfo = null
         this._toolboxOpen = false
-        this.activeTab = 'flows'
+        this.activeTab = 'overview'
         this.selectedPrefix = null
         this.selectedFlowHash = null
         this.selectedRuntimeHash = null
@@ -261,7 +262,16 @@ export class FcApp extends BaseElement {
         `
     }
 
+    _onFlowTypeSelected(_e) {
+        this.activeTab = 'flows'
+        this.selectedPrefix = null
+        this.selectedFlowHash = null
+    }
+
     _renderContent() {
+        if (this.activeTab === 'overview') {
+            return html`<fc-overview @flow-type-selected=${this._onFlowTypeSelected}></fc-overview>`
+        }
         if (this.activeTab === 'flows') {
             if (this.selectedFlowHash) {
                 return html`
@@ -288,7 +298,7 @@ export class FcApp extends BaseElement {
                     </div>
                 `
             }
-            return html` <fc-schema-list @schema-selected=${this._onSchemaSelected}></fc-schema-list> `
+            return html` <fc-type-list @schema-selected=${this._onSchemaSelected}></fc-type-list> `
         }
         if (this.activeTab === 'queues') return html`<fc-queue-list></fc-queue-list>`
         return html`
@@ -341,9 +351,10 @@ export class FcApp extends BaseElement {
                                                   ? 'text-base-content/40'
                                                   : 'text-error/70 animate-pulse'}"
                                           >
-                                              ${[...this._serverDescription ?? ''].length > 24
+                                              ${[...(this._serverDescription ?? '')].length > 24
                                                   ? [...this._serverDescription].slice(0, 21).join('') + '...'
-                                                  : this._serverDescription || (!this._serverInfo?.observerRunning ? 'Observer stopped' : '')}
+                                                  : this._serverDescription ||
+                                                    (!this._serverInfo?.observerRunning ? 'Observer stopped' : '')}
                                           </span>`
                                         : ''}
                                 </div>
@@ -359,7 +370,7 @@ export class FcApp extends BaseElement {
                                               Server Info
                                           </div>
                                           <div class="flex flex-col gap-2.5">
-                                              ${[...this._serverDescription ?? ''].length > 24
+                                              ${[...(this._serverDescription ?? '')].length > 24
                                                   ? html`<div class="flex items-baseline justify-between gap-3">
                                                         <span class="text-xs text-base-content/50 shrink-0">Description</span>
                                                         <span class="text-xs text-right break-all text-base-content/60"
@@ -502,7 +513,7 @@ export class FcApp extends BaseElement {
                                         this.selectedFlowHash = null
                                     }}
                                 >
-                                    ${{ flows: 'Flows', exceptions: 'Exceptions', queues: 'Queues' }[tab]}
+                                    ${{ overview: 'Overview', flows: 'Flows', exceptions: 'Exceptions', queues: 'Queues' }[tab]}
                                 </a>
                             `
                         )}

@@ -6,11 +6,12 @@ function flowTypePrefix(flowType) {
     return (flowType ?? '').replace(/\.v\d+$/, '').toLowerCase()
 }
 
-export class FcSchemaList extends BaseElement {
+export class FcTypeList extends BaseElement {
     static properties = {
         schemas: { state: true },
         loading: { state: true },
         error: { state: true },
+        _sortAsc: { state: true },
     }
 
     constructor() {
@@ -18,6 +19,7 @@ export class FcSchemaList extends BaseElement {
         this.schemas = []
         this.loading = true
         this.error = null
+        this._sortAsc = true
     }
 
     connectedCallback() {
@@ -65,12 +67,17 @@ export class FcSchemaList extends BaseElement {
                 s.successRate = s.total > 0 ? Math.round(((s.total - s.failed) / s.total) * 100) : 100
             }
 
-            this.schemas = [...map.values()].sort((a, b) => b.lastTime?.localeCompare(a.lastTime ?? '') ?? 0)
+            this.schemas = [...map.values()]
         } catch (err) {
             this.error = err.message
         } finally {
             this.loading = false
         }
+    }
+
+    _sortedSchemas() {
+        const dir = this._sortAsc ? 1 : -1
+        return [...this.schemas].sort((a, b) => dir * a.prefix.localeCompare(b.prefix))
     }
 
     _onSelect(schema) {
@@ -108,24 +115,43 @@ export class FcSchemaList extends BaseElement {
                     <span class="font-semibold">${this.schemas.length}</span>
                     Type${this.schemas.length !== 1 ? 's' : ''}
                 </span>
-                <button
-                    class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
-                    title="Neu laden"
-                    @click=${this._load}
-                >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                    </svg>
-                </button>
+                <div class="flex items-center gap-1">
+                    <button
+                        class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                        title=${this._sortAsc ? 'A → Z' : 'Z → A'}
+                        @click=${() => {
+                            this._sortAsc = !this._sortAsc
+                        }}
+                    >
+                        <svg
+                            class="w-3.5 h-3.5 transition-transform ${this._sortAsc ? '' : 'rotate-180'}"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            viewBox="0 0 24 24"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9M3 12h5m4 0l4-4m0 0l4 4m-4-4v12" />
+                        </svg>
+                    </button>
+                    <button
+                        class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                        title="Neu laden"
+                        @click=${this._load}
+                    >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <!-- Type grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                ${this.schemas.map(schema => {
+                ${this._sortedSchemas().map(schema => {
                     const hasFailed = schema.failed > 0
                     const rateColor = schema.successRate === 100 ? 'text-success' : schema.successRate >= 80 ? 'text-warning' : 'text-error'
 
@@ -171,4 +197,4 @@ export class FcSchemaList extends BaseElement {
     }
 }
 
-customElements.define('fc-schema-list', FcSchemaList)
+customElements.define('fc-type-list', FcTypeList)

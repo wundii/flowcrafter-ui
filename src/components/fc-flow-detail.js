@@ -279,7 +279,7 @@ export class FcFlowDetail extends BaseElement {
                                   </div>
                               </div>
 
-                              <form method="dialog" class="modal-backdrop">
+                              <form method="dialog" class="modal-backdrop backdrop-blur-sm">
                                   <button>close</button>
                               </form>
                           `

@@ -846,7 +846,7 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                   </div>
                               </div>
 
-                              <form method="dialog" class="modal-backdrop">
+                              <form method="dialog" class="modal-backdrop backdrop-blur-sm">
                                   <button @click=${this._closeModal}>close</button>
                               </form>
                           `
