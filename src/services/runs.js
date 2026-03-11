@@ -1,6 +1,9 @@
+const byTime = (a, b) => new Date(a.time) - new Date(b.time)
+
 /**
  * Builds run list from real API flow data.
  * Each run groups its messages and exceptions by flowRuntimeHash.
+ * Runs, messages and exceptions are sorted ascending by time.
  */
 export function buildRuns(flow) {
     if (!flow?.flowRuns?.length) return []
@@ -8,10 +11,12 @@ export function buildRuns(flow) {
     const msgs = flow.flowMessages ?? []
     const excs = flow.flowExceptions ?? []
 
-    return flow.flowRuns.map((run, i) => {
+    const sortedRuns = [...flow.flowRuns].sort(byTime)
+
+    return sortedRuns.map((run, i) => {
         const runtimeHash = run.flowRuntimeHash
-        const runMessages = msgs.filter(m => m.flowRuntimeHash === runtimeHash)
-        const runExceptions = excs.filter(e => e.flowRuntimeHash === runtimeHash)
+        const runMessages = msgs.filter(m => m.flowRuntimeHash === runtimeHash).sort(byTime)
+        const runExceptions = excs.filter(e => e.flowRuntimeHash === runtimeHash).sort(byTime)
 
         return {
             runId: runtimeHash,
