@@ -197,14 +197,14 @@ export class FcApp extends BaseElement {
         if (e.type === 'keydown' && e.key !== 'Enter') return
         const q = this._searchQuery.trim()
         if (!q) return
-        this._searchQuery = ''
-        this.activeTab = 'flows'
-        this.selectedPrefix = null
 
         // Try to resolve as runtimeHash first via API
         try {
             const flow = await api.getFlowByRuntimeHash(q)
             if (flow?.flowHash) {
+                this._searchQuery = ''
+                this.activeTab = 'flows'
+                this.selectedPrefix = null
                 this.selectedFlowHash = flow.flowHash
                 this.selectedRuntimeHash = q
                 return
@@ -213,8 +213,24 @@ export class FcApp extends BaseElement {
             // not a runtimeHash — fall through to flowHash search
         }
 
-        this.selectedRuntimeHash = null
-        this.selectedFlowHash = q
+        // Try as flowHash
+        try {
+            await api.getFlow(q)
+            this._searchQuery = ''
+            this.activeTab = 'flows'
+            this.selectedPrefix = null
+            this.selectedRuntimeHash = null
+            this.selectedFlowHash = q
+        } catch {
+            this._shakeSearch()
+        }
+    }
+
+    _shakeSearch() {
+        const input = this.querySelector('.fc-search-input')
+        if (!input) return
+        input.classList.add('fc-shake')
+        input.addEventListener('animationend', () => input.classList.remove('fc-shake'), { once: true })
     }
 
     _breadcrumb() {
@@ -311,17 +327,23 @@ export class FcApp extends BaseElement {
                         >
                             <button
                                 class="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-base-content/8 transition-colors cursor-pointer"
+                                @click=${() => {
+                                    this.activeTab = 'flows'
+                                    this.selectedFlowHash = null
+                                }}
                             >
                                 ${logoIcon(24)}
                                 <div class="flex flex-col leading-tight text-left">
                                     <span class="text-base font-bold tracking-tight whitespace-nowrap">FlowCrafter UI</span>
                                     ${this._serverDescription || this._serverInfo
                                         ? html` <span
-                                              class="text-xs truncate max-w-48 ${this._serverInfo?.observerRunning
+                                              class="text-xs whitespace-nowrap ${this._serverInfo?.observerRunning
                                                   ? 'text-base-content/40'
                                                   : 'text-error/70 animate-pulse'}"
                                           >
-                                              ${this._serverDescription || (!this._serverInfo?.observerRunning ? 'Observer stopped' : '')}
+                                              ${[...this._serverDescription ?? ''].length > 24
+                                                  ? [...this._serverDescription].slice(0, 21).join('') + '...'
+                                                  : this._serverDescription || (!this._serverInfo?.observerRunning ? 'Observer stopped' : '')}
                                           </span>`
                                         : ''}
                                 </div>
@@ -337,6 +359,14 @@ export class FcApp extends BaseElement {
                                               Server Info
                                           </div>
                                           <div class="flex flex-col gap-2.5">
+                                              ${[...this._serverDescription ?? ''].length > 24
+                                                  ? html`<div class="flex items-baseline justify-between gap-3">
+                                                        <span class="text-xs text-base-content/50 shrink-0">Description</span>
+                                                        <span class="text-xs text-right break-all text-base-content/60"
+                                                            >${this._serverDescription}</span
+                                                        >
+                                                    </div>`
+                                                  : ''}
                                               <div class="flex items-baseline justify-between gap-3">
                                                   <span class="text-xs text-base-content/50 shrink-0">Service URL</span>
                                                   <span class="font-mono text-xs text-right break-all text-base-content/60"
