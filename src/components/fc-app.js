@@ -83,6 +83,7 @@ export class FcApp extends BaseElement {
             this._loadInfo()
             this._startInfoPolling()
         }
+        this._applyRoute()
     }
 
     async _loadInfo() {

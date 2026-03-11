@@ -129,7 +129,9 @@ final class PostStubMock extends PostStub
                 flowType: 'flow.order.create.v1',
                 stubs: [
                     { source: 'App\\Stubs\\ValidateInput', messageEnum: 'init' },
+                    { source: 'App\\Stubs\\CheckInventory', messageEnum: 'init' },
                     { source: 'App\\Stubs\\CreateOrder', messageEnum: 'data' },
+                    { source: 'App\\Stubs\\RecordTransaction', messageEnum: 'data' },
                     { source: 'App\\Stubs\\SendNotification', messageEnum: 'return' },
                 ],
             },
@@ -146,7 +148,10 @@ final class PostStubMock extends PostStub
                 stubs: [
                     { source: 'App\\Stubs\\CancelOrder', messageEnum: 'init' },
                     { source: 'App\\Stubs\\ProcessRefund', messageEnum: 'data' },
+                    { source: 'App\\Stubs\\UpdateInventory', messageEnum: 'data' },
                     { source: 'App\\Stubs\\SendNotification', messageEnum: 'return' },
+                    { source: 'App\\Stubs\\WriteAuditLog', messageEnum: 'return' },
+                    { source: 'App\\Stubs\\RecordTransaction', messageEnum: 'return' },
                 ],
             },
             {
@@ -154,21 +159,25 @@ final class PostStubMock extends PostStub
                 stubs: [
                     { source: 'App\\Stubs\\GenerateInvoice', messageEnum: 'init' },
                     { source: 'App\\Stubs\\CalculateTax', messageEnum: 'data' },
-                    { source: 'App\\Stubs\\StorePdf', messageEnum: 'return' },
+                    { source: 'App\\Stubs\\StorePdf', messageEnum: 'data' },
+                    { source: 'App\\Stubs\\WriteAuditLog', messageEnum: 'return' },
                 ],
             },
             {
                 flowType: 'flow.invoice.send.v1',
                 stubs: [
                     { source: 'App\\Stubs\\LoadInvoice', messageEnum: 'init' },
+                    { source: 'App\\Stubs\\ValidateInput', messageEnum: 'init' },
                     { source: 'App\\Stubs\\SendEmail', messageEnum: 'data' },
                     { source: 'App\\Stubs\\WriteAuditLog', messageEnum: 'return' },
+                    { source: 'App\\Stubs\\SendNotification', messageEnum: 'return' },
                 ],
             },
             {
                 flowType: 'flow.payment.process.v1',
                 stubs: [
                     { source: 'App\\Stubs\\ValidateInput', messageEnum: 'init' },
+                    { source: 'App\\Stubs\\CheckFraud', messageEnum: 'init' },
                     { source: 'App\\Stubs\\ChargeGateway', messageEnum: 'data' },
                     { source: 'App\\Stubs\\RecordTransaction', messageEnum: 'return' },
                 ],
@@ -185,8 +194,11 @@ final class PostStubMock extends PostStub
                 flowType: 'flow.user.register.v1',
                 stubs: [
                     { source: 'App\\Stubs\\ValidateInput', messageEnum: 'init' },
+                    { source: 'App\\Stubs\\ValidateEmail', messageEnum: 'init' },
                     { source: 'App\\Stubs\\CreateUser', messageEnum: 'data' },
+                    { source: 'App\\Stubs\\AssignDefaultRole', messageEnum: 'data' },
                     { source: 'App\\Stubs\\SendEmail', messageEnum: 'return' },
+                    { source: 'App\\Stubs\\WriteAuditLog', messageEnum: 'return' },
                 ],
             },
             {
@@ -194,13 +206,16 @@ final class PostStubMock extends PostStub
                 stubs: [
                     { source: 'App\\Stubs\\DeactivateUser', messageEnum: 'init' },
                     { source: 'App\\Stubs\\AnonymizeData', messageEnum: 'data' },
+                    { source: 'App\\Stubs\\RevokeTokens', messageEnum: 'data' },
                     { source: 'App\\Stubs\\SendNotification', messageEnum: 'return' },
+                    { source: 'App\\Stubs\\WriteAuditLog', messageEnum: 'return' },
                 ],
             },
             {
                 flowType: 'flow.shipping.create.v1',
                 stubs: [
-                    { source: 'App\\Stubs\\CreateShipment', messageEnum: 'init' },
+                    { source: 'App\\Stubs\\ValidateInput', messageEnum: 'init' },
+                    { source: 'App\\Stubs\\CreateShipment', messageEnum: 'data' },
                     { source: 'App\\Stubs\\BookCarrier', messageEnum: 'data' },
                     { source: 'App\\Stubs\\PrintLabel', messageEnum: 'return' },
                 ],
@@ -217,7 +232,9 @@ final class PostStubMock extends PostStub
                 flowType: 'flow.product.import.v1',
                 stubs: [
                     { source: 'App\\Stubs\\ParseCsv', messageEnum: 'init' },
+                    { source: 'App\\Stubs\\ValidateInput', messageEnum: 'init' },
                     { source: 'App\\Stubs\\UpsertProduct', messageEnum: 'data' },
+                    { source: 'App\\Stubs\\UpdateInventory', messageEnum: 'data' },
                     { source: 'App\\Stubs\\IndexSearch', messageEnum: 'return' },
                 ],
             },
@@ -232,9 +249,11 @@ final class PostStubMock extends PostStub
             {
                 flowType: 'flow.support.ticket.v1',
                 stubs: [
-                    { source: 'App\\Stubs\\CreateTicket', messageEnum: 'init' },
+                    { source: 'App\\Stubs\\ValidateInput', messageEnum: 'init' },
+                    { source: 'App\\Stubs\\CreateTicket', messageEnum: 'data' },
                     { source: 'App\\Stubs\\AssignAgent', messageEnum: 'data' },
                     { source: 'App\\Stubs\\SendNotification', messageEnum: 'return' },
+                    { source: 'App\\Stubs\\SendEmail', messageEnum: 'return' },
                 ],
             },
             {
