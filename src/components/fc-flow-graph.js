@@ -769,15 +769,26 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                               </span>
                                           </div>
                                       </div>
-                                      <button class="btn btn-sm btn-ghost btn-square mt-0.5 flex-shrink-0" @click=${this._closeModal}>
-                                          ✕
-                                      </button>
+                                      <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
+                                          <button
+                                              class="btn btn-ghost btn-sm"
+                                              title="JSON kopieren"
+                                              @click=${() => navigator.clipboard.writeText(this._modalMsg.payload)}
+                                          >
+                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                              </svg>
+                                          </button>
+                                          <button class="btn btn-sm btn-ghost btn-square" @click=${this._closeModal}>✕</button>
+                                      </div>
                                   </div>
 
                                   <!-- Editor (fills remaining space) -->
                                   <div class="flex-1 overflow-hidden relative">
                                       <fc-json-editor
                                           .value=${this._modalMsg.payload}
+                                          .search=${true}
                                           @change=${this._onEditorChange}
                                           style="display:block; height:100%; overflow:hidden;"
                                       ></fc-json-editor>

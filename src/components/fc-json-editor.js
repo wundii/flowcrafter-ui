@@ -6,7 +6,6 @@ import { json, jsonParseLinter } from '@codemirror/lang-json'
 import { linter, lintGutter } from '@codemirror/lint'
 import { oneDark } from '@codemirror/theme-one-dark'
 
-// Block search & replace panel shortcuts (used when search is disabled)
 const noSearchKeymap = Prec.highest(
     keymap.of([
         { key: 'Mod-f', run: () => true },

@@ -298,7 +298,9 @@ export class FcApp extends BaseElement {
 
         return html`
             <div class="min-h-screen bg-base-100">
-                <div class="navbar bg-base-200 backdrop-blur-sm shadow-md border-b border-base-content/15 px-2 sm:px-4 min-h-12 sticky top-0 z-50">
+                <div
+                    class="navbar bg-base-200 backdrop-blur-sm shadow-md border-b border-base-content/15 px-2 sm:px-4 min-h-12 sticky top-0 z-50"
+                >
                     <!-- Left: logo + title + search -->
                     <div class="flex-1 flex items-center gap-2 sm:gap-3 min-w-0">
                         <!-- Toolbox dropdown -->
@@ -370,12 +372,7 @@ export class FcApp extends BaseElement {
                                 @input=${e => (this._searchQuery = e.target.value)}
                                 @keydown=${this._onSearch}
                             />
-                            <button
-                                class="btn btn-sm btn-ghost join-item border-transparent"
-                                @click=${this._onSearch}
-                            >
-                                ↵
-                            </button>
+                            <button class="btn btn-sm btn-ghost join-item border-transparent" @click=${this._onSearch}>↵</button>
                         </div>
                     </div>
 

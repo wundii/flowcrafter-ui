@@ -277,9 +277,7 @@ export class FcFlowList extends BaseElement {
                                 <div class="font-mono text-xs text-base-content/40 truncate">${flow.flowHash}</div>
                                 <!-- Row 3: Subject + Type -->
                                 <div class="flex items-baseline justify-between gap-2">
-                                    <span class="text-sm text-base-content/50 truncate">
-                                        ${flow.flowSubject || ''}
-                                    </span>
+                                    <span class="text-sm text-base-content/50 truncate"> ${flow.flowSubject || ''} </span>
                                     <span class="badge badge-outline badge-xs text-base-content/50 flex-shrink-0">${flow.flowType}</span>
                                 </div>
                             </div>
