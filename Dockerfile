@@ -1,5 +1,5 @@
 # docker build -t flowcrafter-ui .
-# docker run -p 3000:3000 -v ./data:/data flowcrafter-ui
+# docker run -p 3000:3000 -v ./data:/flowcrafter/data flowcrafter-ui
 # ── Stage 1: Build ────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 
@@ -24,6 +24,6 @@ ENV PORT=3000
 
 EXPOSE 3000
 
-VOLUME ["/data"]
+VOLUME ["/flowcrafter/data"]
 
 CMD ["node", "server.js"]

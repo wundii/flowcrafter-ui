@@ -5,9 +5,9 @@ import { scryptSync, randomBytes, timingSafeEqual, createHash, createCipheriv, c
 import { fileURLToPath } from 'node:url'
 
 const PORT = Number(process.env.PORT ?? 3000)
-const DB_FILE = './data/auth.json'
-const CONNECTION_FILE = './data/connection.json'
-const KEY_FILE = './data/.key'
+const AUTH_FILE = './flowcrafter/data/auth.json'
+const CONNECTION_FILE = './flowcrafter/data/connection.json'
+const KEY_FILE = './flowcrafter/data/.key'
 const DIST = join(dirname(fileURLToPath(import.meta.url)), 'dist')
 
 const MIME = {
@@ -24,13 +24,13 @@ const MIME = {
 
 // ─── JSON store ───────────────────────────────────────────────────────────────
 function loadDb() {
-    if (!existsSync(DB_FILE)) return { passwordHash: null, sessions: {} }
-    return JSON.parse(readFileSync(DB_FILE, 'utf8'))
+    if (!existsSync(AUTH_FILE)) return { passwordHash: null, sessions: {} }
+    return JSON.parse(readFileSync(AUTH_FILE, 'utf8'))
 }
 
 function saveDb(db) {
-    mkdirSync(dirname(DB_FILE), { recursive: true })
-    writeFileSync(DB_FILE, JSON.stringify(db, null, 2))
+    mkdirSync(dirname(AUTH_FILE), { recursive: true })
+    writeFileSync(AUTH_FILE, JSON.stringify(db, null, 2))
 }
 
 // ─── Encryption key ───────────────────────────────────────────────────────────
