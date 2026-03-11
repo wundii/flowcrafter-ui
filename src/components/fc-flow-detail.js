@@ -81,7 +81,7 @@ export class FcFlowDetail extends BaseElement {
             }
             this.dispatchEvent(
                 new CustomEvent('flow-loaded', {
-                    detail: { source: this.flow.flowSource },
+                    detail: { source: this.flow.flowSource, flowType: this.flow.flowType },
                     bubbles: true,
                     composed: true,
                 })
@@ -320,9 +320,16 @@ export class FcFlowDetail extends BaseElement {
                         </div>
                         <div>
                             <div class="text-base-content/50 text-xs mb-1">Status</div>
-                            ${hasExceptions
-                                ? html`<span class="badge badge-error badge-sm leading-none">Failed</span>`
-                                : html`<span class="badge badge-success badge-sm leading-none">OK</span>`}
+                            <div class="flex items-center gap-1 flex-wrap">
+                                ${hasExceptions
+                                    ? html`<span class="badge badge-error badge-sm leading-none">Failed</span>`
+                                    : html`<span class="badge badge-success badge-sm leading-none">OK</span>`}
+                                ${f.isExecutable === false
+                                    ? html`<span class="badge badge-sm border-slate-500/50 bg-slate-600/40 text-slate-300 leading-none"
+                                          >Nicht ausführbar</span
+                                      >`
+                                    : ''}
+                            </div>
                         </div>
                     </div>
                     <div class="mt-1 flex items-center gap-1">

@@ -29,7 +29,7 @@ export class FcApp extends BaseElement {
         _serverInfo: { state: true },
         _toolboxOpen: { state: true },
         activeTab: { state: true },
-        selectedSource: { state: true },
+        selectedPrefix: { state: true },
         selectedFlowHash: { state: true },
         selectedRuntimeHash: { state: true },
         _searchQuery: { state: true },
@@ -46,7 +46,7 @@ export class FcApp extends BaseElement {
         this._serverInfo = null
         this._toolboxOpen = false
         this.activeTab = 'flows'
-        this.selectedSource = null
+        this.selectedPrefix = null
         this.selectedFlowHash = null
         this.selectedRuntimeHash = null
         this._searchQuery = ''
@@ -167,7 +167,7 @@ export class FcApp extends BaseElement {
     }
 
     _onSchemaSelected(e) {
-        this.selectedSource = e.detail.source
+        this.selectedPrefix = e.detail.prefix
         this.selectedFlowHash = null
     }
 
@@ -177,11 +177,13 @@ export class FcApp extends BaseElement {
     }
 
     _onFlowLoaded(e) {
-        this.selectedSource = e.detail.source
+        if (!this.selectedPrefix && e.detail.flowType) {
+            this.selectedPrefix = e.detail.flowType.replace(/\.v\d+$/, '').toLowerCase()
+        }
     }
 
     _onBackToSchema() {
-        this.selectedSource = null
+        this.selectedPrefix = null
         this.selectedFlowHash = null
         this.selectedRuntimeHash = null
     }
@@ -197,7 +199,7 @@ export class FcApp extends BaseElement {
         if (!q) return
         this._searchQuery = ''
         this.activeTab = 'flows'
-        this.selectedSource = null
+        this.selectedPrefix = null
 
         // Try to resolve as runtimeHash first via API
         try {
@@ -218,10 +220,10 @@ export class FcApp extends BaseElement {
     _breadcrumb() {
         if (this.activeTab !== 'flows') return ''
 
-        const crumbs = [{ label: 'Schemas', action: this._onBackToSchema }]
-        if (this.selectedSource) {
+        const crumbs = [{ label: 'Types', action: this._onBackToSchema }]
+        if (this.selectedPrefix) {
             crumbs.push({
-                label: this.selectedSource.split('\\').pop(),
+                label: this.selectedPrefix,
                 action: this._onBackToList,
             })
         }
@@ -254,15 +256,15 @@ export class FcApp extends BaseElement {
                     ></fc-flow-detail>
                 `
             }
-            if (this.selectedSource) {
+            if (this.selectedPrefix) {
                 return html`
                     <div class="flex flex-col md:flex-row gap-4">
                         <div class="w-full md:w-1/3">
-                            <fc-flow-chart .source=${this.selectedSource}></fc-flow-chart>
+                            <fc-flow-chart .type=${this.selectedPrefix}></fc-flow-chart>
                         </div>
                         <div class="w-full md:w-2/3">
                             <fc-flow-list
-                                .source=${this.selectedSource}
+                                .type=${this.selectedPrefix}
                                 @flow-selected=${this._onFlowSelected}
                                 @back=${this._onBackToSchema}
                             ></fc-flow-list>
@@ -469,7 +471,7 @@ export class FcApp extends BaseElement {
                                     class="tab ${this.activeTab === tab ? 'tab-active' : ''}"
                                     @click=${() => {
                                         this.activeTab = tab
-                                        this.selectedSource = null
+                                        this.selectedPrefix = null
                                         this.selectedFlowHash = null
                                     }}
                                 >

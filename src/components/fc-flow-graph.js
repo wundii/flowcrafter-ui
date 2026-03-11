@@ -749,7 +749,15 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                   <!-- Header -->
                                   <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b border-base-300 flex-shrink-0">
                                       <div>
-                                          <h3 class="font-bold text-base leading-tight">Message-Input editieren</h3>
+                                          <div class="flex items-center gap-2">
+                                              <h3 class="font-bold text-base leading-tight">Message-Input editieren</h3>
+                                              ${this.flow?.isExecutable === false
+                                                  ? html`<span
+                                                        class="badge badge-sm border-slate-500/50 bg-slate-600/40 text-slate-300 leading-none"
+                                                        >Nicht ausführbar</span
+                                                    >`
+                                                  : ''}
+                                          </div>
                                           <div class="flex items-center gap-3 mt-1 flex-wrap">
                                               <span class="font-mono text-xs text-base-content/50" title="${this._modalMsg.messageClass}">
                                                   ${this._modalMsg.messageClass}
@@ -800,8 +808,15 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                           </button>
                                           <button
                                               class="btn btn-outline btn-sm"
-                                              ?disabled=${!this._modalMsg?.valid || this._sending || !this._observerRunning}
-                                              title=${this._observerRunning ? 'In Queue legen' : 'Observer ist nicht aktiv'}
+                                              ?disabled=${!this._modalMsg?.valid ||
+                                              this._sending ||
+                                              !this._observerRunning ||
+                                              this.flow?.isExecutable === false}
+                                              title=${this.flow?.isExecutable === false
+                                                  ? 'Flow ist nicht ausführbar'
+                                                  : this._observerRunning
+                                                    ? 'In Queue legen'
+                                                    : 'Observer ist nicht aktiv'}
                                               @click=${() => this._onSend(true)}
                                           >
                                               ${this._sending ? html`<span class="loading loading-spinner loading-xs"></span>` : ''} In
@@ -809,7 +824,8 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                           </button>
                                           <button
                                               class="btn btn-primary btn-sm"
-                                              ?disabled=${!this._modalMsg?.valid || this._sending}
+                                              ?disabled=${!this._modalMsg?.valid || this._sending || this.flow?.isExecutable === false}
+                                              title=${this.flow?.isExecutable === false ? 'Flow ist nicht ausführbar' : ''}
                                               @click=${() => this._onSend(false)}
                                           >
                                               ${this._sending ? html`<span class="loading loading-spinner loading-xs"></span>` : ''} Direkt

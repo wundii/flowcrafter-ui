@@ -120,7 +120,7 @@ export class FcExceptionChart extends BaseElement {
         return html`
             <div class="rounded-box border border-base-300 bg-base-200 p-4">
                 <div class="flex items-baseline justify-between mb-3">
-                    <span class="text-sm font-semibold text-base-content">Exceptions (14 Tage)</span>
+                    <span class="text-sm font-semibold text-base-content">Verlauf der letzten 14 Tage</span>
                     <span class="text-xs text-base-content/50">${total} gesamt</span>
                 </div>
 

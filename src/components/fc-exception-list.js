@@ -4,6 +4,14 @@ import { api } from '../services/api.js'
 
 const PAGE_SIZE = 10
 
+function formatTzOffset(date) {
+    const off = -date.getTimezoneOffset()
+    const sign = off >= 0 ? '+' : '-'
+    const h = String(Math.floor(Math.abs(off) / 60)).padStart(2, '0')
+    const m = String(Math.abs(off) % 60).padStart(2, '0')
+    return sign + h + ':' + m
+}
+
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
 }
@@ -24,6 +32,8 @@ export class FcExceptionList extends BaseElement {
         _page: { state: true },
         _hasMore: { state: true },
         _total: { state: true },
+        _dateFrom: { state: true },
+        _dateTo: { state: true },
     }
 
     constructor() {
@@ -35,6 +45,8 @@ export class FcExceptionList extends BaseElement {
         this._page = 0
         this._hasMore = false
         this._total = null
+        this._dateFrom = ''
+        this._dateTo = ''
     }
 
     connectedCallback() {
@@ -46,7 +58,30 @@ export class FcExceptionList extends BaseElement {
         this.loading = true
         this.error = null
         try {
-            const res = await api.getExceptions({ sort: 'desc', top: PAGE_SIZE, skip: this._page * PAGE_SIZE })
+            const opts = { sort: 'desc', top: PAGE_SIZE, skip: this._page * PAGE_SIZE }
+            if (this._dateFrom) {
+                const d = new Date(this._dateFrom + 'T00:00:00')
+                opts.from =
+                    d.getFullYear() +
+                    '-' +
+                    String(d.getMonth() + 1).padStart(2, '0') +
+                    '-' +
+                    String(d.getDate()).padStart(2, '0') +
+                    'T00:00:00' +
+                    formatTzOffset(d)
+            }
+            if (this._dateTo) {
+                const d = new Date(this._dateTo + 'T23:59:59')
+                opts.to =
+                    d.getFullYear() +
+                    '-' +
+                    String(d.getMonth() + 1).padStart(2, '0') +
+                    '-' +
+                    String(d.getDate()).padStart(2, '0') +
+                    'T23:59:59' +
+                    formatTzOffset(d)
+            }
+            const res = await api.getExceptions(opts)
             this.exceptions = res.items ?? []
             this._hasMore = res.hasMore ?? false
             this._total = res.total ?? null
@@ -83,6 +118,18 @@ export class FcExceptionList extends BaseElement {
         this._load()
     }
 
+    _applyDateFilter() {
+        this._page = 0
+        this._load()
+    }
+
+    _clearDateFilter() {
+        this._dateFrom = ''
+        this._dateTo = ''
+        this._page = 0
+        this._load()
+    }
+
     render() {
         if (this.loading)
             return html`
@@ -107,12 +154,54 @@ export class FcExceptionList extends BaseElement {
 
         return html`
             <!-- Toolbar -->
-            <div class="flex items-center justify-between mb-4">
-                <span class="text-sm text-base-content/60">
-                    ${from}–${to} ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
-                    Exceptions
-                </span>
-                <button class="btn btn-sm btn-ghost" @click=${this._load}>↻ Reload</button>
+            <div class="flex flex-col lg:flex-row lg:items-center gap-2 mb-4">
+                <!-- Links: Datumsfilter -->
+                <div class="flex items-center flex-nowrap">
+                    <div class="join">
+                        <input
+                            type="date"
+                            class="input input-sm input-bordered join-item w-auto text-xs ${this._dateFrom ? '' : 'text-base-content/40'}"
+                            .value=${this._dateFrom}
+                            @change=${e => {
+                                this._dateFrom = e.target.value
+                            }}
+                        />
+                        <input
+                            type="date"
+                            class="input input-sm input-bordered join-item w-auto text-xs ${this._dateTo ? '' : 'text-base-content/40'}"
+                            .value=${this._dateTo}
+                            @change=${e => {
+                                this._dateTo = e.target.value
+                            }}
+                        />
+                        <button
+                            class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50 join-item"
+                            @click=${this._applyDateFilter}
+                            ?disabled=${!this._dateFrom && !this._dateTo}
+                        >
+                            ↵
+                        </button>
+                    </div>
+                    ${this._dateFrom || this._dateTo
+                        ? html`
+                              <button
+                                  class="btn btn-sm btn-ghost text-base-content/50 hover:text-base-content ml-1"
+                                  @click=${this._clearDateFilter}
+                              >
+                                  ✕
+                              </button>
+                          `
+                        : ''}
+                </div>
+
+                <!-- Rechts: Datenanzeige + Reload -->
+                <div class="flex items-center gap-3 flex-shrink-0 ml-auto">
+                    <span class="text-sm text-base-content/60">
+                        ${from}–${to} ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
+                        Exceptions
+                    </span>
+                    <button class="btn btn-sm btn-ghost" @click=${this._load}>↻ Reload</button>
+                </div>
             </div>
 
             <!-- Exception cards -->

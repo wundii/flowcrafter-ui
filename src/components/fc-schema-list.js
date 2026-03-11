@@ -2,8 +2,8 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 
-function shortClass(fqn) {
-    return fqn?.split('\\').pop() ?? fqn
+function flowTypePrefix(flowType) {
+    return (flowType ?? '').replace(/\.v\d+$/, '').toLowerCase()
 }
 
 export class FcSchemaList extends BaseElement {
@@ -39,20 +39,22 @@ export class FcSchemaList extends BaseElement {
             // Hashes of flows that have at least one exception
             const failedHashes = new Set(exceptions.map(e => e.flowHash))
 
-            // Group by flowSource
+            // Group by flowType prefix (everything before .v\d+, case-insensitive)
             const map = new Map()
             for (const flow of flows) {
-                const src = flow.flowSource
-                if (!map.has(src)) {
-                    map.set(src, {
-                        flowSource: src,
+                const prefix = flowTypePrefix(flow.flowType)
+                if (!map.has(prefix)) {
+                    map.set(prefix, {
+                        prefix,
                         flowType: flow.flowType,
+                        sources: new Set(),
                         total: 0,
                         failed: 0,
                         lastTime: null,
                     })
                 }
-                const s = map.get(src)
+                const s = map.get(prefix)
+                s.sources.add(flow.flowSource)
                 s.total++
                 if (failedHashes.has(flow.flowHash)) s.failed++
                 if (!s.lastTime || flow.time > s.lastTime) s.lastTime = flow.time
@@ -74,7 +76,7 @@ export class FcSchemaList extends BaseElement {
     _onSelect(schema) {
         this.dispatchEvent(
             new CustomEvent('schema-selected', {
-                detail: { source: schema.flowSource },
+                detail: { prefix: schema.prefix },
                 bubbles: true,
                 composed: true,
             })
@@ -97,19 +99,19 @@ export class FcSchemaList extends BaseElement {
                 </div>
             `
 
-        if (this.schemas.length === 0) return html` <div class="alert alert-info"><span>Keine Schemas gefunden.</span></div> `
+        if (this.schemas.length === 0) return html` <div class="alert alert-info"><span>Keine Types gefunden.</span></div> `
 
         return html`
             <!-- Toolbar -->
             <div class="flex items-center justify-between mb-4">
                 <span class="text-sm text-base-content/60">
                     <span class="font-semibold">${this.schemas.length}</span>
-                    Schema${this.schemas.length !== 1 ? 's' : ''}
+                    Type${this.schemas.length !== 1 ? 's' : ''}
                 </span>
                 <button class="btn btn-sm btn-ghost" @click=${this._load}>↻ Reload</button>
             </div>
 
-            <!-- Schema grid -->
+            <!-- Type grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                 ${this.schemas.map(schema => {
                     const hasFailed = schema.failed > 0
@@ -124,15 +126,7 @@ export class FcSchemaList extends BaseElement {
                         >
                             <!-- Card header -->
                             <div class="px-4 pt-4 pb-3 border-b border-base-300">
-                                <div class="font-bold text-sm leading-tight mb-0.5 truncate" title="${shortClass(schema.flowSource)}">
-                                    ${shortClass(schema.flowSource)}
-                                </div>
-                                <div class="font-mono text-xs text-base-content/35 truncate mb-2" title="${schema.flowSource}">
-                                    ${schema.flowSource}
-                                </div>
-                                <span class="badge badge-outline badge-xs text-base-content/50" title="${schema.flowType}"
-                                    >${schema.flowType}</span
-                                >
+                                <div class="font-bold text-sm leading-tight truncate" title="${schema.prefix}">${schema.prefix}</div>
                             </div>
 
                             <!-- Stats row -->

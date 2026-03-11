@@ -18,7 +18,7 @@ function shortDate(iso) {
 
 export class FcFlowChart extends BaseElement {
     static properties = {
-        source: { type: String },
+        type: { type: String },
         _data: { state: true },
         _loading: { state: true },
         _error: { state: true },
@@ -26,7 +26,7 @@ export class FcFlowChart extends BaseElement {
 
     constructor() {
         super()
-        this.source = null
+        this.type = null
         this._data = []
         this._loading = true
         this._error = false
@@ -38,7 +38,7 @@ export class FcFlowChart extends BaseElement {
     }
 
     updated(changed) {
-        if (changed.has('source')) this._load()
+        if (changed.has('type')) this._load()
     }
 
     async _load() {
@@ -51,7 +51,7 @@ export class FcFlowChart extends BaseElement {
             from.setHours(0, 0, 0, 0)
 
             const res = await api.getFlows({
-                source: this.source ?? undefined,
+                type: this.type ?? undefined,
                 sort: 'desc',
                 top: 10000,
                 skip: 0,
@@ -123,7 +123,7 @@ export class FcFlowChart extends BaseElement {
         return html`
             <div class="rounded-box border border-base-300 bg-base-200 p-4">
                 <div class="flex items-baseline justify-between mb-3">
-                    <span class="text-sm font-semibold text-base-content">Flows (14 Tage)</span>
+                    <span class="text-sm font-semibold text-base-content">Verlauf der letzten 14 Tage</span>
                     <span class="text-xs text-base-content/50">${total} gesamt</span>
                 </div>
 

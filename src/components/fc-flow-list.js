@@ -4,6 +4,14 @@ import { api } from '../services/api.js'
 
 const PAGE_SIZE = 10
 
+function formatTzOffset(date) {
+    const off = -date.getTimezoneOffset()
+    const sign = off >= 0 ? '+' : '-'
+    const h = String(Math.floor(Math.abs(off) / 60)).padStart(2, '0')
+    const m = String(Math.abs(off) % 60).padStart(2, '0')
+    return sign + h + ':' + m
+}
+
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
 }
@@ -17,24 +25,28 @@ function formatDate(iso) {
 
 export class FcFlowList extends BaseElement {
     static properties = {
-        source: { type: String },
+        type: { type: String },
         flows: { state: true },
         loading: { state: true },
         error: { state: true },
         _page: { state: true },
         _hasMore: { state: true },
         _total: { state: true },
+        _dateFrom: { state: true },
+        _dateTo: { state: true },
     }
 
     constructor() {
         super()
-        this.source = null
+        this.type = null
         this.flows = []
         this.loading = true
         this.error = null
         this._page = 0
         this._hasMore = false
         this._total = null
+        this._dateFrom = ''
+        this._dateTo = ''
     }
 
     connectedCallback() {
@@ -43,7 +55,7 @@ export class FcFlowList extends BaseElement {
     }
 
     updated(changed) {
-        if (changed.has('source')) {
+        if (changed.has('type')) {
             this._page = 0
             this._load()
         }
@@ -53,7 +65,30 @@ export class FcFlowList extends BaseElement {
         this.loading = true
         this.error = null
         try {
-            const res = await api.getFlows({ source: this.source ?? undefined, top: PAGE_SIZE, skip: this._page * PAGE_SIZE })
+            const opts = { type: this.type ?? undefined, top: PAGE_SIZE, skip: this._page * PAGE_SIZE }
+            if (this._dateFrom) {
+                const d = new Date(this._dateFrom + 'T00:00:00')
+                opts.from =
+                    d.getFullYear() +
+                    '-' +
+                    String(d.getMonth() + 1).padStart(2, '0') +
+                    '-' +
+                    String(d.getDate()).padStart(2, '0') +
+                    'T00:00:00' +
+                    formatTzOffset(d)
+            }
+            if (this._dateTo) {
+                const d = new Date(this._dateTo + 'T23:59:59')
+                opts.to =
+                    d.getFullYear() +
+                    '-' +
+                    String(d.getMonth() + 1).padStart(2, '0') +
+                    '-' +
+                    String(d.getDate()).padStart(2, '0') +
+                    'T23:59:59' +
+                    formatTzOffset(d)
+            }
+            const res = await api.getFlows(opts)
             this.flows = res.items ?? []
             this._hasMore = res.hasMore ?? false
             this._total = res.total ?? null
@@ -88,6 +123,18 @@ export class FcFlowList extends BaseElement {
         this._load()
     }
 
+    _applyDateFilter() {
+        this._page = 0
+        this._load()
+    }
+
+    _clearDateFilter() {
+        this._dateFrom = ''
+        this._dateTo = ''
+        this._page = 0
+        this._load()
+    }
+
     render() {
         if (this.loading)
             return html`
@@ -112,11 +159,65 @@ export class FcFlowList extends BaseElement {
 
         return html`
             <!-- Toolbar -->
-            <div class="flex items-center justify-between mb-4">
-                <button class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50" @click=${this._onBack}>
-                    ← Zurück zur Schema-Übersicht
-                </button>
-                <div class="flex items-center gap-3">
+            <div class="flex flex-col lg:flex-row lg:items-center gap-2 mb-4">
+                <!-- Zeile 1 mobil / Links desktop: Zurück -->
+                <div class="flex items-center justify-between lg:justify-start gap-2">
+                    <button
+                        class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50 flex-shrink-0"
+                        @click=${this._onBack}
+                    >
+                        ← Zurück zur Type-Übersicht
+                    </button>
+                    <!-- Datenanzeige + Reload: mobil rechts, desktop hidden -->
+                    <div class="flex items-center gap-2 lg:hidden flex-shrink-0">
+                        <span class="text-sm text-base-content/60">
+                            ${from}–${to} ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
+                        </span>
+                        <button class="btn btn-sm btn-ghost" @click=${this._load}>↻</button>
+                    </div>
+                </div>
+
+                <!-- Mitte: Datumsfilter -->
+                <div class="flex items-center lg:justify-center lg:flex-1 flex-nowrap">
+                    <div class="join">
+                        <input
+                            type="date"
+                            class="input input-sm input-bordered join-item w-auto text-xs ${this._dateFrom ? '' : 'text-base-content/40'}"
+                            .value=${this._dateFrom}
+                            @change=${e => {
+                                this._dateFrom = e.target.value
+                            }}
+                        />
+                        <input
+                            type="date"
+                            class="input input-sm input-bordered join-item w-auto text-xs ${this._dateTo ? '' : 'text-base-content/40'}"
+                            .value=${this._dateTo}
+                            @change=${e => {
+                                this._dateTo = e.target.value
+                            }}
+                        />
+                        <button
+                            class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50 join-item"
+                            @click=${this._applyDateFilter}
+                            ?disabled=${!this._dateFrom && !this._dateTo}
+                        >
+                            ↵
+                        </button>
+                    </div>
+                    ${this._dateFrom || this._dateTo
+                        ? html`
+                              <button
+                                  class="btn btn-sm btn-ghost text-base-content/50 hover:text-base-content ml-1"
+                                  @click=${this._clearDateFilter}
+                              >
+                                  ✕
+                              </button>
+                          `
+                        : ''}
+                </div>
+
+                <!-- Rechts: Datenanzeige + Reload (nur desktop) -->
+                <div class="hidden lg:flex items-center gap-3 flex-shrink-0">
                     <span class="text-sm text-base-content/60">
                         ${from}–${to} ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                     </span>
