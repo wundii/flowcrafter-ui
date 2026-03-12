@@ -15,7 +15,7 @@ function stubSignature(stubs) {
     return stubs.map(s => `${s.source}:${s.messageEnum}`).join('|')
 }
 
-const ENUM_BADGE = { init: 'badge-info', data: 'badge-success', return: 'badge-warning' }
+const ENUM_BADGE = { init: 'badge-info', stub: 'badge-success' }
 
 export class FcOverview extends BaseElement {
     static properties = {
@@ -56,15 +56,15 @@ export class FcOverview extends BaseElement {
             const stubs = schema.stubs.map(s => ({ source: s.source, messageEnum: s.messageEnum }))
             for (const s of stubs) {
                 if (!stubUsage.has(s.source)) stubUsage.set(s.source, new Set())
-                stubUsage.get(s.source).add(schema.flowType)
+                stubUsage.get(s.source).add(schema.type)
             }
-            return { flowType: schema.flowType, stubs }
+            return { type: schema.type, stubs }
         })
 
         // Group by displayName — only merge if stubs are identical
         const byName = new Map()
         for (const entry of raw) {
-            const name = flowDisplayName(entry.flowType)
+            const name = flowDisplayName(entry.type)
             if (!byName.has(name)) byName.set(name, [])
             byName.get(name).push(entry)
         }
@@ -80,9 +80,9 @@ export class FcOverview extends BaseElement {
                     // Identical stubs → one row without version
                     flows.push({ label: name, stubs: entries[0].stubs })
                 } else {
-                    // Different stubs → separate rows with full flowType
+                    // Different stubs → separate rows with full type
                     for (const e of entries) {
-                        flows.push({ label: e.flowType, stubs: e.stubs })
+                        flows.push({ label: e.type, stubs: e.stubs })
                     }
                 }
             }

@@ -339,7 +339,7 @@ export class FcApp extends BaseElement {
                             <button
                                 class="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-base-content/8 transition-colors cursor-pointer"
                                 @click=${() => {
-                                    this.activeTab = 'flows'
+                                    this.activeTab = 'overview'
                                     this.selectedFlowHash = null
                                 }}
                             >
