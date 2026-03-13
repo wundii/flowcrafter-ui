@@ -2,6 +2,7 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import './fc-source-viewer.js'
+import './fc-flow-graph.js'
 
 function shortName(fqcn) {
     return fqcn.split('\\').pop()
@@ -28,6 +29,7 @@ export class FcOverview extends BaseElement {
         _hoveredStub: { state: true },
         _popupX: { state: true },
         _popupY: { state: true },
+        _graphFlow: { state: true },
     }
 
     constructor() {
@@ -42,6 +44,7 @@ export class FcOverview extends BaseElement {
         this._hoveredStub = null
         this._popupX = 0
         this._popupY = 0
+        this._graphFlow = null
     }
 
     async connectedCallback() {
@@ -140,6 +143,22 @@ export class FcOverview extends BaseElement {
 
     _closeSourceModal() {
         this.renderRoot.querySelector('#stub-source-modal')?.close()
+    }
+
+    _openGraphModal(flow) {
+        this._graphFlow = {
+            flowSchema: { stubs: flow.stubs },
+            flowMessages: [],
+            flowExceptions: [],
+        }
+        this.updateComplete.then(() => {
+            this.renderRoot.querySelector('#flow-graph-modal')?.showModal()
+        })
+    }
+
+    _closeGraphModal() {
+        this.renderRoot.querySelector('#flow-graph-modal')?.close()
+        this._graphFlow = null
     }
 
     _onStubEnter(e, stub) {
@@ -327,7 +346,12 @@ export class FcOverview extends BaseElement {
                                 : filtered.map(
                                       f => html`
                                           <tr class="hover:bg-base-200 transition-colors">
-                                              <td class="font-mono text-xs">${f.label}</td>
+                                              <td
+                                                  class="font-mono text-xs cursor-pointer hover:text-primary transition-colors"
+                                                  @click=${() => this._openGraphModal(f)}
+                                              >
+                                                  ${f.label}
+                                              </td>
                                               <td class="flex flex-wrap gap-1">${f.stubs.map(s => this._renderStubBadge(s))}</td>
                                           </tr>
                                       `
@@ -350,6 +374,21 @@ export class FcOverview extends BaseElement {
                                 : this._stubSourceError
                                   ? html`<div class="p-4 text-error text-sm">${this._stubSourceError}</div>`
                                   : html`<div class="p-4 text-base-content/40 text-sm">Loading...</div>`}
+                        </div>
+                    </div>
+                    <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                        <button>close</button>
+                    </form>
+                </dialog>
+
+                <dialog id="flow-graph-modal" class="modal">
+                    <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
+                        <div class="flex items-center justify-between px-4 py-3 border-b border-base-300">
+                            <span class="font-mono text-sm truncate">${this._graphFlow ? 'Flow Graph' : ''}</span>
+                            <button class="btn btn-sm btn-ghost" @click=${() => this._closeGraphModal()}>✕</button>
+                        </div>
+                        <div class="flex-1 overflow-auto p-4">
+                            ${this._graphFlow ? html`<fc-flow-graph .flow=${this._graphFlow} readonly></fc-flow-graph>` : ''}
                         </div>
                     </div>
                     <form method="dialog" class="modal-backdrop backdrop-blur-sm">

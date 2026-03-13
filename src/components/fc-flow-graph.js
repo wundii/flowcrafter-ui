@@ -238,6 +238,7 @@ const fmtJson = (obj, max = 30) => {
 export class FcFlowGraph extends BaseElement {
     static properties = {
         flow: { type: Object },
+        readonly: { type: Boolean },
         runId: { type: String },
         runMessages: { type: Array }, // overrides flow.flowMessages for a specific run
         runExceptions: { type: Array }, // overrides flow.flowExceptions for a specific run
@@ -252,6 +253,7 @@ export class FcFlowGraph extends BaseElement {
     constructor() {
         super()
         this.flow = null
+        this.readonly = false
         this.runId = null
         this.runMessages = null
         this.runExceptions = null
@@ -607,35 +609,39 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                                             <span class="font-mono text-xs font-semibold text-base-content/60">
                                                                 ${short(msgClass)}
                                                             </span>
-                                                            <button
-                                                                class="btn btn-xs btn-ghost btn-square opacity-50 hover:opacity-100"
-                                                                title="Message-Input editieren"
-                                                                @click=${() => this._openModal(selStub.source, msgClass, received[0])}
-                                                            >
-                                                                <svg
-                                                                    class="w-3.5 h-3.5"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    stroke-width="2"
-                                                                    viewBox="0 0 24 24"
-                                                                >
-                                                                    <path
-                                                                        stroke-linecap="round"
-                                                                        stroke-linejoin="round"
-                                                                        d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
-                                                                    />
-                                                                    <path
-                                                                        stroke-linecap="round"
-                                                                        stroke-linejoin="round"
-                                                                        d="M19.5 7.125L18 8.625"
-                                                                    />
-                                                                </svg>
-                                                            </button>
+                                                            ${!this.readonly
+                                                                ? html`<button
+                                                                      class="btn btn-xs btn-ghost btn-square opacity-50 hover:opacity-100"
+                                                                      title="Message-Input editieren"
+                                                                      @click=${() => this._openModal(selStub.source, msgClass, received[0])}
+                                                                  >
+                                                                      <svg
+                                                                          class="w-3.5 h-3.5"
+                                                                          fill="none"
+                                                                          stroke="currentColor"
+                                                                          stroke-width="2"
+                                                                          viewBox="0 0 24 24"
+                                                                      >
+                                                                          <path
+                                                                              stroke-linecap="round"
+                                                                              stroke-linejoin="round"
+                                                                              d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
+                                                                          />
+                                                                          <path
+                                                                              stroke-linecap="round"
+                                                                              stroke-linejoin="round"
+                                                                              d="M19.5 7.125L18 8.625"
+                                                                          />
+                                                                      </svg>
+                                                                  </button>`
+                                                                : ''}
                                                         </div>
                                                         ${received.length === 0
-                                                            ? html`<div class="text-xs text-base-content/30 italic px-2">
-                                                                  nicht empfangen
-                                                              </div>`
+                                                            ? !this.readonly
+                                                                ? html`<div class="text-xs text-base-content/30 italic px-2">
+                                                                      nicht empfangen
+                                                                  </div>`
+                                                                : ''
                                                             : received.map(
                                                                   m => html`
                                                                       <div class="rounded-lg bg-base-300 p-3 mb-1">
@@ -728,9 +734,11 @@ ${ex.traceString}</pre
 ${JSON.stringify(outData.message, null, 2)}</pre
                                                                             >
                                                                         </div>`
-                                                                      : html`<div class="text-xs text-base-content/30 italic px-2">
-                                                                            nicht gesendet
-                                                                        </div>`}
+                                                                      : !this.readonly
+                                                                        ? html`<div class="text-xs text-base-content/30 italic px-2">
+                                                                              nicht gesendet
+                                                                          </div>`
+                                                                        : ''}
                                                               </div>
                                                           `
                                                       })}
