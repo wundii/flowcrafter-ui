@@ -25,6 +25,9 @@ export class FcOverview extends BaseElement {
         _stubSource: { state: true },
         _stubSourceError: { state: true },
         _sortAsc: { state: true },
+        _hoveredStub: { state: true },
+        _popupX: { state: true },
+        _popupY: { state: true },
     }
 
     constructor() {
@@ -36,6 +39,9 @@ export class FcOverview extends BaseElement {
         this._stubSource = null
         this._stubSourceError = null
         this._sortAsc = true
+        this._hoveredStub = null
+        this._popupX = 0
+        this._popupY = 0
     }
 
     async connectedCallback() {
@@ -53,7 +59,12 @@ export class FcOverview extends BaseElement {
 
         // Collect stubs per schema
         const raw = schemas.map(schema => {
-            const stubs = schema.stubs.map(s => ({ source: s.source, messageEnum: s.messageEnum }))
+            const stubs = schema.stubs.map(s => ({
+                source: s.source,
+                messageEnum: s.messageEnum,
+                messages: s.messages ?? [],
+                returnTypes: s.returnTypes ?? [],
+            }))
             for (const s of stubs) {
                 if (!stubUsage.has(s.source)) stubUsage.set(s.source, new Set())
                 stubUsage.get(s.source).add(schema.type)
@@ -131,6 +142,12 @@ export class FcOverview extends BaseElement {
         this.renderRoot.querySelector('#stub-source-modal')?.close()
     }
 
+    _onStubEnter(e, stub) {
+        this._hoveredStub = stub
+        this._popupX = e.clientX
+        this._popupY = e.clientY
+    }
+
     _renderStubBadge(stub) {
         const name = shortName(stub.source)
         const css = ENUM_BADGE[stub.messageEnum] ?? 'badge-ghost'
@@ -140,11 +157,61 @@ export class FcOverview extends BaseElement {
         return html`
             <button
                 class="badge badge-sm ${css} ${shared ? 'badge-outline' : ''} cursor-pointer hover:brightness-125 transition-all"
-                title="${shared ? `Shared by ${usage.size} flows` : stub.source}"
+                @mouseenter=${e => this._onStubEnter(e, stub)}
+                @mouseleave=${() => (this._hoveredStub = null)}
                 @click=${e => this._onStubClick(e, stub)}
             >
                 ${name}
             </button>
+        `
+    }
+
+    _renderPopup() {
+        if (!this._hoveredStub) return ''
+        const stub = this._hoveredStub
+        const name = shortName(stub.source)
+        const usage = this._stubUsageMap.get(stub.source)
+        const shared = usage && usage.size > 1
+
+        return html`
+            <div
+                class="fixed z-[9999] w-72 rounded-box border border-base-300 bg-base-100 shadow-lg p-4 pointer-events-none"
+                style="left:${this._popupX}px; top:${this._popupY + 12}px;"
+            >
+                <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box text-xs font-semibold text-base-content/50 uppercase tracking-wider">
+                    ${name}
+                </div>
+                ${stub.messages.length || stub.returnTypes.length
+                    ? html`<div class="bg-base-100 -mx-4 px-4 py-3 flex flex-col gap-2.5">
+                          ${stub.messages.length
+                              ? html`<div>
+                                    <span class="text-xs text-base-content/50">Input Messages</span>
+                                    <div class="flex flex-col gap-1 mt-1">
+                                        ${stub.messages.map(
+                                            m => html`<span class="font-mono text-xs text-base-content/60 break-all">${shortName(m)}</span>`
+                                        )}
+                                    </div>
+                                </div>`
+                              : ''}
+                          ${stub.returnTypes.length
+                              ? html`<div>
+                                    <span class="text-xs text-base-content/50">Output Messages</span>
+                                    <div class="flex flex-col gap-1 mt-1">
+                                        ${stub.returnTypes.map(
+                                            r => html`<span class="font-mono text-xs text-base-content/60 break-all">${shortName(r)}</span>`
+                                        )}
+                                    </div>
+                                </div>`
+                              : ''}
+                      </div>`
+                    : ''}
+                ${shared
+                    ? html`<div class="bg-base-100 -mx-4 px-4 py-3 rounded-b-box flex items-baseline justify-between gap-3">
+                          <span class="text-xs text-base-content/50 shrink-0">Shared by</span>
+                          <span class="text-xs text-right text-base-content/60">${usage.size} flows</span>
+                      </div>`
+                    : ''}
+            </div>
         `
     }
 
@@ -163,34 +230,34 @@ export class FcOverview extends BaseElement {
                     />
                     ${this._filter
                         ? html`
-                              <button
-                                  class="btn btn-sm btn-ghost"
-                                  @click=${() => {
-                                      this._filter = ''
-                                      this._selectedStub = null
-                                  }}
-                              >
-                                  clear
-                              </button>
-                              ${this._selectedStub
-                                  ? html`
-                                        <button
-                                            class="btn btn-sm btn-outline btn-info"
-                                            title=${this._selectedStub.source}
-                                            @click=${() => this._openSourceModal()}
-                                        >
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                                                />
-                                            </svg>
-                                            Source
-                                        </button>
-                                    `
-                                  : ''}
-                          `
+                            <button
+                                class="btn btn-sm btn-ghost"
+                                @click=${() => {
+                                    this._filter = ''
+                                    this._selectedStub = null
+                                }}
+                            >
+                                clear
+                            </button>
+                            ${this._selectedStub
+                                ? html`
+                                    <button
+                                        class="btn btn-sm btn-outline btn-info"
+                                        title=${this._selectedStub.source}
+                                        @click=${() => this._openSourceModal()}
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                                            />
+                                        </svg>
+                                        Source
+                                    </button>
+                                `
+                                : ''}
+                              `
                         : ''}
                     <div class="ml-auto flex items-center gap-1">
                         <button
@@ -228,18 +295,18 @@ export class FcOverview extends BaseElement {
 
                 ${this._stubSourceError && !this.renderRoot.querySelector('#stub-source-modal[open]')
                     ? html`
-                          <div class="alert alert-error alert-sm mb-3">
-                              <span class="text-sm">${this._stubSourceError}</span>
-                              <button
-                                  class="btn btn-sm btn-ghost"
-                                  @click=${() => {
-                                      this._stubSourceError = null
-                                  }}
-                              >
-                                  ✕
-                              </button>
-                          </div>
-                      `
+                        <div class="alert alert-error alert-sm mb-3">
+                            <span class="text-sm">${this._stubSourceError}</span>
+                            <button
+                                class="btn btn-sm btn-ghost"
+                                @click=${() => {
+                                    this._stubSourceError = null
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    `
                     : ''}
 
                 <div class="overflow-x-auto border border-base-300 rounded-lg">
@@ -256,12 +323,12 @@ export class FcOverview extends BaseElement {
                                       <td colspan="2" class="text-center text-base-content/40 py-8">No flows match the current filters.</td>
                                   </tr>`
                                 : filtered.map(
-                                      f => html`
-                                          <tr class="hover:bg-base-200 transition-colors">
-                                              <td class="font-mono text-xs">${f.label}</td>
-                                              <td class="flex flex-wrap gap-1">${f.stubs.map(s => this._renderStubBadge(s))}</td>
-                                          </tr>
-                                      `
+                                    f => html`
+                                        <tr class="hover:bg-base-200 transition-colors">
+                                            <td class="font-mono text-xs">${f.label}</td>
+                                            <td class="flex flex-wrap gap-1">${f.stubs.map(s => this._renderStubBadge(s))}</td>
+                                        </tr>
+                                    `
                                   )}
                         </tbody>
                     </table>
@@ -287,6 +354,8 @@ export class FcOverview extends BaseElement {
                         <button>close</button>
                     </form>
                 </dialog>
+
+                ${this._renderPopup()}
             </div>
         `
     }

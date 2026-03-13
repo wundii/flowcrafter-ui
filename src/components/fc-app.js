@@ -365,12 +365,12 @@ export class FcApp extends BaseElement {
                                 ? html`
                                       <!-- Dropdown card -->
                                       <div
-                                          class="absolute left-0 top-full mt-2 z-50 w-72 rounded-box border border-base-300 bg-base-200 shadow-lg p-4"
+                                          class="absolute left-0 top-full mt-2 z-50 w-75 rounded-box border border-base-300 bg-base-100 shadow-lg p-4"
                                       >
-                                          <div class="text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-3">
+                                          <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box text-xs font-semibold text-base-content/50 uppercase tracking-wider">
                                               Server Info
                                           </div>
-                                          <div class="flex flex-col gap-2.5">
+                                          <div class="bg-base-100 -mx-4 px-4 py-3 flex flex-col gap-2.5">
                                               ${[...(this._serverDescription ?? '')].length > 24
                                                   ? html`<div class="flex items-baseline justify-between gap-3">
                                                         <span class="text-xs text-base-content/50 shrink-0">Description</span>
