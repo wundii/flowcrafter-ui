@@ -333,8 +333,13 @@ export class FcApp extends BaseElement {
                         <!-- Toolbox dropdown -->
                         <div
                             class="relative hidden sm:block"
-                            @mouseenter=${() => (this._toolboxOpen = true)}
-                            @mouseleave=${() => (this._toolboxOpen = false)}
+                            @mouseenter=${() => {
+                                clearTimeout(this._toolboxTimer)
+                                this._toolboxOpen = true
+                            }}
+                            @mouseleave=${() => {
+                                this._toolboxTimer = setTimeout(() => (this._toolboxOpen = false), 150)
+                            }}
                         >
                             <button
                                 class="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-base-content/8 transition-colors cursor-pointer"

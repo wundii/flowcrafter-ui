@@ -121,19 +121,20 @@ export class FcOverview extends BaseElement {
 
     _onStubClick(e, stub) {
         this._filter = shortName(stub.source)
-        this._selectedStub = stub
     }
 
-    async _openSourceModal() {
+    async _openSourceModal(stub) {
+        this._selectedStub = stub
+        this._hoveredStub = null
         this._stubSource = null
         this._stubSourceError = null
         try {
-            const data = await api.getStubSource(this._selectedStub.source)
+            const data = await api.getStubSource(stub.source)
             this._stubSource = data.source ?? ''
             this.renderRoot.querySelector('#stub-source-modal')?.showModal()
         } catch (err) {
             if (err.message.includes('404')) {
-                this._stubSourceError = `${this._selectedStub.source} ist nicht mehr verfügbar.`
+                this._stubSourceError = `${stub.source} ist nicht mehr verfügbar.`
             } else {
                 this._stubSourceError = err.message
                 this.renderRoot.querySelector('#stub-source-modal')?.showModal()
@@ -162,9 +163,18 @@ export class FcOverview extends BaseElement {
     }
 
     _onStubEnter(e, stub) {
+        clearTimeout(this._hoverTimer)
         this._hoveredStub = stub
         this._popupX = e.clientX
         this._popupY = e.clientY
+    }
+
+    _onStubLeave() {
+        this._hoverTimer = setTimeout(() => (this._hoveredStub = null), 150)
+    }
+
+    _onPopupEnter() {
+        clearTimeout(this._hoverTimer)
     }
 
     _renderStubBadge(stub) {
@@ -177,7 +187,7 @@ export class FcOverview extends BaseElement {
             <button
                 class="badge badge-sm ${css} ${shared ? 'badge-outline' : ''} cursor-pointer hover:brightness-125 transition-all"
                 @mouseenter=${e => this._onStubEnter(e, stub)}
-                @mouseleave=${() => (this._hoveredStub = null)}
+                @mouseleave=${() => this._onStubLeave()}
                 @click=${e => this._onStubClick(e, stub)}
             >
                 ${name}
@@ -194,13 +204,19 @@ export class FcOverview extends BaseElement {
 
         return html`
             <div
-                class="fixed z-[9999] w-72 rounded-box border border-base-300 bg-base-100 shadow-lg p-4 pointer-events-none"
+                class="fixed z-[9999] w-72 rounded-box border border-base-300 bg-base-100 shadow-lg p-4"
                 style="left:${this._popupX}px; top:${this._popupY + 12}px;"
+                @mouseenter=${() => this._onPopupEnter()}
+                @mouseleave=${() => this._onStubLeave()}
             >
-                <div
-                    class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box text-xs font-semibold text-base-content/50 uppercase tracking-wider"
-                >
-                    ${name}
+                <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box flex items-center justify-between">
+                    <span class="text-xs font-semibold text-base-content/50 uppercase tracking-wider">${name}</span>
+                    <button class="btn btn-xs btn-outline btn-info" title=${stub.source} @click=${() => this._openSourceModal(stub)}>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                        Source
+                    </button>
                 </div>
                 ${stub.messages.length || stub.returnTypes.length
                     ? html`<div class="bg-base-100 -mx-4 px-4 py-3 flex flex-col gap-2.5">
@@ -249,37 +265,7 @@ export class FcOverview extends BaseElement {
                         .value=${this._filter}
                         @input=${e => (this._filter = e.target.value)}
                     />
-                    ${this._filter
-                        ? html`
-                              <button
-                                  class="btn btn-sm btn-ghost"
-                                  @click=${() => {
-                                      this._filter = ''
-                                      this._selectedStub = null
-                                  }}
-                              >
-                                  clear
-                              </button>
-                              ${this._selectedStub
-                                  ? html`
-                                        <button
-                                            class="btn btn-sm btn-outline btn-info"
-                                            title=${this._selectedStub.source}
-                                            @click=${() => this._openSourceModal()}
-                                        >
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                                                />
-                                            </svg>
-                                            Source
-                                        </button>
-                                    `
-                                  : ''}
-                          `
-                        : ''}
+                    ${this._filter ? html` <button class="btn btn-sm btn-ghost" @click=${() => (this._filter = '')}>clear</button> ` : ''}
                     <div class="ml-auto flex items-center gap-1">
                         <button
                             class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
