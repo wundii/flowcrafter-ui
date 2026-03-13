@@ -367,7 +367,9 @@ export class FcApp extends BaseElement {
                                       <div
                                           class="absolute left-0 top-full mt-2 z-50 w-75 rounded-box border border-base-300 bg-base-100 shadow-lg p-4"
                                       >
-                                          <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box text-xs font-semibold text-base-content/50 uppercase tracking-wider">
+                                          <div
+                                              class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box text-xs font-semibold text-base-content/50 uppercase tracking-wider"
+                                          >
                                               Server Info
                                           </div>
                                           <div class="bg-base-100 -mx-4 px-4 py-3 flex flex-col gap-2.5">

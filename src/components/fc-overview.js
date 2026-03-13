@@ -178,7 +178,9 @@ export class FcOverview extends BaseElement {
                 class="fixed z-[9999] w-72 rounded-box border border-base-300 bg-base-100 shadow-lg p-4 pointer-events-none"
                 style="left:${this._popupX}px; top:${this._popupY + 12}px;"
             >
-                <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box text-xs font-semibold text-base-content/50 uppercase tracking-wider">
+                <div
+                    class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box text-xs font-semibold text-base-content/50 uppercase tracking-wider"
+                >
                     ${name}
                 </div>
                 ${stub.messages.length || stub.returnTypes.length
@@ -230,34 +232,34 @@ export class FcOverview extends BaseElement {
                     />
                     ${this._filter
                         ? html`
-                            <button
-                                class="btn btn-sm btn-ghost"
-                                @click=${() => {
-                                    this._filter = ''
-                                    this._selectedStub = null
-                                }}
-                            >
-                                clear
-                            </button>
-                            ${this._selectedStub
-                                ? html`
-                                    <button
-                                        class="btn btn-sm btn-outline btn-info"
-                                        title=${this._selectedStub.source}
-                                        @click=${() => this._openSourceModal()}
-                                    >
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                                            />
-                                        </svg>
-                                        Source
-                                    </button>
-                                `
-                                : ''}
-                              `
+                              <button
+                                  class="btn btn-sm btn-ghost"
+                                  @click=${() => {
+                                      this._filter = ''
+                                      this._selectedStub = null
+                                  }}
+                              >
+                                  clear
+                              </button>
+                              ${this._selectedStub
+                                  ? html`
+                                        <button
+                                            class="btn btn-sm btn-outline btn-info"
+                                            title=${this._selectedStub.source}
+                                            @click=${() => this._openSourceModal()}
+                                        >
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                                                />
+                                            </svg>
+                                            Source
+                                        </button>
+                                    `
+                                  : ''}
+                          `
                         : ''}
                     <div class="ml-auto flex items-center gap-1">
                         <button
@@ -295,18 +297,18 @@ export class FcOverview extends BaseElement {
 
                 ${this._stubSourceError && !this.renderRoot.querySelector('#stub-source-modal[open]')
                     ? html`
-                        <div class="alert alert-error alert-sm mb-3">
-                            <span class="text-sm">${this._stubSourceError}</span>
-                            <button
-                                class="btn btn-sm btn-ghost"
-                                @click=${() => {
-                                    this._stubSourceError = null
-                                }}
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    `
+                          <div class="alert alert-error alert-sm mb-3">
+                              <span class="text-sm">${this._stubSourceError}</span>
+                              <button
+                                  class="btn btn-sm btn-ghost"
+                                  @click=${() => {
+                                      this._stubSourceError = null
+                                  }}
+                              >
+                                  ✕
+                              </button>
+                          </div>
+                      `
                     : ''}
 
                 <div class="overflow-x-auto border border-base-300 rounded-lg">
@@ -323,12 +325,12 @@ export class FcOverview extends BaseElement {
                                       <td colspan="2" class="text-center text-base-content/40 py-8">No flows match the current filters.</td>
                                   </tr>`
                                 : filtered.map(
-                                    f => html`
-                                        <tr class="hover:bg-base-200 transition-colors">
-                                            <td class="font-mono text-xs">${f.label}</td>
-                                            <td class="flex flex-wrap gap-1">${f.stubs.map(s => this._renderStubBadge(s))}</td>
-                                        </tr>
-                                    `
+                                      f => html`
+                                          <tr class="hover:bg-base-200 transition-colors">
+                                              <td class="font-mono text-xs">${f.label}</td>
+                                              <td class="flex flex-wrap gap-1">${f.stubs.map(s => this._renderStubBadge(s))}</td>
+                                          </tr>
+                                      `
                                   )}
                         </tbody>
                     </table>
