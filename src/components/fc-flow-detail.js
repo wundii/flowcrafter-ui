@@ -270,13 +270,6 @@ export class FcFlowDetail extends BaseElement {
                                           style="display:block; height:100%; overflow:hidden;"
                                       ></fc-json-editor>
                                   </div>
-
-                                  <!-- Footer -->
-                                  <div class="flex justify-end px-4 py-3 border-t border-base-300 flex-shrink-0">
-                                      <button class="btn btn-sm" @click=${() => this.querySelector('#fc-raw-modal')?.close()}>
-                                          Schließen
-                                      </button>
-                                  </div>
                               </div>
 
                               <form method="dialog" class="modal-backdrop backdrop-blur-sm">

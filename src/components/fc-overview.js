@@ -206,12 +206,6 @@ export class FcOverview extends BaseElement {
             >
                 <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box flex items-center justify-between">
                     <span class="text-xs font-semibold text-base-content/50 uppercase tracking-wider">${name}</span>
-                    <button class="btn btn-xs btn-outline btn-info" title=${stub.source} @click=${() => this._openSourceModal(stub)}>
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                        </svg>
-                        Source
-                    </button>
                 </div>
                 ${stub.messages.length || stub.returnTypes.length
                     ? html`<div class="bg-base-100 -mx-4 px-4 py-3 flex flex-col gap-2.5">
@@ -424,7 +418,13 @@ export class FcOverview extends BaseElement {
                             <button class="btn btn-sm btn-ghost" @click=${() => this._closeGraphModal()}>✕</button>
                         </div>
                         <div class="flex-1 overflow-auto p-4">
-                            ${this._graphFlow ? html`<fc-flow-graph .flow=${this._graphFlow} readonly></fc-flow-graph>` : ''}
+                            ${this._graphFlow
+                                ? html`<fc-flow-graph
+                                      .flow=${this._graphFlow}
+                                      readonly
+                                      @source-requested=${e => this._openSourceModal({ source: e.detail.source })}
+                                  ></fc-flow-graph>`
+                                : ''}
                         </div>
                     </div>
                     <form method="dialog" class="modal-backdrop backdrop-blur-sm">

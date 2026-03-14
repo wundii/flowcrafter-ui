@@ -318,12 +318,16 @@ export class FcFlowGraph extends BaseElement {
     }
 
     async _openSourceModal(stubSource, stubHash) {
+        if (this.readonly) {
+            this.dispatchEvent(new CustomEvent('source-requested', { detail: { source: stubSource }, bubbles: true, composed: true }))
+            return
+        }
         this._stubSourceName = stubSource
         this._stubSource = null
         this._stubSourceError = null
         this._stubSourceCurrent = true
         try {
-            const data = await api.getStubSourceByHash(stubHash)
+            const data = stubHash ? await api.getStubSourceByHash(stubHash) : await api.getStubSource(stubSource)
             this._stubSource = data.source ?? ''
             this._stubSourceCurrent = data.current !== false
             this.updateComplete.then(() => {
@@ -636,28 +640,20 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                       ${(() => {
                                           const firstMsg = selMsgs[0]
                                           const stubHash = firstMsg?.stubHash
-                                          return stubHash
-                                              ? html`<button
-                                                    class="btn btn-xs btn-outline btn-info"
-                                                    title="Stub Source anzeigen"
-                                                    @click=${() => this._openSourceModal(selStub.source, stubHash)}
-                                                >
-                                                    <svg
-                                                        class="w-3 h-3"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        stroke-width="2"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path
-                                                            stroke-linecap="round"
-                                                            stroke-linejoin="round"
-                                                            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                                                        />
-                                                    </svg>
-                                                    Source
-                                                </button>`
-                                              : ''
+                                          return html`<button
+                                              class="btn btn-xs btn-outline btn-info"
+                                              title="Stub Source anzeigen"
+                                              @click=${() => this._openSourceModal(selStub.source, stubHash)}
+                                          >
+                                              <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                                                  />
+                                              </svg>
+                                              Source
+                                          </button>`
                                       })()}
                                       <button class="btn btn-xs btn-ghost" @click=${() => (this.selectedStub = null)}>✕</button>
                                   </div>
