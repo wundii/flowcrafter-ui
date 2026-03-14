@@ -3,6 +3,7 @@ import { unsafeSVG } from 'lit/directives/unsafe-svg.js'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import './fc-json-editor.js'
+import './fc-source-viewer.js'
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 const NODE_W = 220
@@ -248,6 +249,10 @@ export class FcFlowGraph extends BaseElement {
         _sendError: { state: true },
         _tooltip: { state: true }, // { x, y, label, data } | null
         _observerRunning: { state: true },
+        _stubSource: { state: true },
+        _stubSourceError: { state: true },
+        _stubSourceName: { state: true },
+        _stubSourceCurrent: { state: true },
     }
 
     constructor() {
@@ -263,6 +268,10 @@ export class FcFlowGraph extends BaseElement {
         this._sendError = null
         this._tooltip = null
         this._observerRunning = false
+        this._stubSource = null
+        this._stubSourceError = null
+        this._stubSourceName = null
+        this._stubSourceCurrent = true
         injectAnimation()
     }
 
@@ -306,6 +315,38 @@ export class FcFlowGraph extends BaseElement {
         this.querySelector('#fc-stub-input-modal')?.close()
         this._modalMsg = null
         this._sendError = null
+    }
+
+    async _openSourceModal(stubSource, stubHash) {
+        this._stubSourceName = stubSource
+        this._stubSource = null
+        this._stubSourceError = null
+        this._stubSourceCurrent = true
+        try {
+            const data = await api.getStubSourceByHash(stubHash)
+            this._stubSource = data.source ?? ''
+            this._stubSourceCurrent = data.current !== false
+            this.updateComplete.then(() => {
+                this.querySelector('#fc-stub-source-modal')?.showModal()
+            })
+        } catch (err) {
+            if (err.message.includes('404')) {
+                this._stubSourceError = `${stubSource} ist nicht mehr verfügbar.`
+            } else {
+                this._stubSourceError = err.message
+            }
+            this.updateComplete.then(() => {
+                this.querySelector('#fc-stub-source-modal')?.showModal()
+            })
+        }
+    }
+
+    _closeSourceModal() {
+        this.querySelector('#fc-stub-source-modal')?.close()
+        this._stubSource = null
+        this._stubSourceError = null
+        this._stubSourceName = null
+        this._stubSourceCurrent = true
     }
 
     _onEditorChange(e) {
@@ -591,7 +632,35 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                       <span class="font-semibold text-sm">${short(selStub.source)}</span>
                                       <span class="font-mono text-xs text-base-content/40 ml-2">${selStub.source}</span>
                                   </div>
-                                  <button class="btn btn-xs btn-ghost" @click=${() => (this.selectedStub = null)}>✕</button>
+                                  <div class="flex items-center gap-1">
+                                      ${(() => {
+                                          const firstMsg = selMsgs[0]
+                                          const stubHash = firstMsg?.stubHash
+                                          return stubHash
+                                              ? html`<button
+                                                    class="btn btn-xs btn-outline btn-info"
+                                                    title="Stub Source anzeigen"
+                                                    @click=${() => this._openSourceModal(selStub.source, stubHash)}
+                                                >
+                                                    <svg
+                                                        class="w-3 h-3"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="2"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                                                        />
+                                                    </svg>
+                                                    Source
+                                                </button>`
+                                              : ''
+                                      })()}
+                                      <button class="btn btn-xs btn-ghost" @click=${() => (this.selectedStub = null)}>✕</button>
+                                  </div>
                               </div>
 
                               <div class="p-4 grid md:grid-cols-2 gap-6">
@@ -859,6 +928,26 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                               </form>
                           `
                         : ''}
+                </dialog>
+
+                <!-- ── Stub Source Modal ── -->
+                <dialog id="fc-stub-source-modal" class="modal">
+                    <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
+                        <div class="flex items-center justify-between px-4 py-3 border-b border-base-300">
+                            <span class="font-mono text-sm truncate">${this._stubSourceCurrent === false ? html`<span class="badge badge-warning badge-sm mr-2">archiviert</span>` : ''}${this._stubSourceName ?? ''}</span>
+                            <button class="btn btn-sm btn-ghost" @click=${() => this._closeSourceModal()}>✕</button>
+                        </div>
+                        <div class="flex-1 overflow-hidden">
+                            ${this._stubSource !== null
+                                ? html`<fc-source-viewer class="block h-full" .value=${this._stubSource}></fc-source-viewer>`
+                                : this._stubSourceError
+                                  ? html`<div class="p-4 text-error text-sm">${this._stubSourceError}</div>`
+                                  : html`<div class="p-4 text-base-content/40 text-sm">Loading...</div>`}
+                        </div>
+                    </div>
+                    <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                        <button @click=${() => this._closeSourceModal()}>close</button>
+                    </form>
                 </dialog>
             </div>
         `

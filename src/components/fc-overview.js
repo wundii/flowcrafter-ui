@@ -17,6 +17,7 @@ export class FcOverview extends BaseElement {
         _selectedStub: { state: true },
         _stubSource: { state: true },
         _stubSourceError: { state: true },
+        _stubSourceCurrent: { state: true },
         _sortAsc: { state: true },
         _hoveredStub: { state: true },
         _popupX: { state: true },
@@ -32,6 +33,7 @@ export class FcOverview extends BaseElement {
         this._selectedStub = null
         this._stubSource = null
         this._stubSourceError = null
+        this._stubSourceCurrent = true
         this._sortAsc = true
         this._hoveredStub = null
         this._popupX = 0
@@ -93,9 +95,11 @@ export class FcOverview extends BaseElement {
         this._hoveredStub = null
         this._stubSource = null
         this._stubSourceError = null
+        this._stubSourceCurrent = true
         try {
             const data = await api.getStubSource(stub.source)
             this._stubSource = data.source ?? ''
+            this._stubSourceCurrent = data.current !== false
             this.renderRoot.querySelector('#stub-source-modal')?.showModal()
         } catch (err) {
             if (err.message.includes('404')) {
@@ -316,7 +320,7 @@ export class FcOverview extends BaseElement {
                 <dialog id="stub-source-modal" class="modal">
                     <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
                         <div class="flex items-center justify-between px-4 py-3 border-b border-base-300">
-                            <span class="font-mono text-sm truncate">${this._selectedStub?.source ?? ''}</span>
+                            <span class="font-mono text-sm truncate">${this._stubSourceCurrent === false ? html`<span class="badge badge-warning badge-sm mr-2">archiviert</span>` : ''}${this._selectedStub?.source ?? ''}</span>
                             <button class="btn btn-sm btn-ghost" @click=${() => this._closeSourceModal()}>✕</button>
                         </div>
                         <div class="flex-1 overflow-hidden">

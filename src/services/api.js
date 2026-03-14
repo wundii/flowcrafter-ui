@@ -93,6 +93,12 @@ export const api = {
         return fetchJson(`/api/schema/stub-source?${p}`)
     },
 
+    /** @param {string} stubHash */
+    getStubSourceByHash(stubHash) {
+        const p = new URLSearchParams({ stubHash })
+        return fetchJson(`/api/schema/stub-source?${p}`)
+    },
+
     /** @returns {Promise<Array>} mock schema data */
     getSchemas() {
         return fetchJson('/api/schemas')
