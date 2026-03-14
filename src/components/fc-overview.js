@@ -8,6 +8,11 @@ function shortName(fqcn) {
     return fqcn.split('\\').pop()
 }
 
+function formatDate(iso) {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' })
+}
+
 const ENUM_BADGE = { init: 'badge-info', stub: 'badge-success' }
 
 export class FcOverview extends BaseElement {
@@ -15,9 +20,11 @@ export class FcOverview extends BaseElement {
         _filter: { state: true },
         _flows: { state: true },
         _selectedStub: { state: true },
-        _stubSource: { state: true },
-        _stubSourceError: { state: true },
+        _stubVersions: { state: true },
+        _selectedVersionIdx: { state: true },
+        _stubSourceFallback: { state: true },
         _stubSourceCurrent: { state: true },
+        _stubSourceError: { state: true },
         _sortAsc: { state: true },
         _hoveredStub: { state: true },
         _popupX: { state: true },
@@ -31,9 +38,11 @@ export class FcOverview extends BaseElement {
         this._flows = []
         this._stubUsageMap = new Map()
         this._selectedStub = null
-        this._stubSource = null
-        this._stubSourceError = null
+        this._stubVersions = []
+        this._selectedVersionIdx = null
+        this._stubSourceFallback = null
         this._stubSourceCurrent = true
+        this._stubSourceError = null
         this._sortAsc = true
         this._hoveredStub = null
         this._popupX = 0
@@ -93,22 +102,39 @@ export class FcOverview extends BaseElement {
     async _openSourceModal(stub) {
         this._selectedStub = stub
         this._hoveredStub = null
-        this._stubSource = null
-        this._stubSourceError = null
+        this._stubVersions = []
+        this._selectedVersionIdx = null
+        this._stubSourceFallback = null
         this._stubSourceCurrent = true
+        this._stubSourceError = null
         try {
-            const data = await api.getStubSource(stub.source)
-            this._stubSource = data.source ?? ''
-            this._stubSourceCurrent = data.current !== false
+            console.log(stub.source)
+            const versions = await api.getStubSources(stub.source)
+            if (versions.length > 0) {
+                this._stubVersions = versions
+                const currentIdx = versions.findIndex(v => v.current === true)
+                this._selectedVersionIdx = currentIdx !== -1 ? currentIdx : 0
+            } else {
+                const data = await api.getStubSource(stub.source)
+                this._stubSourceFallback = data.source ?? ''
+                this._stubSourceCurrent = data.current !== false
+            }
+            await this.updateComplete
             this.renderRoot.querySelector('#stub-source-modal')?.showModal()
         } catch (err) {
             if (err.message.includes('404')) {
                 this._stubSourceError = `${stub.source} ist nicht mehr verfügbar.`
             } else {
                 this._stubSourceError = err.message
-                this.renderRoot.querySelector('#stub-source-modal')?.showModal()
             }
+            await this.updateComplete
+            this.renderRoot.querySelector('#stub-source-modal')?.showModal()
         }
+    }
+
+    get _selectedVersion() {
+        if (this._selectedVersionIdx === null || this._selectedVersionIdx === undefined || !this._stubVersions.length) return null
+        return this._stubVersions[this._selectedVersionIdx] ?? null
     }
 
     _closeSourceModal() {
@@ -320,15 +346,70 @@ export class FcOverview extends BaseElement {
                 <dialog id="stub-source-modal" class="modal">
                     <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
                         <div class="flex items-center justify-between px-4 py-3 border-b border-base-300">
-                            <span class="font-mono text-sm truncate">${this._stubSourceCurrent === false ? html`<span class="badge badge-warning badge-sm mr-2">archiviert</span>` : ''}${this._selectedStub?.source ?? ''}</span>
+                            <span class="font-mono text-sm truncate">
+                                ${this._stubSourceFallback !== null && this._stubSourceCurrent === false
+                                    ? html`<span class="badge badge-outline border-base-content/40 text-base-content/60 badge-sm mr-2"
+                                          >archiviert</span
+                                      >`
+                                    : ''}
+                                ${this._selectedStub?.source ?? ''}
+                            </span>
                             <button class="btn btn-sm btn-ghost" @click=${() => this._closeSourceModal()}>✕</button>
                         </div>
+
+                        ${this._stubVersions.length > 0
+                            ? html`
+                                  <div class="px-4 py-3 border-b border-base-300">
+                                      <div class="flex gap-2 overflow-x-auto pb-1">
+                                          ${this._stubVersions.map((v, i) => {
+                                              const selected = i === this._selectedVersionIdx
+                                              return html`
+                                                  <div
+                                                      class="flex-shrink-0 rounded-box border px-3 py-2 text-left cursor-pointer transition-all
+                                                          ${selected
+                                                          ? 'border-primary bg-primary/10'
+                                                          : 'border-base-300 bg-base-200 hover:border-base-content/30'}"
+                                                      @click=${() => {
+                                                          this._selectedVersionIdx = i
+                                                      }}
+                                                  >
+                                                      <div class="flex items-center gap-2 mb-1">
+                                                          <span
+                                                              class="font-semibold text-xs ${selected
+                                                                  ? 'text-primary'
+                                                                  : 'text-base-content/70'}"
+                                                          >
+                                                              #${i + 1}
+                                                          </span>
+                                                          ${v.current
+                                                              ? html`<span class="badge badge-xs badge-success leading-none">aktuell</span>`
+                                                              : html`<span
+                                                                    class="badge badge-xs badge-outline border-base-content/40 text-base-content/60 leading-none"
+                                                                    >archiviert</span
+                                                                >`}
+                                                      </div>
+                                                      <div class="text-xs text-base-content/40 font-mono">${formatDate(v.time)}</div>
+                                                  </div>
+                                              `
+                                          })}
+                                      </div>
+                                  </div>
+                              `
+                            : ''}
+                        ${this._stubSourceFallback !== null
+                            ? html`<div class="px-4 py-2 border-b border-base-300 text-xs text-base-content/50">
+                                  Keine Versionierung verfügbar
+                              </div>`
+                            : ''}
+
                         <div class="flex-1 overflow-hidden">
-                            ${this._stubSource !== null
-                                ? html`<fc-source-viewer class="block h-full" .value=${this._stubSource}></fc-source-viewer>`
-                                : this._stubSourceError
-                                  ? html`<div class="p-4 text-error text-sm">${this._stubSourceError}</div>`
-                                  : html`<div class="p-4 text-base-content/40 text-sm">Loading...</div>`}
+                            ${this._selectedVersion !== null && this._selectedVersion?.source !== undefined
+                                ? html`<fc-source-viewer class="block h-full" .value=${this._selectedVersion.source}></fc-source-viewer>`
+                                : this._stubSourceFallback !== null
+                                  ? html`<fc-source-viewer class="block h-full" .value=${this._stubSourceFallback}></fc-source-viewer>`
+                                  : this._stubSourceError
+                                    ? html`<div class="p-4 text-error text-sm">${this._stubSourceError}</div>`
+                                    : html`<div class="p-4 text-base-content/40 text-sm">Loading...</div>`}
                         </div>
                     </div>
                     <form method="dialog" class="modal-backdrop backdrop-blur-sm">

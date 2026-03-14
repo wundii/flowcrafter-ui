@@ -934,7 +934,13 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                 <dialog id="fc-stub-source-modal" class="modal">
                     <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
                         <div class="flex items-center justify-between px-4 py-3 border-b border-base-300">
-                            <span class="font-mono text-sm truncate">${this._stubSourceCurrent === false ? html`<span class="badge badge-warning badge-sm mr-2">archiviert</span>` : ''}${this._stubSourceName ?? ''}</span>
+                            <span class="font-mono text-sm truncate"
+                                >${this._stubSourceCurrent === false
+                                    ? html`<span class="badge badge-outline border-base-content/40 text-base-content/60 badge-sm mr-2"
+                                          >archiviert</span
+                                      >`
+                                    : ''}${this._stubSourceName ?? ''}</span
+                            >
                             <button class="btn btn-sm btn-ghost" @click=${() => this._closeSourceModal()}>✕</button>
                         </div>
                         <div class="flex-1 overflow-hidden">

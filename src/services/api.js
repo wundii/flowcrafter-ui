@@ -93,6 +93,13 @@ export const api = {
         return fetchJson(`/api/schema/stub-source?${p}`)
     },
 
+    /** @param {string} stubSource */
+    getStubSources(stubSource) {
+        console.log(stubSource)
+        const p = new URLSearchParams({ stubSource })
+        return fetchJson(`/api/schema/stub-sources?${p}`)
+    },
+
     /** @param {string} stubHash */
     getStubSourceByHash(stubHash) {
         const p = new URLSearchParams({ stubHash })
