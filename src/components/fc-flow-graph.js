@@ -634,9 +634,7 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                               <div class="p-4 border-b border-base-300 flex items-center justify-between">
                                   <div>
                                       <span class="font-semibold text-sm">${short(selStub.source)}</span>
-                                      <span class="font-mono text-xs text-base-content/40 ml-2">${selStub.source}</span>
-                                  </div>
-                                  <div class="flex items-center gap-1">
+                                      <span class="font-mono text-xs text-base-content/40 ml-2 mr-2">${selStub.source}</span>
                                       ${(() => {
                                           const firstMsg = selMsgs[0]
                                           const stubHash = firstMsg?.stubHash
@@ -655,6 +653,8 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                               Source
                                           </button>`
                                       })()}
+                                  </div>
+                                  <div class="flex items-center gap-1">
                                       <button class="btn btn-xs btn-ghost" @click=${() => (this.selectedStub = null)}>✕</button>
                                   </div>
                               </div>
