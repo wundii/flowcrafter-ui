@@ -34,6 +34,7 @@ export class FcApp extends BaseElement {
         selectedFlowHash: { state: true },
         selectedRuntimeHash: { state: true },
         _searchQuery: { state: true },
+        _serverOffline: { state: true },
     }
 
     constructor() {
@@ -51,6 +52,7 @@ export class FcApp extends BaseElement {
         this.selectedFlowHash = null
         this.selectedRuntimeHash = null
         this._searchQuery = ''
+        this._serverOffline = false
         this._infoTimer = null
     }
 
@@ -75,6 +77,18 @@ export class FcApp extends BaseElement {
         this._stopInfoPolling()
     }
 
+    updated(changed) {
+        if (changed.has('_serverOffline')) {
+            const dialog = this.querySelector('#server-offline-modal')
+            if (!dialog) return
+            if (this._serverOffline && !dialog.open) {
+                dialog.showModal()
+            } else if (!this._serverOffline && dialog.open) {
+                dialog.close()
+            }
+        }
+    }
+
     async _onAuthenticated() {
         this._authed = true
         await connection.load()
@@ -91,8 +105,9 @@ export class FcApp extends BaseElement {
             const info = await api.getInfo()
             this._serverInfo = info
             this._serverDescription = info.description ?? null
+            this._serverOffline = false
         } catch {
-            // optional — ignore errors
+            this._serverOffline = true
         }
     }
 
@@ -608,6 +623,20 @@ export class FcApp extends BaseElement {
                         : ''}
                 </dialog>
                 <main class="p-4" @flow-selected=${this._onFlowSelected} @flow-loaded=${this._onFlowLoaded}>${this._renderContent()}</main>
+
+                <!-- Server offline modal -->
+                <dialog id="server-offline-modal" class="modal">
+                    <div class="modal-box max-w-sm text-center">
+                        <span class="loading loading-ring loading-lg text-warning"></span>
+                        <h3 class="font-bold text-lg mt-4">Server nicht erreichbar</h3>
+                        <p class="text-sm text-base-content/60 mt-2">
+                            Die Verbindung zum FlowCrafter-Server ist unterbrochen. Die Anwendung versucht automatisch, die Verbindung
+                            wiederherzustellen.
+                        </p>
+                        <button class="btn btn-sm btn-outline btn-warning mt-4" @click=${this._loadInfo}>Jetzt prüfen</button>
+                    </div>
+                    <div class="modal-backdrop backdrop-blur-sm"></div>
+                </dialog>
             </div>
         `
     }
