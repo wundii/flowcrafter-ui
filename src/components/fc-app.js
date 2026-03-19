@@ -263,6 +263,14 @@ export class FcApp extends BaseElement {
         `
     }
 
+    _onRefreshFlowChart() {
+        this.querySelector('fc-flow-chart')?._load()
+    }
+
+    _onRefreshExceptionChart() {
+        this.querySelector('fc-exception-chart')?._load()
+    }
+
     _onFlowTypeSelected(_e) {
         this.activeTab = 'flows'
         this.selectedPrefix = null
@@ -294,6 +302,7 @@ export class FcApp extends BaseElement {
                                 .type=${this.selectedPrefix}
                                 @flow-selected=${this._onFlowSelected}
                                 @back=${this._onBackToSchema}
+                                @list-refreshed=${this._onRefreshFlowChart}
                             ></fc-flow-list>
                         </div>
                     </div>
@@ -308,7 +317,7 @@ export class FcApp extends BaseElement {
                     <fc-exception-chart></fc-exception-chart>
                 </div>
                 <div class="w-full md:w-2/3">
-                    <fc-exception-list></fc-exception-list>
+                    <fc-exception-list @list-refreshed=${this._onRefreshExceptionChart}></fc-exception-list>
                 </div>
             </div>
         `

@@ -89,6 +89,7 @@ export class FcExceptionList extends BaseElement {
             this.error = err.message
         } finally {
             this.loading = false
+            this.dispatchEvent(new CustomEvent('list-refreshed', { bubbles: true, composed: true }))
         }
     }
 
