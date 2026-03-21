@@ -32,6 +32,7 @@ export class FcFlowDetail extends BaseElement {
         _analysisLoading: { state: true },
         _analysisError: { state: true },
         _analysisSteps: { state: true },
+        _analysisModel: { state: true },
     }
 
     constructor() {
@@ -55,10 +56,16 @@ export class FcFlowDetail extends BaseElement {
         this._analysisLoading = false
         this._analysisError = null
         this._analysisSteps = []
+        this._analysisModel = null
     }
 
     updated(changed) {
-        if (changed.has('hash') && this.hash) this._load()
+        if (changed.has('hash') && this.hash) {
+            this._load()
+            this._analysisSteps = []
+            this._analysisLoading = false
+            this._loadCachedAnalysis()
+        }
         if (changed.has('selectedRunId') && this.selectedRunId) {
             this.updateComplete.then(() => this._scrollToSelected())
         }
@@ -115,19 +122,45 @@ export class FcFlowDetail extends BaseElement {
         this.dispatchEvent(new CustomEvent('back', { bubbles: true, composed: true }))
     }
 
-    async _onAnalyze() {
+    _loadCachedAnalysis() {
+        try {
+            const cached = sessionStorage.getItem(`fc_analysis_${this.hash}`)
+            if (cached) {
+                const data = JSON.parse(cached)
+                this._analysis = data.analysis
+                this._analysisModel = data.model ?? null
+                this._analysisError = null
+                return
+            }
+        } catch {
+            // ignore parse errors
+        }
+        this._analysis = null
+        this._analysisModel = null
+        this._analysisError = null
+    }
+
+    _onAnalyze() {
+        this._analysisModal = true
+        this.updateComplete.then(() => this.querySelector('#fc-analysis-modal')?.showModal())
+        if (!this._analysis && !this._analysisError) {
+            this._runAnalysis()
+        }
+    }
+
+    async _runAnalysis() {
         this._analysis = null
         this._analysisError = null
         this._analysisSteps = []
+        this._analysisModel = null
         this._analysisLoading = true
-        this._analysisModal = true
-        this.updateComplete.then(() => this.querySelector('#fc-analysis-modal')?.showModal())
         try {
             const result = await api.analyzeFlow(this.hash, this.selectedRunId, event => {
                 this._analysisSteps = [...this._analysisSteps, event]
             })
             this._analysis = result.analysis
             this._analysisModel = result.model ?? null
+            sessionStorage.setItem(`fc_analysis_${this.hash}`, JSON.stringify({ analysis: result.analysis, model: result.model }))
         } catch (err) {
             this._analysisError = { message: err.message, detail: err.detail ?? null }
         } finally {
@@ -519,9 +552,25 @@ export class FcFlowDetail extends BaseElement {
                                               >
                                           </div>
                                       </div>
-                                      <button class="btn btn-ghost btn-sm btn-square btn-circle" @click=${this._closeAnalysisModal}>
-                                          ✕
-                                      </button>
+                                      <div class="flex items-center gap-1">
+                                          <button
+                                              class="btn btn-ghost btn-sm btn-square btn-circle"
+                                              title="Neu analysieren"
+                                              ?disabled=${this._analysisLoading}
+                                              @click=${this._runAnalysis}
+                                          >
+                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M21.015 4.356v4.992"
+                                                  />
+                                              </svg>
+                                          </button>
+                                          <button class="btn btn-ghost btn-sm btn-square btn-circle" @click=${this._closeAnalysisModal}>
+                                              ✕
+                                          </button>
+                                      </div>
                                   </div>
                               </div>
 
