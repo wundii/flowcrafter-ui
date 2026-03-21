@@ -159,6 +159,7 @@ export class FcApp extends BaseElement {
         if (this._serviceReady) {
             this._loadInfo()
             this._startInfoPolling()
+            this._loadAiConfig()
         }
         this._applyRoute()
     }
