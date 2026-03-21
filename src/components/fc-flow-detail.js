@@ -18,6 +18,7 @@ export class FcFlowDetail extends BaseElement {
     static properties = {
         hash: { type: String },
         initialRuntimeHash: { type: String },
+        aiConfigured: { type: Boolean },
         flow: { state: true },
         loading: { state: true },
         error: { state: true },
@@ -39,6 +40,7 @@ export class FcFlowDetail extends BaseElement {
         super()
         this.hash = ''
         this.initialRuntimeHash = null
+        this.aiConfigured = false
         this.flow = null
         this.loading = true
         this.error = null
@@ -261,8 +263,8 @@ export class FcFlowDetail extends BaseElement {
                             ? html`
                                   <button
                                       class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
-                                      title="AI-Analyse starten"
-                                      ?disabled=${this._analysisLoading}
+                                      title="${this.aiConfigured ? 'AI-Analyse starten' : 'AI nicht konfiguriert'}"
+                                      ?disabled=${!this.aiConfigured || this._analysisLoading}
                                       @click=${this._onAnalyze}
                                   >
                                       ${this._analysisLoading

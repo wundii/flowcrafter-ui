@@ -376,6 +376,7 @@ export class FcApp extends BaseElement {
                     <fc-flow-detail
                         .hash=${this.selectedFlowHash}
                         .initialRuntimeHash=${this.selectedRuntimeHash}
+                        .aiConfigured=${this._aiConfigured}
                         @back=${this._onBackToList}
                     ></fc-flow-detail>
                 `
