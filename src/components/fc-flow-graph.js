@@ -723,6 +723,34 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                                                               <span class="text-xs text-base-content/40"
                                                                                   >${fmtDate(m.time)}</span
                                                                               >
+                                                                              <button
+                                                                                  class="btn btn-ghost btn-xs px-1 ml-auto text-base-content/30 hover:text-base-content/70"
+                                                                                  title="Inhalt kopieren"
+                                                                                  @click=${() =>
+                                                                                      navigator.clipboard.writeText(
+                                                                                          JSON.stringify(m.message, null, 2)
+                                                                                      )}
+                                                                              >
+                                                                                  <svg
+                                                                                      class="w-3 h-3"
+                                                                                      fill="none"
+                                                                                      stroke="currentColor"
+                                                                                      stroke-width="2"
+                                                                                      viewBox="0 0 24 24"
+                                                                                  >
+                                                                                      <rect
+                                                                                          x="9"
+                                                                                          y="9"
+                                                                                          width="13"
+                                                                                          height="13"
+                                                                                          rx="2"
+                                                                                          ry="2"
+                                                                                      ></rect>
+                                                                                      <path
+                                                                                          d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                                                      ></path>
+                                                                                  </svg>
+                                                                              </button>
                                                                           </div>
                                                                           <pre
                                                                               class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"
@@ -792,6 +820,34 @@ ${ex.traceString}</pre
                                                                                 <span class="text-xs text-base-content/40"
                                                                                     >${fmtDate(outData.time)}</span
                                                                                 >
+                                                                                <button
+                                                                                    class="btn btn-ghost btn-xs px-1 ml-auto text-base-content/30 hover:text-base-content/70"
+                                                                                    title="Inhalt kopieren"
+                                                                                    @click=${() =>
+                                                                                        navigator.clipboard.writeText(
+                                                                                            JSON.stringify(outData.message, null, 2)
+                                                                                        )}
+                                                                                >
+                                                                                    <svg
+                                                                                        class="w-3 h-3"
+                                                                                        fill="none"
+                                                                                        stroke="currentColor"
+                                                                                        stroke-width="2"
+                                                                                        viewBox="0 0 24 24"
+                                                                                    >
+                                                                                        <rect
+                                                                                            x="9"
+                                                                                            y="9"
+                                                                                            width="13"
+                                                                                            height="13"
+                                                                                            rx="2"
+                                                                                            ry="2"
+                                                                                        ></rect>
+                                                                                        <path
+                                                                                            d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                                                        ></path>
+                                                                                    </svg>
+                                                                                </button>
                                                                             </div>
                                                                             <pre
                                                                                 class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"
@@ -991,9 +1047,23 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                             : ''}
                                     </div>
                                 </div>
-                                <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${() => this._closeSourceModal()}>
-                                    ✕
-                                </button>
+                                <div class="flex items-center gap-1">
+                                    ${this._stubSource !== null
+                                        ? html`<button
+                                              class="btn btn-sm btn-ghost btn-square btn-circle text-base-content/30 hover:text-base-content/70"
+                                              title="Quellcode kopieren"
+                                              @click=${() => navigator.clipboard.writeText(this._stubSource)}
+                                          >
+                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                              </svg>
+                                          </button>`
+                                        : ''}
+                                    <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${() => this._closeSourceModal()}>
+                                        ✕
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div class="flex-1 overflow-hidden">

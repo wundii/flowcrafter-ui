@@ -358,9 +358,26 @@ export class FcOverview extends BaseElement {
                                             : ''}
                                     </div>
                                 </div>
-                                <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${() => this._closeSourceModal()}>
-                                    ✕
-                                </button>
+                                <div class="flex items-center gap-1">
+                                    ${(this._selectedVersion?.source ?? this._stubSourceFallback) !== null
+                                        ? html`<button
+                                              class="btn btn-sm btn-ghost btn-square btn-circle text-base-content/30 hover:text-base-content/70"
+                                              title="Quellcode kopieren"
+                                              @click=${() =>
+                                                  navigator.clipboard.writeText(
+                                                      this._selectedVersion?.source ?? this._stubSourceFallback ?? ''
+                                                  )}
+                                          >
+                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                              </svg>
+                                          </button>`
+                                        : ''}
+                                    <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${() => this._closeSourceModal()}>
+                                        ✕
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
