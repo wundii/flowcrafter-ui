@@ -102,8 +102,7 @@ function saveAiConfig(provider, apiKey, model) {
 }
 
 function clearAiConfig() {
-    if (existsSync(AI_FILE))
-        writeFileSync(AI_FILE, JSON.stringify({ provider: null, encryptedApiKey: null, model: null }, null, 2))
+    if (existsSync(AI_FILE)) writeFileSync(AI_FILE, JSON.stringify({ provider: null, encryptedApiKey: null, model: null }, null, 2))
 }
 
 // ─── AI analysis ─────────────────────────────────────────────────────────────
