@@ -24,6 +24,7 @@ export default [
                 CustomEvent: 'readonly',
                 Event: 'readonly',
                 URLSearchParams: 'readonly',
+                TextDecoder: 'readonly',
                 setTimeout: 'readonly',
                 clearTimeout: 'readonly',
                 setInterval: 'readonly',

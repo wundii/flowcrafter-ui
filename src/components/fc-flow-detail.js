@@ -27,6 +27,11 @@ export class FcFlowDetail extends BaseElement {
         _toast: { state: true },
         _refreshCountdown: { state: true },
         _rawModal: { state: true },
+        _analysisModal: { state: true },
+        _analysis: { state: true },
+        _analysisLoading: { state: true },
+        _analysisError: { state: true },
+        _analysisSteps: { state: true },
     }
 
     constructor() {
@@ -45,6 +50,11 @@ export class FcFlowDetail extends BaseElement {
         this._refreshCountdown = null
         this._countdownInterval = null
         this._rawModal = false
+        this._analysisModal = false
+        this._analysis = null
+        this._analysisLoading = false
+        this._analysisError = null
+        this._analysisSteps = []
     }
 
     updated(changed) {
@@ -103,6 +113,30 @@ export class FcFlowDetail extends BaseElement {
 
     _onBack() {
         this.dispatchEvent(new CustomEvent('back', { bubbles: true, composed: true }))
+    }
+
+    async _onAnalyze() {
+        this._analysis = null
+        this._analysisError = null
+        this._analysisSteps = []
+        this._analysisLoading = true
+        this._analysisModal = true
+        this.updateComplete.then(() => this.querySelector('#fc-analysis-modal')?.showModal())
+        try {
+            const result = await api.analyzeFlow(this.hash, this.selectedRunId, event => {
+                this._analysisSteps = [...this._analysisSteps, event]
+            })
+            this._analysis = result.analysis
+        } catch (err) {
+            this._analysisError = { message: err.message, detail: err.detail ?? null }
+        } finally {
+            this._analysisLoading = false
+        }
+    }
+
+    _closeAnalysisModal() {
+        this.querySelector('#fc-analysis-modal')?.close()
+        this._analysisModal = false
     }
 
     _onRunComplete(e) {
@@ -193,6 +227,28 @@ export class FcFlowDetail extends BaseElement {
                             ? html`
                                   <button
                                       class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                                      title="AI-Analyse starten"
+                                      ?disabled=${this._analysisLoading}
+                                      @click=${this._onAnalyze}
+                                  >
+                                      ${this._analysisLoading
+                                          ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                          : html`<svg
+                                                class="w-3.5 h-3.5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
+                                                />
+                                            </svg>`}
+                                  </button>
+                                  <button
+                                      class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
                                       title="Raw JSON anzeigen"
                                       @click=${() => {
                                           this._rawModal = true
@@ -279,6 +335,8 @@ export class FcFlowDetail extends BaseElement {
                         : ''}
                 </dialog>
 
+                <!-- Analysis Modal -->
+                ${this._renderAnalysisModal()}
                 ${this.loading
                     ? html`<div class="flex justify-center py-16">
                           <span class="loading loading-spinner loading-lg"></span>
@@ -358,6 +416,263 @@ export class FcFlowDetail extends BaseElement {
                 .runExceptions=${graphRun?.exceptions ?? null}
                 class="block mb-6"
             ></fc-flow-graph>
+        `
+    }
+
+    _renderAnalysisModal() {
+        const severityLabel = s => ({ high: 'Hoch', medium: 'Mittel', low: 'Niedrig' })[s] ?? s
+        const categoryLabel = c => ({ error: 'Fehler', warning: 'Warnung', performance: 'Performance', info: 'Info' })[c] ?? c
+        const categoryIcon = c =>
+            ({
+                error: html`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z M12 15.75h.007v.008H12v-.008z"
+                    />
+                </svg>`,
+                warning: html`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z M12 15.75h.007v.008H12v-.008z"
+                    />
+                </svg>`,
+                performance: html`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>`,
+                info: html`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+                    />
+                </svg>`,
+            })[c] ?? ''
+        const severityColor = s => ({ high: 'text-error', medium: 'text-warning', low: 'text-base-content/50' })[s] ?? ''
+        const categoryColor = c =>
+            ({
+                error: 'border-error/40 bg-error/5',
+                warning: 'border-warning/40 bg-warning/5',
+                performance: 'border-info/40 bg-info/5',
+                info: 'border-base-content/20 bg-base-content/3',
+            })[c] ?? ''
+        const categoryAccent = c =>
+            ({ error: 'text-error', warning: 'text-warning', performance: 'text-info', info: 'text-base-content/60' })[c] ?? ''
+
+        return html`
+            <dialog
+                id="fc-analysis-modal"
+                class="modal"
+                @close=${() => {
+                    this._analysisModal = false
+                }}
+            >
+                ${this._analysisModal
+                    ? html`
+                          <div class="modal-box w-[700px] max-w-[90vw] max-h-[85vh] p-0 flex flex-col overflow-hidden">
+                              <!-- Header -->
+                              <div class="flex items-center justify-between px-5 pt-4 pb-3 border-b border-base-300 flex-shrink-0">
+                                  <div class="flex items-center gap-2">
+                                      <svg
+                                          class="w-5 h-5 text-primary"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          stroke-width="2"
+                                          viewBox="0 0 24 24"
+                                      >
+                                          <path
+                                              stroke-linecap="round"
+                                              stroke-linejoin="round"
+                                              d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
+                                          />
+                                      </svg>
+                                      <div>
+                                          <h3 class="font-bold text-base leading-tight">AI-Analyse</h3>
+                                          <span class="text-xs text-base-content/40"
+                                              >${this.flow ? shortClass(this.flow.flowSource) : ''}</span
+                                          >
+                                      </div>
+                                  </div>
+                                  <button class="btn btn-ghost btn-sm btn-square" @click=${this._closeAnalysisModal}>✕</button>
+                              </div>
+
+                              <!-- Content -->
+                              <div class="flex-1 overflow-y-auto px-5 py-4">
+                                  ${this._analysisLoading
+                                      ? html`
+                                            <div class="flex flex-col items-center justify-center py-12 gap-4">
+                                                <span class="loading loading-spinner loading-lg text-primary"></span>
+                                                <div class="flex flex-col items-center gap-1.5">
+                                                    ${this._analysisSteps.map(
+                                                        (step, i) => html`
+                                                            <div
+                                                                class="flex items-center gap-2 text-xs ${i ===
+                                                                this._analysisSteps.length - 1
+                                                                    ? 'text-base-content/60'
+                                                                    : 'text-base-content/30'}"
+                                                            >
+                                                                ${step.type === 'tool_use'
+                                                                    ? html`<svg
+                                                                          class="w-3 h-3"
+                                                                          fill="none"
+                                                                          stroke="currentColor"
+                                                                          stroke-width="2"
+                                                                          viewBox="0 0 24 24"
+                                                                      >
+                                                                          <path
+                                                                              stroke-linecap="round"
+                                                                              stroke-linejoin="round"
+                                                                              d="M17 8l4 4-4 4M7 8l-4 4 4 4M14 4l-4 16"
+                                                                          />
+                                                                      </svg>`
+                                                                    : html`<svg
+                                                                          class="w-3 h-3"
+                                                                          fill="none"
+                                                                          stroke="currentColor"
+                                                                          stroke-width="2"
+                                                                          viewBox="0 0 24 24"
+                                                                      >
+                                                                          <path
+                                                                              stroke-linecap="round"
+                                                                              stroke-linejoin="round"
+                                                                              d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                          />
+                                                                      </svg>`}
+                                                                <span>${step.message}</span>
+                                                            </div>
+                                                        `
+                                                    )}
+                                                </div>
+                                            </div>
+                                        `
+                                      : this._analysisError
+                                        ? html`
+                                              <div class="rounded-lg border border-error/30 bg-error/5 p-4">
+                                                  <div class="flex items-center gap-2 mb-2">
+                                                      <svg
+                                                          class="w-4 h-4 text-error flex-shrink-0"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                                                          />
+                                                      </svg>
+                                                      <span class="text-sm font-medium text-error">Analyse fehlgeschlagen</span>
+                                                  </div>
+                                                  <p class="text-sm text-base-content/70 ml-6">${this._analysisError.message}</p>
+                                                  ${this._analysisError.detail
+                                                      ? html`<pre
+                                                            class="mt-3 ml-6 p-3 rounded bg-base-300 text-xs font-mono text-base-content/60 overflow-x-auto whitespace-pre-wrap"
+                                                        >
+${JSON.stringify(this._analysisError.detail, null, 2)}</pre
+                                                        >`
+                                                      : ''}
+                                              </div>
+                                          `
+                                        : this._analysis
+                                          ? html`
+                                                <!-- Summary -->
+                                                <div class="rounded-lg bg-base-200 border border-base-300 p-4 mb-5">
+                                                    <div class="text-xs font-semibold uppercase tracking-wider text-base-content/40 mb-1.5">
+                                                        Zusammenfassung
+                                                    </div>
+                                                    <p class="text-sm text-base-content/80 leading-relaxed">${this._analysis.summary}</p>
+                                                </div>
+
+                                                <!-- Findings -->
+                                                ${this._analysis.findings.length === 0
+                                                    ? html`
+                                                          <div class="flex items-center gap-2 text-success py-4">
+                                                              <svg
+                                                                  class="w-5 h-5"
+                                                                  fill="none"
+                                                                  stroke="currentColor"
+                                                                  stroke-width="2"
+                                                                  viewBox="0 0 24 24"
+                                                              >
+                                                                  <path
+                                                                      stroke-linecap="round"
+                                                                      stroke-linejoin="round"
+                                                                      d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                  />
+                                                              </svg>
+                                                              <span class="text-sm font-medium">Keine Auffälligkeiten gefunden</span>
+                                                          </div>
+                                                      `
+                                                    : html`
+                                                          <div class="flex flex-col gap-3">
+                                                              ${this._analysis.findings.map(
+                                                                  f => html`
+                                                                      <div class="rounded-lg border p-4 ${categoryColor(f.category)}">
+                                                                          <div class="flex items-start gap-3">
+                                                                              <div
+                                                                                  class="flex-shrink-0 mt-0.5 ${categoryAccent(f.category)}"
+                                                                              >
+                                                                                  ${categoryIcon(f.category)}
+                                                                              </div>
+                                                                              <div class="flex-1 min-w-0">
+                                                                                  <div class="flex items-center gap-2 flex-wrap mb-1.5">
+                                                                                      <span class="text-sm font-semibold text-base-content"
+                                                                                          >${f.title}</span
+                                                                                      >
+                                                                                      <span
+                                                                                          class="text-xs px-1.5 py-0.5 rounded-full bg-base-content/8 ${severityColor(
+                                                                                              f.severity
+                                                                                          )}"
+                                                                                          >${severityLabel(f.severity)}</span
+                                                                                      >
+                                                                                      <span
+                                                                                          class="text-xs px-1.5 py-0.5 rounded-full bg-base-content/8 text-base-content/50"
+                                                                                          >${categoryLabel(f.category)}</span
+                                                                                      >
+                                                                                  </div>
+                                                                                  <p class="text-sm text-base-content/60 leading-relaxed">
+                                                                                      ${f.description}
+                                                                                  </p>
+                                                                                  ${f.affectedStub
+                                                                                      ? html`<div
+                                                                                            class="mt-2 inline-flex items-center gap-1.5 text-xs font-mono text-base-content/40 bg-base-content/5 rounded px-2 py-1"
+                                                                                        >
+                                                                                            <svg
+                                                                                                class="w-3 h-3"
+                                                                                                fill="none"
+                                                                                                stroke="currentColor"
+                                                                                                stroke-width="2"
+                                                                                                viewBox="0 0 24 24"
+                                                                                            >
+                                                                                                <path
+                                                                                                    stroke-linecap="round"
+                                                                                                    stroke-linejoin="round"
+                                                                                                    d="M17 8l4 4-4 4M7 8l-4 4 4 4M14 4l-4 16"
+                                                                                                />
+                                                                                            </svg>
+                                                                                            ${shortClass(f.affectedStub)}
+                                                                                        </div>`
+                                                                                      : ''}
+                                                                              </div>
+                                                                          </div>
+                                                                      </div>
+                                                                  `
+                                                              )}
+                                                          </div>
+                                                      `}
+                                            `
+                                          : ''}
+                              </div>
+                          </div>
+
+                          <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                              <button>close</button>
+                          </form>
+                      `
+                    : ''}
+            </dialog>
         `
     }
 

@@ -13,6 +13,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/lang-php": "^6.0.2",
     "@codemirror/theme-one-dark": "^6.1.3",

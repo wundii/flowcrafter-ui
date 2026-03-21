@@ -8,6 +8,18 @@ export default defineConfig({
         proxy: {
             '/api/auth': 'http://localhost:3000',
             '/api/connection': 'http://localhost:3000',
+            '/api/ai-config': 'http://localhost:3000',
+            '/api/analyze': {
+                target: 'http://localhost:3000',
+                configure: proxy => {
+                    proxy.on('proxyRes', (proxyRes, _req, res) => {
+                        // Disable buffering so NDJSON streams through immediately
+                        res.writeHead(proxyRes.statusCode, proxyRes.headers)
+                        proxyRes.pipe(res)
+                    })
+                },
+                selfHandleResponse: true,
+            },
         },
     },
 })

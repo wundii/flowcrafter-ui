@@ -26,6 +26,7 @@ function formatDate(iso) {
 export class FcFlowList extends BaseElement {
     static properties = {
         type: { type: String },
+        page: { type: Number },
         flows: { state: true },
         loading: { state: true },
         error: { state: true },
@@ -39,6 +40,7 @@ export class FcFlowList extends BaseElement {
     constructor() {
         super()
         this.type = null
+        this.page = 0
         this.flows = []
         this.loading = true
         this.error = null
@@ -51,14 +53,20 @@ export class FcFlowList extends BaseElement {
 
     connectedCallback() {
         super.connectedCallback()
+        this._page = this.page ?? 0
         this._load()
     }
 
     updated(changed) {
-        if (changed.has('type')) {
+        if (changed.has('type') && changed.get('type') !== undefined) {
             this._page = 0
+            this._emitPageChange()
             this._load()
         }
+    }
+
+    _emitPageChange() {
+        this.dispatchEvent(new CustomEvent('page-changed', { detail: { page: this._page }, bubbles: true, composed: true }))
     }
 
     async _load() {
@@ -116,16 +124,19 @@ export class FcFlowList extends BaseElement {
 
     _onPrev() {
         this._page = Math.max(0, this._page - 1)
+        this._emitPageChange()
         this._load()
     }
 
     _onNext() {
         this._page += 1
+        this._emitPageChange()
         this._load()
     }
 
     _applyDateFilter() {
         this._page = 0
+        this._emitPageChange()
         this._load()
     }
 
@@ -133,6 +144,7 @@ export class FcFlowList extends BaseElement {
         this._dateFrom = ''
         this._dateTo = ''
         this._page = 0
+        this._emitPageChange()
         this._load()
     }
 

@@ -3,10 +3,12 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, createReadStream } 
 import { join, extname, dirname } from 'node:path'
 import { scryptSync, randomBytes, timingSafeEqual, createHash, createCipheriv, createDecipheriv } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
+import Anthropic from '@anthropic-ai/sdk'
 
 const PORT = Number(process.env.PORT ?? 3000)
 const AUTH_FILE = './data/auth.json'
 const CONNECTION_FILE = './data/connection.json'
+const AI_FILE = './data/ai.json'
 const KEY_FILE = './data/.key'
 const DIST = join(dirname(fileURLToPath(import.meta.url)), 'dist')
 
@@ -76,6 +78,150 @@ function saveConnection(url, secret) {
 
 function clearConnection() {
     if (existsSync(CONNECTION_FILE)) writeFileSync(CONNECTION_FILE, JSON.stringify({ url: null, encryptedSecret: null }, null, 2))
+}
+
+// ─── AI config store ─────────────────────────────────────────────────────────
+function loadAiConfig() {
+    if (!existsSync(AI_FILE)) return { provider: null, encryptedApiKey: null }
+    return JSON.parse(readFileSync(AI_FILE, 'utf8'))
+}
+
+function saveAiConfig(provider, apiKey) {
+    mkdirSync(dirname(AI_FILE), { recursive: true })
+    writeFileSync(AI_FILE, JSON.stringify({ provider, encryptedApiKey: apiKey ? encryptSecret(apiKey) : null }, null, 2))
+}
+
+function clearAiConfig() {
+    if (existsSync(AI_FILE)) writeFileSync(AI_FILE, JSON.stringify({ provider: null, encryptedApiKey: null }, null, 2))
+}
+
+// ─── AI analysis ─────────────────────────────────────────────────────────────
+const ANALYSIS_SYSTEM_PROMPT = `Du bist ein Experte fuer Workflow- und State-Machine-Analyse fuer FlowCrafter, eine PHP message-driven Workflow-Engine.
+
+Du analysierst Flow-Ausfuehrungsdaten und lieferst konkrete, umsetzbare Erkenntnisse in diesen Kategorien:
+- "error": Erkannte oder wahrscheinliche Fehlerquellen
+- "warning": Praeventive Warnungen vor moeglichen Problemen
+- "performance": Performance-Auffaelligkeiten (Zeitluecken, langsame Stubs, unnoetige Verarbeitung)
+- "info": Allgemeine Beobachtungen und Verbesserungsvorschlaege
+
+Ein Flow besteht aus:
+- Einem Schema mit Stubs (Prozessoren), die typisierte Messages konsumieren und produzieren
+- Messages fliessen zwischen Stubs mit den Zustaenden: WAIT -> PROCESS -> FINISH
+- Jede Message hat Zeitstempel, predecessorHash-Ketten und ist an einen flowRuntimeHash (Run) gebunden
+- Exceptions werden mit vollstaendigem Stack-Trace erfasst
+- Pro Flow koennen mehrere Runs existieren (Wiederausfuehrung mit neuen Messages)
+- Jeder Run wird durch eine Message ausgelöst, diese Message besitzt kein predecessorHash.
+- Mehrere Runs sind normal und gewollt: Ein Run bricht typischerweise ab, wenn ein Stub einen Fehler im eigenen Code hat oder eine externe Abhaengigkeit einen Fehler zurueckliefert. In diesem Fall wird ein neuer Run mit gleicher oder geänderten message gestartet um den Flow fortzusetzen. Das ist erwartetes Verhalten und KEINE Auffaelligkeit.
+
+Antworte AUSSCHLIESSLICH mit validem JSON in genau dieser Struktur:
+{
+  "summary": "1-2 Saetze Gesamtbewertung",
+  "findings": [
+    {
+      "category": "error|warning|performance|info",
+      "severity": "high|medium|low",
+      "title": "Kurzer Titel",
+      "description": "Detaillierte Erklaerung mit konkreten Verweisen auf Stubs/Messages",
+      "affectedStub": "ClassName oder null"
+    }
+  ]
+}
+
+Du hast Zugriff auf das Tool "get_stub_source", um den PHP-Quellcode einzelner Stubs zu laden. Nutze es, wenn der Quellcode fuer eine fundierte Analyse hilfreich waere (z.B. bei Exceptions, unklarem Verhalten oder Performance-Problemen).
+
+Alle Texte (summary, title, description) muessen auf Deutsch sein.
+Wenn es keine Auffaelligkeiten gibt, liefere ein leeres findings-Array.
+Verpacke das JSON niemals in Markdown-Code-Bloecke.`
+
+function buildUserPrompt(flowData, runtimeHash) {
+    let prompt = `Analyze this flow execution data:\n\n${JSON.stringify(flowData, null, 2)}`
+    if (runtimeHash) {
+        prompt += `\n\nFocus your analysis especially on the run with flowRuntimeHash: ${runtimeHash}`
+    }
+    return prompt
+}
+
+const ANALYSIS_TOOLS = [
+    {
+        name: 'get_stub_source',
+        description:
+            'Laedt den PHP-Quellcode eines Stubs anhand seines Klassennamens. Nutze dieses Tool, wenn du den Quellcode eines Stubs benoetist um die Analyse zu vertiefen (z.B. bei Fehlern, unklarer Logik oder Performance-Problemen).',
+        input_schema: {
+            type: 'object',
+            properties: {
+                className: {
+                    type: 'string',
+                    description: 'Vollqualifizierter PHP-Klassenname des Stubs (z.B. App\\Stubs\\MyStub)',
+                },
+            },
+            required: ['className'],
+        },
+    },
+]
+
+function shortClassName(fqn) {
+    return fqn?.split('\\').pop() ?? fqn
+}
+
+async function analyzeFlow(apiKey, flowData, runtimeHash, phpUrl, phpHeaders, onProgress) {
+    const client = new Anthropic({ apiKey })
+    const messages = [{ role: 'user', content: buildUserPrompt(flowData, runtimeHash) }]
+
+    onProgress({ type: 'status', message: 'Flow-Daten werden analysiert…' })
+
+    let response = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        system: ANALYSIS_SYSTEM_PROMPT,
+        tools: ANALYSIS_TOOLS,
+        messages,
+    })
+
+    // Tool-use loop: let AI request stub source code if needed
+    while (response.stop_reason === 'tool_use') {
+        const toolBlocks = response.content.filter(b => b.type === 'tool_use')
+        messages.push({ role: 'assistant', content: response.content })
+
+        const toolResults = []
+        for (const block of toolBlocks) {
+            if (block.name === 'get_stub_source') {
+                onProgress({ type: 'tool_use', message: `Lade Quellcode: ${shortClassName(block.input.className)}` })
+                try {
+                    const p = new URLSearchParams({ className: block.input.className })
+                    const srcRes = await fetch(`${phpUrl}/api/schema/stub-source?${p}`, { headers: phpHeaders })
+                    const srcData = srcRes.ok ? await srcRes.json() : { error: `HTTP ${srcRes.status}` }
+                    toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(srcData) })
+                } catch (err) {
+                    toolResults.push({
+                        type: 'tool_result',
+                        tool_use_id: block.id,
+                        content: JSON.stringify({ error: err.message }),
+                        is_error: true,
+                    })
+                }
+            }
+        }
+
+        onProgress({ type: 'status', message: 'Analyse wird fortgesetzt…' })
+        messages.push({ role: 'user', content: toolResults })
+        response = await client.messages.create({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 4096,
+            system: ANALYSIS_SYSTEM_PROMPT,
+            tools: ANALYSIS_TOOLS,
+            messages,
+        })
+    }
+
+    const text = response.content
+        .filter(b => b.type === 'text')
+        .map(b => b.text)
+        .join('')
+        .replace(/```json?\n?/g, '')
+        .replace(/```$/g, '')
+        .trim()
+
+    return JSON.parse(text)
 }
 
 // ─── Crypto ───────────────────────────────────────────────────────────────────
@@ -228,6 +374,92 @@ const server = createServer(async (req, res) => {
         }
 
         return json(res, { error: 'Not found.' }, 404)
+    }
+
+    // ── AI config API ─────────────────────────────────────────────────────────
+    if (path === '/api/ai-config') {
+        const db = loadDb()
+        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+
+        if (method === 'GET') {
+            const config = loadAiConfig()
+            return json(res, { configured: !!config.encryptedApiKey, provider: config.provider ?? '' })
+        }
+
+        if (method === 'POST') {
+            const { apiKey, provider } = await readBody(req)
+            if (!apiKey) return json(res, { error: 'apiKey fehlt.' }, 400)
+            try {
+                const client = new Anthropic({ apiKey })
+                await client.messages.create({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 10,
+                    messages: [{ role: 'user', content: 'ping' }],
+                })
+            } catch (err) {
+                const msg = err.error?.error?.message ?? err.message ?? 'API-Key ungültig.'
+                return json(res, { error: msg }, 400)
+            }
+            saveAiConfig(provider || 'anthropic', apiKey)
+            return json(res, { ok: true })
+        }
+
+        if (method === 'DELETE') {
+            clearAiConfig()
+            return json(res, { ok: true })
+        }
+
+        return json(res, { error: 'Not found.' }, 404)
+    }
+
+    // ── Analyze API ─────────────────────────────────────────────────────────
+    if (path === '/api/analyze' && method === 'POST') {
+        const db = loadDb()
+        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+
+        const aiConfig = loadAiConfig()
+        if (!aiConfig.encryptedApiKey) return json(res, { error: 'AI nicht konfiguriert.' }, 503)
+
+        const conn = loadConnection()
+        if (!conn.url) return json(res, { error: 'Keine FlowCrafter-Verbindung konfiguriert.' }, 503)
+
+        const { flowHash, runtimeHash } = await readBody(req)
+        if (!flowHash) return json(res, { error: 'flowHash fehlt.' }, 400)
+
+        res.writeHead(200, {
+            'Content-Type': 'application/x-ndjson',
+            'Cache-Control': 'no-cache',
+            'Access-Control-Allow-Origin': '*',
+        })
+
+        const send = data => res.write(JSON.stringify(data) + '\n')
+
+        try {
+            send({ type: 'status', message: 'Flow-Daten werden geladen…' })
+            const phpSecret = conn.encryptedSecret ? decryptSecret(conn.encryptedSecret) : null
+            const phpHeaders = phpSecret ? { Authorization: `Bearer ${phpSecret}` } : {}
+            const flowRes = await fetch(`${conn.url}/api/flows/detail?hash=${encodeURIComponent(flowHash)}`, {
+                headers: phpHeaders,
+            })
+            if (!flowRes.ok) {
+                send({ type: 'error', error: `FlowCrafter API: HTTP ${flowRes.status}` })
+                return res.end()
+            }
+            const flowData = await flowRes.json()
+
+            const apiKey = decryptSecret(aiConfig.encryptedApiKey)
+            const analysis = await analyzeFlow(apiKey, flowData, runtimeHash, conn.url, phpHeaders, send)
+
+            send({ type: 'result', analysis, model: 'claude-sonnet-4-20250514', timestamp: new Date().toISOString() })
+        } catch (err) {
+            console.error('Analyze error:', err)
+            const detail = {}
+            if (err.status) detail.status = err.status
+            if (err.error) detail.body = err.error
+            const message = err.error?.error?.message ?? err.message ?? 'Analyse fehlgeschlagen.'
+            send({ type: 'error', error: message, detail: Object.keys(detail).length > 0 ? detail : undefined })
+        }
+        return res.end()
     }
 
     // ── Static files ─────────────────────────────────────────────────────────

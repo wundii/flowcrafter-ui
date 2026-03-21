@@ -110,4 +110,89 @@ export const api = {
     getSchemas() {
         return fetchJson('/api/schemas')
     },
+
+    /**
+     * @param {string} flowHash
+     * @param {string} [runtimeHash]
+     * @param {(event: object) => void} [onProgress]
+     */
+    async analyzeFlow(flowHash, runtimeHash = null, onProgress = () => {}) {
+        const token = sessionStorage.getItem('fc_token') ?? ''
+        const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ flowHash, runtimeHash }),
+        })
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let result = null
+
+        while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop()
+            for (const line of lines) {
+                if (!line.trim()) continue
+                const event = JSON.parse(line)
+                if (event.type === 'result') {
+                    result = event
+                } else if (event.type === 'error') {
+                    const err = new Error(event.error)
+                    err.detail = event.detail ?? null
+                    throw err
+                } else {
+                    onProgress(event)
+                }
+            }
+        }
+
+        // Process remaining buffer
+        if (buffer.trim()) {
+            const event = JSON.parse(buffer)
+            if (event.type === 'result') result = event
+            else if (event.type === 'error') {
+                const err = new Error(event.error)
+                err.detail = event.detail ?? null
+                throw err
+            }
+        }
+
+        if (!result) throw new Error('Keine Antwort erhalten.')
+        return result
+    },
+
+    getAiConfig() {
+        const token = sessionStorage.getItem('fc_token') ?? ''
+        return fetch('/api/ai-config', {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }).then(res => res.json())
+    },
+
+    /** @param {string} apiKey */
+    saveAiConfig(apiKey) {
+        const token = sessionStorage.getItem('fc_token') ?? ''
+        return fetch('/api/ai-config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ apiKey }),
+        }).then(res => res.json())
+    },
+
+    clearAiConfig() {
+        const token = sessionStorage.getItem('fc_token') ?? ''
+        return fetch('/api/ai-config', {
+            method: 'DELETE',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }).then(res => res.json())
+    },
 }
