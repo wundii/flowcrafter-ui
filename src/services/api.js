@@ -1,9 +1,10 @@
-import { connection } from './connection.js'
+function uiToken() {
+    return sessionStorage.getItem('fc_token') ?? ''
+}
 
 function fetchJson(path) {
-    const secret = connection.getSecret()
-    const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
-    return fetch(`${connection.getUrl()}${path}`, { headers }).then(async res => {
+    const headers = uiToken() ? { Authorization: `Bearer ${uiToken()}` } : {}
+    return fetch(`/api/fc${path}`, { headers }).then(async res => {
         if (!res.ok) {
             const body = await res.json().catch(() => ({}))
             throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -13,12 +14,11 @@ function fetchJson(path) {
 }
 
 function postJson(path, body) {
-    const secret = connection.getSecret()
     const headers = {
         'Content-Type': 'application/json',
-        ...(secret ? { Authorization: `Bearer ${secret}` } : {}),
+        ...(uiToken() ? { Authorization: `Bearer ${uiToken()}` } : {}),
     }
-    return fetch(`${connection.getUrl()}${path}`, {
+    return fetch(`/api/fc${path}`, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),

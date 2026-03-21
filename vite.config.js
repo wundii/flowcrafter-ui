@@ -6,6 +6,8 @@ export default defineConfig({
     server: {
         port: 5173,
         proxy: {
+            '/api/fc': 'http://localhost:3000',
+            '/api/fc-ping': 'http://localhost:3000',
             '/api/auth': 'http://localhost:3000',
             '/api/connection': 'http://localhost:3000',
             '/api/ai-config': 'http://localhost:3000',

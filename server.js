@@ -442,6 +442,61 @@ const server = createServer(async (req, res) => {
         return json(res, { error: 'Not found.' }, 404)
     }
 
+    // ── FlowCrafter proxy ─────────────────────────────────────────────────
+    if (path.startsWith('/api/fc/')) {
+        const db = loadDb()
+        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+
+        const conn = loadConnection()
+        if (!conn.url) return json(res, { error: 'Keine FlowCrafter-Verbindung konfiguriert.' }, 503)
+
+        const phpSecret = conn.encryptedSecret ? decryptSecret(conn.encryptedSecret) : null
+        const targetPath = path.replace('/api/fc', '') + url.search
+        const targetUrl = `${conn.url}${targetPath}`
+
+        const proxyHeaders = {
+            ...(phpSecret ? { Authorization: `Bearer ${phpSecret}` } : {}),
+        }
+
+        try {
+            const fetchOpts = { method, headers: proxyHeaders }
+            if (method === 'POST') {
+                const body = await readBody(req)
+                fetchOpts.body = JSON.stringify(body)
+                proxyHeaders['Content-Type'] = 'application/json'
+            }
+            const proxyRes = await fetch(targetUrl, fetchOpts)
+            const contentType = proxyRes.headers.get('content-type') ?? 'application/json'
+            res.writeHead(proxyRes.status, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' })
+            const buffer = Buffer.from(await proxyRes.arrayBuffer())
+            return res.end(buffer)
+        } catch (err) {
+            console.error('Proxy error:', err.message)
+            return json(res, { error: 'FlowCrafter nicht erreichbar.' }, 502)
+        }
+    }
+
+    // ── Ping proxy ───────────────────────────────────────────────────────────
+    if (path === '/api/fc-ping' && method === 'POST') {
+        const db = loadDb()
+        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+
+        const { url: pingUrl, secret } = await readBody(req)
+        if (!pingUrl) return json(res, { error: 'url fehlt.' }, 400)
+
+        try {
+            const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
+            const pingRes = await fetch(`${pingUrl.replace(/\/$/, '')}/api/ping`, { headers })
+            if (pingRes.status === 401) return json(res, { error: '401' })
+            if (!pingRes.ok) return json(res, { error: 'unreachable' })
+            const data = await pingRes.json().catch(() => null)
+            if (data === 'pong' || data?.pong) return json(res, { ok: true })
+            return json(res, { error: 'unexpected' })
+        } catch {
+            return json(res, { error: 'unreachable' })
+        }
+    }
+
     // ── Analyze API ─────────────────────────────────────────────────────────
     if (path === '/api/analyze' && method === 'POST') {
         const db = loadDb()

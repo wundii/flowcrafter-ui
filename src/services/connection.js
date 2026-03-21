@@ -55,13 +55,11 @@ export const connection = {
 
     async ping(url, secret) {
         try {
-            const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
-            const res = await fetch(`${url.replace(/\/$/, '')}/api/ping`, { headers })
-            if (res.status === 401) return { error: '401' }
-            if (!res.ok) return { error: 'unreachable' }
-            const data = await res.json().catch(() => null)
-            if (data === 'pong' || data?.pong) return { ok: true }
-            return { error: 'unexpected' }
+            const res = await apiFetch('/api/fc-ping', {
+                method: 'POST',
+                body: JSON.stringify({ url: url.replace(/\/$/, ''), secret: secret || null }),
+            })
+            return await res.json()
         } catch {
             return { error: 'unreachable' }
         }
