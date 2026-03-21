@@ -127,6 +127,7 @@ export class FcFlowDetail extends BaseElement {
                 this._analysisSteps = [...this._analysisSteps, event]
             })
             this._analysis = result.analysis
+            this._analysisModel = result.model ?? null
         } catch (err) {
             this._analysisError = { message: err.message, detail: err.detail ?? null }
         } finally {
@@ -512,7 +513,9 @@ export class FcFlowDetail extends BaseElement {
                                           <div>
                                               <h3 class="font-bold text-base leading-tight">AI-Analyse</h3>
                                               <span class="text-xs text-base-content/50"
-                                                  >${this.flow ? shortClass(this.flow.flowSource) : ''}</span
+                                                  >${this.flow ? shortClass(this.flow.flowSource) : ''}${this._analysisModel
+                                                      ? html` · <span class="text-base-content/40">${this._analysisModel}</span>`
+                                                      : ''}</span
                                               >
                                           </div>
                                       </div>

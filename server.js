@@ -81,18 +81,29 @@ function clearConnection() {
 }
 
 // ─── AI config store ─────────────────────────────────────────────────────────
+const AI_MODELS = [
+    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+    { id: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
+    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
+]
+const DEFAULT_MODEL = 'claude-sonnet-4-20250514'
+
 function loadAiConfig() {
-    if (!existsSync(AI_FILE)) return { provider: null, encryptedApiKey: null }
+    if (!existsSync(AI_FILE)) return { provider: null, encryptedApiKey: null, model: null }
     return JSON.parse(readFileSync(AI_FILE, 'utf8'))
 }
 
-function saveAiConfig(provider, apiKey) {
+function saveAiConfig(provider, apiKey, model) {
     mkdirSync(dirname(AI_FILE), { recursive: true })
-    writeFileSync(AI_FILE, JSON.stringify({ provider, encryptedApiKey: apiKey ? encryptSecret(apiKey) : null }, null, 2))
+    const existing = loadAiConfig()
+    const validModel = AI_MODELS.some(m => m.id === model) ? model : DEFAULT_MODEL
+    const encryptedApiKey = apiKey ? encryptSecret(apiKey) : existing.encryptedApiKey
+    writeFileSync(AI_FILE, JSON.stringify({ provider, encryptedApiKey, model: validModel }, null, 2))
 }
 
 function clearAiConfig() {
-    if (existsSync(AI_FILE)) writeFileSync(AI_FILE, JSON.stringify({ provider: null, encryptedApiKey: null }, null, 2))
+    if (existsSync(AI_FILE))
+        writeFileSync(AI_FILE, JSON.stringify({ provider: null, encryptedApiKey: null, model: null }, null, 2))
 }
 
 // ─── AI analysis ─────────────────────────────────────────────────────────────
@@ -168,14 +179,14 @@ function shortClassName(fqn) {
     return fqn?.split('\\').pop() ?? fqn
 }
 
-async function analyzeFlow(apiKey, flowData, runtimeHash, phpUrl, phpHeaders, onProgress) {
+async function analyzeFlow(apiKey, model, flowData, runtimeHash, phpUrl, phpHeaders, onProgress) {
     const client = new Anthropic({ apiKey })
     const messages = [{ role: 'user', content: buildUserPrompt(flowData, runtimeHash) }]
 
     onProgress({ type: 'status', message: 'Flow-Daten werden analysiert…' })
 
     let response = await client.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model,
         max_tokens: 4096,
         system: ANALYSIS_SYSTEM_PROMPT,
         tools: ANALYSIS_TOOLS,
@@ -213,7 +224,7 @@ async function analyzeFlow(apiKey, flowData, runtimeHash, phpUrl, phpHeaders, on
         onProgress({ type: 'status', message: 'Analyse wird fortgesetzt…' })
         messages.push({ role: 'user', content: toolResults })
         response = await client.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model,
             max_tokens: 4096,
             system: ANALYSIS_SYSTEM_PROMPT,
             tools: ANALYSIS_TOOLS,
@@ -395,24 +406,31 @@ const server = createServer(async (req, res) => {
 
         if (method === 'GET') {
             const config = loadAiConfig()
-            return json(res, { configured: !!config.encryptedApiKey, provider: config.provider ?? '' })
+            return json(res, {
+                configured: !!config.encryptedApiKey,
+                provider: config.provider ?? '',
+                model: config.model ?? DEFAULT_MODEL,
+                models: AI_MODELS,
+            })
         }
 
         if (method === 'POST') {
-            const { apiKey, provider } = await readBody(req)
-            if (!apiKey) return json(res, { error: 'apiKey fehlt.' }, 400)
-            try {
-                const client = new Anthropic({ apiKey })
-                await client.messages.create({
-                    model: 'claude-sonnet-4-20250514',
-                    max_tokens: 10,
-                    messages: [{ role: 'user', content: 'ping' }],
-                })
-            } catch (err) {
-                const msg = err.error?.error?.message ?? err.message ?? 'API-Key ungültig.'
-                return json(res, { error: msg }, 400)
+            const { apiKey, provider, model } = await readBody(req)
+            const selectedModel = AI_MODELS.some(m => m.id === model) ? model : DEFAULT_MODEL
+            if (apiKey) {
+                try {
+                    const client = new Anthropic({ apiKey })
+                    await client.messages.create({
+                        model: selectedModel,
+                        max_tokens: 10,
+                        messages: [{ role: 'user', content: 'ping' }],
+                    })
+                } catch (err) {
+                    const msg = err.error?.error?.message ?? err.message ?? 'API-Key ungültig.'
+                    return json(res, { error: msg }, 400)
+                }
             }
-            saveAiConfig(provider || 'anthropic', apiKey)
+            saveAiConfig(provider || 'anthropic', apiKey, selectedModel)
             return json(res, { ok: true })
         }
 
@@ -460,9 +478,10 @@ const server = createServer(async (req, res) => {
             const flowData = await flowRes.json()
 
             const apiKey = decryptSecret(aiConfig.encryptedApiKey)
-            const analysis = await analyzeFlow(apiKey, flowData, runtimeHash, conn.url, phpHeaders, send)
+            const aiModel = aiConfig.model ?? DEFAULT_MODEL
+            const analysis = await analyzeFlow(apiKey, aiModel, flowData, runtimeHash, conn.url, phpHeaders, send)
 
-            send({ type: 'result', analysis, model: 'claude-sonnet-4-20250514', timestamp: new Date().toISOString() })
+            send({ type: 'result', analysis, model: aiModel, timestamp: new Date().toISOString() })
         } catch (err) {
             console.error('Analyze error:', err)
             const detail = {}

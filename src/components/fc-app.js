@@ -37,6 +37,8 @@ export class FcApp extends BaseElement {
         _serverOffline: { state: true },
         _aiModal: { state: true },
         _aiConfigured: { state: true },
+        _aiModel: { state: true },
+        _aiModels: { state: true },
         _flowListPage: { state: true },
         _exceptionListPage: { state: true },
     }
@@ -60,6 +62,8 @@ export class FcApp extends BaseElement {
         this._infoTimer = null
         this._aiModal = null
         this._aiConfigured = false
+        this._aiModel = null
+        this._aiModels = []
         this._flowListPage = 0
         this._exceptionListPage = 0
     }
@@ -85,6 +89,8 @@ export class FcApp extends BaseElement {
         try {
             const config = await api.getAiConfig()
             this._aiConfigured = config.configured
+            this._aiModel = config.model ?? null
+            this._aiModels = config.models ?? []
         } catch {
             this._aiConfigured = false
         }
@@ -104,18 +110,20 @@ export class FcApp extends BaseElement {
         e.preventDefault()
         const form = e.target
         const apiKey = form.apiKey.value.trim()
-        if (!apiKey) {
+        const model = form.model?.value ?? this._aiModel
+        if (!apiKey && !this._aiConfigured) {
             this._aiModal = { ...this._aiModal, error: 'API-Key darf nicht leer sein.' }
             return
         }
         this._aiModal = { ...this._aiModal, loading: true, error: null }
         try {
-            const res = await api.saveAiConfig(apiKey)
+            const res = await api.saveAiConfig(apiKey, model)
             if (res.error) {
                 this._aiModal = { ...this._aiModal, loading: false, error: res.error }
                 return
             }
             this._aiConfigured = true
+            this._aiModel = model
             this._closeAiModal()
         } catch (err) {
             this._aiModal = { ...this._aiModal, loading: false, error: err.message }
@@ -797,6 +805,28 @@ export class FcApp extends BaseElement {
                                           : ''}
 
                                       <form @submit=${this._onSaveAiConfig} class="flex flex-col gap-3">
+                                          ${this._aiModels.length > 0
+                                              ? html`
+                                                    <div class="form-control">
+                                                        <label class="label py-1"
+                                                            ><span class="label-text text-xs font-medium">Modell</span></label
+                                                        >
+                                                        <select
+                                                            name="model"
+                                                            class="select select-bordered select-sm w-full"
+                                                            ?disabled=${this._aiModal.loading}
+                                                        >
+                                                            ${this._aiModels.map(
+                                                                m => html`
+                                                                    <option value=${m.id} ?selected=${m.id === this._aiModel}>
+                                                                        ${m.label}
+                                                                    </option>
+                                                                `
+                                                            )}
+                                                        </select>
+                                                    </div>
+                                                `
+                                              : ''}
                                           <div class="form-control">
                                               <label class="label py-1"
                                                   ><span class="label-text text-xs font-medium"
@@ -809,7 +839,7 @@ export class FcApp extends BaseElement {
                                                   class="input input-bordered input-sm font-mono w-full"
                                                   placeholder="sk-ant-..."
                                                   ?disabled=${this._aiModal.loading}
-                                                  required
+                                                  ?required=${!this._aiConfigured}
                                               />
                                           </div>
                                           ${this._aiModal.error
@@ -819,7 +849,7 @@ export class FcApp extends BaseElement {
                                                     </div>
                                                 `
                                               : ''}
-                                          <div class="flex items-center justify-between mt-4">
+                                          <div class="flex items-center justify-between mt-16">
                                               ${this._aiConfigured
                                                   ? html`<button
                                                         type="button"

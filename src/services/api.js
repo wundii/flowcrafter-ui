@@ -175,8 +175,8 @@ export const api = {
         }).then(res => res.json())
     },
 
-    /** @param {string} apiKey */
-    saveAiConfig(apiKey) {
+    /** @param {string} apiKey @param {string} model */
+    saveAiConfig(apiKey, model) {
         const token = sessionStorage.getItem('fc_token') ?? ''
         return fetch('/api/ai-config', {
             method: 'POST',
@@ -184,7 +184,7 @@ export const api = {
                 'Content-Type': 'application/json',
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
-            body: JSON.stringify({ apiKey }),
+            body: JSON.stringify({ apiKey, model }),
         }).then(res => res.json())
     },
 
