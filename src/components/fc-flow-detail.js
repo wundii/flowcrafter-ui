@@ -292,28 +292,55 @@ export class FcFlowDetail extends BaseElement {
                         ? html`
                               <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
                                   <!-- Header -->
-                                  <div class="flex items-center justify-between px-5 pt-4 pb-3 border-b border-base-300 flex-shrink-0">
-                                      <div>
-                                          <h3 class="font-bold text-base leading-tight">Raw JSON</h3>
-                                          <span class="font-mono text-xs text-base-content/50">${this.flow.flowHash}</span>
-                                      </div>
-                                      <div class="flex items-center gap-2">
-                                          <button
-                                              class="btn btn-ghost btn-sm"
-                                              title="JSON kopieren"
-                                              @click=${() => navigator.clipboard.writeText(JSON.stringify(this.flow, null, 2))}
-                                          >
-                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
-                                              </svg>
-                                          </button>
-                                          <button
-                                              class="btn btn-ghost btn-sm btn-square"
-                                              @click=${() => this.querySelector('#fc-raw-modal')?.close()}
-                                          >
-                                              ✕
-                                          </button>
+                                  <div
+                                      class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0"
+                                  >
+                                      <div class="flex items-center justify-between">
+                                          <div class="flex items-center gap-3">
+                                              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                  <svg
+                                                      class="w-5 h-5 text-primary"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                      viewBox="0 0 24 24"
+                                                  >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
+                                                      />
+                                                  </svg>
+                                              </div>
+                                              <div>
+                                                  <h3 class="font-bold text-base leading-tight">Raw JSON</h3>
+                                                  <span class="font-mono text-xs text-base-content/50">${this.flow.flowHash}</span>
+                                              </div>
+                                          </div>
+                                          <div class="flex items-center gap-2">
+                                              <button
+                                                  class="btn btn-ghost btn-sm"
+                                                  title="JSON kopieren"
+                                                  @click=${() => navigator.clipboard.writeText(JSON.stringify(this.flow, null, 2))}
+                                              >
+                                                  <svg
+                                                      class="w-4 h-4"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                      viewBox="0 0 24 24"
+                                                  >
+                                                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                                  </svg>
+                                              </button>
+                                              <button
+                                                  class="btn btn-ghost btn-sm btn-square btn-circle"
+                                                  @click=${() => this.querySelector('#fc-raw-modal')?.close()}
+                                              >
+                                                  ✕
+                                              </button>
+                                          </div>
                                       </div>
                                   </div>
 
@@ -472,29 +499,27 @@ export class FcFlowDetail extends BaseElement {
                     ? html`
                           <div class="modal-box w-[700px] max-w-[90vw] max-h-[85vh] p-0 flex flex-col overflow-hidden">
                               <!-- Header -->
-                              <div class="flex items-center justify-between px-5 pt-4 pb-3 border-b border-base-300 flex-shrink-0">
-                                  <div class="flex items-center gap-2">
-                                      <svg
-                                          class="w-5 h-5 text-primary"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          stroke-width="2"
-                                          viewBox="0 0 24 24"
-                                      >
-                                          <path
-                                              stroke-linecap="round"
-                                              stroke-linejoin="round"
-                                              d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
-                                          />
-                                      </svg>
-                                      <div>
-                                          <h3 class="font-bold text-base leading-tight">AI-Analyse</h3>
-                                          <span class="text-xs text-base-content/40"
-                                              >${this.flow ? shortClass(this.flow.flowSource) : ''}</span
-                                          >
+                              <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0">
+                                  <div class="flex items-center justify-between">
+                                      <div class="flex items-center gap-3">
+                                          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                              <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                                                  <path
+                                                      d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813A3.75 3.75 0 007.466 7.89l.813-2.846A.75.75 0 019 4.5zM18 1.5a.75.75 0 01.728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 010 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 01-1.456 0l-.258-1.036a2.625 2.625 0 00-1.91-1.91l-1.036-.258a.75.75 0 010-1.456l1.036-.258a2.625 2.625 0 001.91-1.91l.258-1.036A.75.75 0 0118 1.5zM16.5 15a.75.75 0 01.712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 010 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 01-1.422 0l-.395-1.183a1.5 1.5 0 00-.948-.948l-1.183-.395a.75.75 0 010-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0116.5 15z"
+                                                  />
+                                              </svg>
+                                          </div>
+                                          <div>
+                                              <h3 class="font-bold text-base leading-tight">AI-Analyse</h3>
+                                              <span class="text-xs text-base-content/50"
+                                                  >${this.flow ? shortClass(this.flow.flowSource) : ''}</span
+                                              >
+                                          </div>
                                       </div>
+                                      <button class="btn btn-ghost btn-sm btn-square btn-circle" @click=${this._closeAnalysisModal}>
+                                          ✕
+                                      </button>
                                   </div>
-                                  <button class="btn btn-ghost btn-sm btn-square" @click=${this._closeAnalysisModal}>✕</button>
                               </div>
 
                               <!-- Content -->

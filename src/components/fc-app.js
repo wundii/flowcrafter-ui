@@ -125,7 +125,6 @@ export class FcApp extends BaseElement {
     async _onClearAiConfig() {
         await api.clearAiConfig()
         this._aiConfigured = false
-        this._closeAiModal()
     }
 
     disconnectedCallback() {
@@ -641,12 +640,31 @@ export class FcApp extends BaseElement {
                 <dialog id="pw-change-modal" class="modal">
                     ${this._pwModal
                         ? html`
-                              <div class="modal-box max-w-sm">
-                                  <div class="flex items-center justify-between mb-4">
-                                      <h3 class="font-bold text-base">Passwort ändern</h3>
-                                      <button class="btn btn-sm btn-ghost btn-square" @click=${this._closePwModal}>✕</button>
+                              <div class="modal-box max-w-sm p-0 overflow-hidden">
+                                  <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-6 pt-5 pb-4">
+                                      <div class="flex items-center justify-between">
+                                          <div class="flex items-center gap-3">
+                                              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                  <svg
+                                                      class="w-5 h-5 text-primary"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                      viewBox="0 0 24 24"
+                                                  >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+                                                      />
+                                                  </svg>
+                                              </div>
+                                              <h3 class="font-bold text-base">Passwort ändern</h3>
+                                          </div>
+                                          <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${this._closePwModal}>✕</button>
+                                      </div>
                                   </div>
-                                  <form @submit=${this._onChangePassword} class="flex flex-col gap-3">
+                                  <form @submit=${this._onChangePassword} class="flex flex-col gap-3 px-6 pb-6 pt-4">
                                       <div class="form-control">
                                           <label class="label py-1"><span class="label-text text-xs">Aktuelles Passwort</span></label>
                                           <input
@@ -709,20 +727,31 @@ export class FcApp extends BaseElement {
                 <dialog id="ai-config-modal" class="modal">
                     ${this._aiModal
                         ? html`
-                              <div class="modal-box max-w-sm">
-                                  <div class="flex items-center justify-between mb-4">
-                                      <h3 class="font-bold text-base">AI-Einstellungen</h3>
-                                      <button class="btn btn-sm btn-ghost btn-square" @click=${this._closeAiModal}>✕</button>
+                              <div class="modal-box max-w-sm p-0 overflow-hidden">
+                                  <!-- Header mit Gradient -->
+                                  <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-6 pt-5 pb-4">
+                                      <div class="flex items-center justify-between">
+                                          <div class="flex items-center gap-3">
+                                              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                  <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                                                      <path
+                                                          d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813A3.75 3.75 0 007.466 7.89l.813-2.846A.75.75 0 019 4.5zM18 1.5a.75.75 0 01.728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 010 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 01-1.456 0l-.258-1.036a2.625 2.625 0 00-1.91-1.91l-1.036-.258a.75.75 0 010-1.456l1.036-.258a2.625 2.625 0 001.91-1.91l.258-1.036A.75.75 0 0118 1.5zM16.5 15a.75.75 0 01.712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 010 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 01-1.422 0l-.395-1.183a1.5 1.5 0 00-.948-.948l-1.183-.395a.75.75 0 010-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0116.5 15z"
+                                                      />
+                                                  </svg>
+                                              </div>
+                                              <div>
+                                                  <h3 class="font-bold text-base">AI-Einstellungen</h3>
+                                                  <span class="text-xs text-base-content/50">Anthropic Claude</span>
+                                              </div>
+                                          </div>
+                                          <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${this._closeAiModal}>✕</button>
+                                      </div>
                                   </div>
 
-                                  <!-- Provider info -->
-                                  <div class="flex items-center gap-3 rounded-lg bg-base-200 border border-base-300 p-3 mb-4">
-                                      <svg class="w-8 h-8 flex-shrink-0 text-base-content/70" viewBox="0 0 24 24" fill="currentColor">
-                                          <path d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813A3.75 3.75 0 007.466 7.89l.813-2.846A.75.75 0 019 4.5zM18 1.5a.75.75 0 01.728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 010 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 01-1.456 0l-.258-1.036a2.625 2.625 0 00-1.91-1.91l-1.036-.258a.75.75 0 010-1.456l1.036-.258a2.625 2.625 0 001.91-1.91l.258-1.036A.75.75 0 0118 1.5zM16.5 15a.75.75 0 01.712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 010 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 01-1.422 0l-.395-1.183a1.5 1.5 0 00-.948-.948l-1.183-.395a.75.75 0 010-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0116.5 15z" />
-                                      </svg>
-                                      <div>
-                                          <div class="text-sm font-semibold">Anthropic Claude</div>
-                                          <div class="text-xs text-base-content/50">
+                                  <div class="px-6 pb-6 pt-4">
+                                      <!-- Provider info -->
+                                      <div class="rounded-lg bg-base-200 border border-base-300 px-3 py-2.5 mb-4">
+                                          <p class="text-xs text-base-content/60">
                                               Die AI-Analyse nutzt Claude von Anthropic. Ein API-Key wird unter
                                               <a
                                                   href="https://console.anthropic.com/settings/keys"
@@ -732,82 +761,82 @@ export class FcApp extends BaseElement {
                                                   >console.anthropic.com</a
                                               >
                                               erstellt.
-                                          </div>
+                                          </p>
                                       </div>
-                                  </div>
 
-                                  ${this._aiConfigured
-                                      ? html`
-                                            <div
-                                                class="flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 mb-4"
-                                            >
-                                                <svg
-                                                    class="w-4 h-4 text-success flex-shrink-0"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="2"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                    />
-                                                </svg>
-                                                <span class="text-xs text-success">API-Key ist hinterlegt</span>
-                                            </div>
-                                        `
-                                      : ''}
-
-                                  <form @submit=${this._onSaveAiConfig} class="flex flex-col gap-3">
-                                      <div class="form-control">
-                                          <label class="label py-1"
-                                              ><span class="label-text text-xs"
-                                                  >${this._aiConfigured ? 'Neuer API-Key' : 'API-Key'}</span
-                                              ></label
-                                          >
-                                          <input
-                                              type="password"
-                                              name="apiKey"
-                                              class="input input-bordered input-sm font-mono w-full"
-                                              placeholder="sk-ant-..."
-                                              ?disabled=${this._aiModal.loading}
-                                              required
-                                          />
-                                      </div>
-                                      ${this._aiModal.error
+                                      ${this._aiConfigured
                                           ? html`
-                                                <div class="alert alert-error py-2 px-3 text-xs">
-                                                    <span>${this._aiModal.error}</span>
+                                                <div
+                                                    class="flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 mb-4"
+                                                >
+                                                    <svg
+                                                        class="w-4 h-4 text-success flex-shrink-0"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="2"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                        />
+                                                    </svg>
+                                                    <span class="text-xs text-success font-medium">API-Key ist hinterlegt</span>
                                                 </div>
                                             `
                                           : ''}
-                                      <div class="flex items-center justify-between mt-0">
-                                          ${this._aiConfigured
-                                              ? html`<button
-                                                    type="button"
-                                                    class="btn btn-ghost btn-sm text-error"
-                                                    @click=${this._onClearAiConfig}
-                                                >
-                                                    Entfernen
-                                                </button>`
-                                              : html`<span></span>`}
-                                          <div class="flex gap-2">
-                                              <button type="button" class="btn btn-ghost btn-sm" @click=${this._closeAiModal}>
-                                                  Abbrechen
-                                              </button>
-                                              <button
-                                                  type="submit"
-                                                  class="btn btn-primary btn-sm min-w-24"
-                                                  ?disabled=${this._aiModal.loading}
+
+                                      <form @submit=${this._onSaveAiConfig} class="flex flex-col gap-3">
+                                          <div class="form-control">
+                                              <label class="label py-1"
+                                                  ><span class="label-text text-xs font-medium"
+                                                      >${this._aiConfigured ? 'Neuer API-Key' : 'API-Key'}</span
+                                                  ></label
                                               >
-                                                  ${this._aiModal.loading
-                                                      ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                                      : 'Speichern'}
-                                              </button>
+                                              <input
+                                                  type="password"
+                                                  name="apiKey"
+                                                  class="input input-bordered input-sm font-mono w-full"
+                                                  placeholder="sk-ant-..."
+                                                  ?disabled=${this._aiModal.loading}
+                                                  required
+                                              />
                                           </div>
-                                      </div>
-                                  </form>
+                                          ${this._aiModal.error
+                                              ? html`
+                                                    <div class="alert alert-error py-2 px-3 text-xs">
+                                                        <span>${this._aiModal.error}</span>
+                                                    </div>
+                                                `
+                                              : ''}
+                                          <div class="flex items-center justify-between mt-4">
+                                              ${this._aiConfigured
+                                                  ? html`<button
+                                                        type="button"
+                                                        class="btn btn-ghost btn-sm text-error"
+                                                        @click=${this._onClearAiConfig}
+                                                    >
+                                                        Entfernen
+                                                    </button>`
+                                                  : html`<span></span>`}
+                                              <div class="flex gap-2">
+                                                  <button type="button" class="btn btn-ghost btn-sm" @click=${this._closeAiModal}>
+                                                      Abbrechen
+                                                  </button>
+                                                  <button
+                                                      type="submit"
+                                                      class="btn btn-primary btn-sm min-w-24"
+                                                      ?disabled=${this._aiModal.loading}
+                                                  >
+                                                      ${this._aiModal.loading
+                                                          ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                                          : 'Speichern'}
+                                                  </button>
+                                              </div>
+                                          </div>
+                                      </form>
+                                  </div>
                               </div>
                               <form method="dialog" class="modal-backdrop backdrop-blur-sm">
                                   <button @click=${this._closeAiModal}>close</button>
@@ -820,14 +849,37 @@ export class FcApp extends BaseElement {
 
                 <!-- Server offline modal -->
                 <dialog id="server-offline-modal" class="modal">
-                    <div class="modal-box max-w-sm text-center">
-                        <span class="loading loading-ring loading-lg text-warning"></span>
-                        <h3 class="font-bold text-lg mt-4">Server nicht erreichbar</h3>
-                        <p class="text-sm text-base-content/60 mt-2">
-                            Die Verbindung zum FlowCrafter-Server ist unterbrochen. Die Anwendung versucht automatisch, die Verbindung
-                            wiederherzustellen.
-                        </p>
-                        <button class="btn btn-sm btn-outline btn-warning mt-4" @click=${this._loadInfo}>Jetzt prüfen</button>
+                    <div class="modal-box max-w-sm p-0 overflow-hidden">
+                        <div class="bg-gradient-to-br from-warning/10 via-warning/5 to-transparent px-6 pt-5 pb-4">
+                            <div class="flex items-center justify-center">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center">
+                                        <svg
+                                            class="w-5 h-5 text-warning"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <h3 class="font-bold text-base">Server nicht erreichbar</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-6 pb-6 pt-4 text-center">
+                            <span class="loading loading-ring loading-lg text-warning"></span>
+                            <p class="text-sm text-base-content/60 mt-3">
+                                Die Verbindung zum FlowCrafter-Server ist unterbrochen. Die Anwendung versucht automatisch, die Verbindung
+                                wiederherzustellen.
+                            </p>
+                            <button class="btn btn-sm btn-outline btn-warning mt-4" @click=${this._loadInfo}>Jetzt prüfen</button>
+                        </div>
                     </div>
                     <div class="modal-backdrop backdrop-blur-sm"></div>
                 </dialog>

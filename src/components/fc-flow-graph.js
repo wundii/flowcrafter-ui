@@ -820,40 +820,74 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                         ? html`
                               <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
                                   <!-- Header -->
-                                  <div class="flex items-start justify-between px-5 pt-4 pb-3 border-b border-base-300 flex-shrink-0">
-                                      <div>
-                                          <div class="flex items-center gap-2">
-                                              <h3 class="font-bold text-base leading-tight">Message-Input editieren</h3>
-                                              ${this.flow?.isExecutable === false
-                                                  ? html`<span
-                                                        class="badge badge-sm border-slate-500/50 bg-slate-600/40 text-slate-300 leading-none"
-                                                        >Nicht ausführbar</span
-                                                    >`
-                                                  : ''}
+                                  <div
+                                      class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0"
+                                  >
+                                      <div class="flex items-start justify-between">
+                                          <div class="flex items-start gap-3">
+                                              <div
+                                                  class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"
+                                              >
+                                                  <svg
+                                                      class="w-5 h-5 text-primary"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                      viewBox="0 0 24 24"
+                                                  >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+                                                      />
+                                                  </svg>
+                                              </div>
+                                              <div>
+                                                  <div class="flex items-center gap-2">
+                                                      <h3 class="font-bold text-base leading-tight">Message-Input editieren</h3>
+                                                      ${this.flow?.isExecutable === false
+                                                          ? html`<span
+                                                                class="badge badge-sm border-slate-500/50 bg-slate-600/40 text-slate-300 leading-none"
+                                                                >Nicht ausführbar</span
+                                                            >`
+                                                          : ''}
+                                                  </div>
+                                                  <div class="flex items-center gap-3 mt-1 flex-wrap">
+                                                      <span
+                                                          class="font-mono text-xs text-base-content/50"
+                                                          title="${this._modalMsg.messageClass}"
+                                                      >
+                                                          ${this._modalMsg.messageClass}
+                                                      </span>
+                                                      <span class="text-base-content/30 text-xs">·</span>
+                                                      <span class="text-xs text-base-content/40">
+                                                          Stub:
+                                                          <span class="font-mono">${short(this._modalMsg.stubSource)}</span>
+                                                      </span>
+                                                  </div>
+                                              </div>
                                           </div>
-                                          <div class="flex items-center gap-3 mt-1 flex-wrap">
-                                              <span class="font-mono text-xs text-base-content/50" title="${this._modalMsg.messageClass}">
-                                                  ${this._modalMsg.messageClass}
-                                              </span>
-                                              <span class="text-base-content/30 text-xs">·</span>
-                                              <span class="text-xs text-base-content/40">
-                                                  Stub:
-                                                  <span class="font-mono">${short(this._modalMsg.stubSource)}</span>
-                                              </span>
+                                          <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
+                                              <button
+                                                  class="btn btn-ghost btn-sm"
+                                                  title="JSON kopieren"
+                                                  @click=${() => navigator.clipboard.writeText(this._modalMsg.payload)}
+                                              >
+                                                  <svg
+                                                      class="w-4 h-4"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                      viewBox="0 0 24 24"
+                                                  >
+                                                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                                  </svg>
+                                              </button>
+                                              <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${this._closeModal}>
+                                                  ✕
+                                              </button>
                                           </div>
-                                      </div>
-                                      <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
-                                          <button
-                                              class="btn btn-ghost btn-sm"
-                                              title="JSON kopieren"
-                                              @click=${() => navigator.clipboard.writeText(this._modalMsg.payload)}
-                                          >
-                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
-                                              </svg>
-                                          </button>
-                                          <button class="btn btn-sm btn-ghost btn-square" @click=${this._closeModal}>✕</button>
                                       </div>
                                   </div>
 
@@ -929,15 +963,38 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                 <!-- ── Stub Source Modal ── -->
                 <dialog id="fc-stub-source-modal" class="modal">
                     <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
-                        <div class="flex items-center justify-between px-4 py-3 border-b border-base-300">
-                            <span class="font-mono text-sm truncate"
-                                >${this._stubSourceCurrent === false
-                                    ? html`<span class="badge badge-outline border-base-content/40 text-base-content/60 badge-sm mr-2"
-                                          >archiviert</span
-                                      >`
-                                    : ''}${this._stubSourceName ?? ''}</span
-                            >
-                            <button class="btn btn-sm btn-ghost" @click=${() => this._closeSourceModal()}>✕</button>
+                        <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                        <svg
+                                            class="w-5 h-5 text-primary"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-base leading-tight font-mono truncate">${this._stubSourceName ?? ''}</h3>
+                                        ${this._stubSourceCurrent === false
+                                            ? html`<span
+                                                  class="badge badge-outline border-base-content/40 text-base-content/60 badge-sm mt-1"
+                                                  >archiviert</span
+                                              >`
+                                            : ''}
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${() => this._closeSourceModal()}>
+                                    ✕
+                                </button>
+                            </div>
                         </div>
                         <div class="flex-1 overflow-hidden">
                             ${this._stubSource !== null

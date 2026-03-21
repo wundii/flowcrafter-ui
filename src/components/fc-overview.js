@@ -328,16 +328,40 @@ export class FcOverview extends BaseElement {
 
                 <dialog id="stub-source-modal" class="modal">
                     <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
-                        <div class="flex items-center justify-between px-4 py-3 border-b border-base-300">
-                            <span class="font-mono text-sm truncate">
-                                ${this._stubSourceFallback !== null && this._stubSourceCurrent === false
-                                    ? html`<span class="badge badge-outline border-base-content/40 text-base-content/60 badge-sm mr-2"
-                                          >archiviert</span
-                                      >`
-                                    : ''}
-                                ${this._selectedStub?.source ?? ''}
-                            </span>
-                            <button class="btn btn-sm btn-ghost" @click=${() => this._closeSourceModal()}>✕</button>
+                        <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                        <svg
+                                            class="w-5 h-5 text-primary"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-base leading-tight font-mono truncate">
+                                            ${this._selectedStub?.source ?? ''}
+                                        </h3>
+                                        ${this._stubSourceFallback !== null && this._stubSourceCurrent === false
+                                            ? html`<span
+                                                  class="badge badge-outline border-base-content/40 text-base-content/60 badge-sm mt-1"
+                                                  >archiviert</span
+                                              >`
+                                            : ''}
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${() => this._closeSourceModal()}>
+                                    ✕
+                                </button>
+                            </div>
                         </div>
 
                         ${this._stubVersions.length > 0
@@ -402,9 +426,30 @@ export class FcOverview extends BaseElement {
 
                 <dialog id="flow-graph-modal" class="modal">
                     <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
-                        <div class="flex items-center justify-between px-4 py-3 border-b border-base-300">
-                            <span class="font-mono text-sm truncate">${this._graphFlow ? 'Flow Graph' : ''}</span>
-                            <button class="btn btn-sm btn-ghost" @click=${() => this._closeGraphModal()}>✕</button>
+                        <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                        <svg
+                                            class="w-5 h-5 text-primary"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <h3 class="font-bold text-base leading-tight">Flow Graph</h3>
+                                </div>
+                                <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${() => this._closeGraphModal()}>
+                                    ✕
+                                </button>
+                            </div>
                         </div>
                         <div class="flex-1 overflow-auto p-4">
                             ${this._graphFlow
