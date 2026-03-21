@@ -638,13 +638,66 @@ export class FcApp extends BaseElement {
                             tab => html`
                                 <a
                                     role="tab"
-                                    class="tab ${this.activeTab === tab ? 'tab-active' : ''}"
+                                    class="tab gap-1.5 ${this.activeTab === tab ? 'tab-active' : ''}"
                                     @click=${() => {
                                         this.activeTab = tab
                                         this.selectedPrefix = null
                                         this.selectedFlowHash = null
                                     }}
                                 >
+                                    ${{
+                                        overview: html`<svg
+                                            class="w-3.5 h-3.5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                                            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                                            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                                            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                                        </svg>`,
+                                        flows: html`<svg
+                                            class="w-3.5 h-3.5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+                                            />
+                                        </svg>`,
+                                        exceptions: html`<svg
+                                            class="w-3.5 h-3.5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                            />
+                                        </svg>`,
+                                        queues: html`<svg
+                                            class="w-3.5 h-3.5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859M12 3v8.25m0 0l-3-3m3 3l3-3"
+                                            />
+                                        </svg>`,
+                                    }[tab]}
                                     ${{ overview: 'Overview', flows: 'Flows', exceptions: 'Exceptions', queues: 'Queues' }[tab]}
                                 </a>
                             `
