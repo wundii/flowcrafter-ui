@@ -526,49 +526,25 @@ export class FcFlowDetail extends BaseElement {
                               <div class="flex-1 overflow-y-auto px-5 py-4">
                                   ${this._analysisLoading
                                       ? html`
-                                            <div class="flex flex-col items-center justify-center py-12 gap-4">
-                                                <span class="loading loading-spinner loading-lg text-primary"></span>
-                                                <div class="flex flex-col items-center gap-1.5">
+                                            <div class="py-8 flex justify-center">
+                                                <ul class="steps steps-vertical">
                                                     ${this._analysisSteps.map(
                                                         (step, i) => html`
-                                                            <div
-                                                                class="flex items-center gap-2 text-xs ${i ===
-                                                                this._analysisSteps.length - 1
-                                                                    ? 'text-base-content/60'
-                                                                    : 'text-base-content/30'}"
-                                                            >
-                                                                ${step.type === 'tool_use'
-                                                                    ? html`<svg
-                                                                          class="w-3 h-3"
-                                                                          fill="none"
-                                                                          stroke="currentColor"
-                                                                          stroke-width="2"
-                                                                          viewBox="0 0 24 24"
-                                                                      >
-                                                                          <path
-                                                                              stroke-linecap="round"
-                                                                              stroke-linejoin="round"
-                                                                              d="M17 8l4 4-4 4M7 8l-4 4 4 4M14 4l-4 16"
-                                                                          />
-                                                                      </svg>`
-                                                                    : html`<svg
-                                                                          class="w-3 h-3"
-                                                                          fill="none"
-                                                                          stroke="currentColor"
-                                                                          stroke-width="2"
-                                                                          viewBox="0 0 24 24"
-                                                                      >
-                                                                          <path
-                                                                              stroke-linecap="round"
-                                                                              stroke-linejoin="round"
-                                                                              d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                                          />
-                                                                      </svg>`}
-                                                                <span>${step.message}</span>
-                                                            </div>
+                                                            <li class="step ${i < this._analysisSteps.length - 1 ? 'step-primary' : ''}">
+                                                                <span
+                                                                    class="text-xs text-left ${i === this._analysisSteps.length - 1
+                                                                        ? 'text-base-content/70'
+                                                                        : 'text-base-content/40'}"
+                                                                >
+                                                                    ${step.message}
+                                                                </span>
+                                                            </li>
                                                         `
                                                     )}
-                                                </div>
+                                                    <li class="step">
+                                                        <span class="loading loading-spinner loading-xs text-primary"></span>
+                                                    </li>
+                                                </ul>
                                             </div>
                                         `
                                       : this._analysisError

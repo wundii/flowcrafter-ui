@@ -110,7 +110,8 @@ Ein Flow besteht aus:
 - Jede Message hat Zeitstempel, predecessorHash-Ketten und ist an einen flowRuntimeHash (Run) gebunden
 - Exceptions werden mit vollstaendigem Stack-Trace erfasst
 - Pro Flow koennen mehrere Runs existieren (Wiederausfuehrung mit neuen Messages)
-- Jeder Run wird durch eine Message ausgelöst, diese Message besitzt kein predecessorHash.
+- Jeder Run wird durch eine Message ausgelöst, diese Message besitzt kein predecessorHash
+- Messages in flowMessages sind nicht sortiert
 - Mehrere Runs sind normal und gewollt: Ein Run bricht typischerweise ab, wenn ein Stub einen Fehler im eigenen Code hat oder eine externe Abhaengigkeit einen Fehler zurueckliefert. In diesem Fall wird ein neuer Run mit gleicher oder geänderten message gestartet um den Flow fortzusetzen. Das ist erwartetes Verhalten und KEINE Auffaelligkeit.
 
 Antworte AUSSCHLIESSLICH mit validem JSON in genau dieser Struktur:
@@ -145,16 +146,20 @@ const ANALYSIS_TOOLS = [
     {
         name: 'get_stub_source',
         description:
-            'Laedt den PHP-Quellcode eines Stubs anhand seines Klassennamens. Nutze dieses Tool, wenn du den Quellcode eines Stubs benoetist um die Analyse zu vertiefen (z.B. bei Fehlern, unklarer Logik oder Performance-Problemen).',
+            'Laedt den PHP-Quellcode eines Stubs anhand seines stubHash. Nutze dieses Tool, wenn du den Quellcode eines Stubs benoetist um die Analyse zu vertiefen (z.B. bei Fehlern, unklarer Logik oder Performance-Problemen). Der stubHash ist in den Flow-Messages und Exceptions enthalten und ermoeglicht auch den Zugriff auf archivierte Versionen.',
         input_schema: {
             type: 'object',
             properties: {
+                stubHash: {
+                    type: 'string',
+                    description: 'Der stubHash des Stubs (z.B. aus flowMessages[].stubHash oder flowExceptions[].stubHash)',
+                },
                 className: {
                     type: 'string',
-                    description: 'Vollqualifizierter PHP-Klassenname des Stubs (z.B. App\\Stubs\\MyStub)',
+                    description: 'Vollqualifizierter PHP-Klassenname des Stubs (z.B. App\\Stubs\\MyStub) — nur zur Anzeige',
                 },
             },
-            required: ['className'],
+            required: ['stubHash'],
         },
     },
 ]
@@ -185,9 +190,12 @@ async function analyzeFlow(apiKey, flowData, runtimeHash, phpUrl, phpHeaders, on
         const toolResults = []
         for (const block of toolBlocks) {
             if (block.name === 'get_stub_source') {
-                onProgress({ type: 'tool_use', message: `Lade Quellcode: ${shortClassName(block.input.className)}` })
+                onProgress({
+                    type: 'tool_use',
+                    message: `Lade Quellcode: ${shortClassName(block.input.className ?? block.input.stubHash)}`,
+                })
                 try {
-                    const p = new URLSearchParams({ className: block.input.className })
+                    const p = new URLSearchParams({ stubHash: block.input.stubHash })
                     const srcRes = await fetch(`${phpUrl}/api/schema/stub-source?${p}`, { headers: phpHeaders })
                     const srcData = srcRes.ok ? await srcRes.json() : { error: `HTTP ${srcRes.status}` }
                     toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(srcData) })
@@ -218,10 +226,14 @@ async function analyzeFlow(apiKey, flowData, runtimeHash, phpUrl, phpHeaders, on
         .map(b => b.text)
         .join('')
         .replace(/```json?\n?/g, '')
-        .replace(/```$/g, '')
+        .replace(/```\s*$/g, '')
         .trim()
 
-    return JSON.parse(text)
+    // Extract JSON object even if surrounded by prose text
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('Keine gueltige JSON-Antwort vom AI-Modell erhalten.')
+
+    return JSON.parse(jsonMatch[0])
 }
 
 // ─── Crypto ───────────────────────────────────────────────────────────────────

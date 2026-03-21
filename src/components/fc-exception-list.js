@@ -287,14 +287,12 @@ ${ex.traceString}</pre
             </div>
 
             <!-- Pagination -->
-            <div class="flex items-center justify-center gap-2 mt-4">
-                <button class="btn btn-sm btn-ghost border border-base-content/30" ?disabled=${this._page === 0} @click=${this._onPrev}>
-                    ← Zurück
-                </button>
-                <span class="text-sm text-base-content/50">Seite ${this._page + 1}</span>
-                <button class="btn btn-sm btn-ghost border border-base-content/30" ?disabled=${!this._hasMore} @click=${this._onNext}>
-                    Weiter →
-                </button>
+            <div class="flex justify-center mt-4">
+                <div class="join">
+                    <button class="join-item btn btn-sm" ?disabled=${this._page === 0} @click=${this._onPrev}>«</button>
+                    <button class="join-item btn btn-sm">Seite ${this._page + 1}</button>
+                    <button class="join-item btn btn-sm" ?disabled=${!this._hasMore} @click=${this._onNext}>»</button>
+                </div>
             </div>
         `
     }

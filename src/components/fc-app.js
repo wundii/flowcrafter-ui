@@ -246,6 +246,7 @@ export class FcApp extends BaseElement {
     }
 
     _onFlowSelected(e) {
+        this._previousTab = this.activeTab
         this.activeTab = 'flows'
         this.selectedFlowHash = e.detail.hash
     }
@@ -263,8 +264,16 @@ export class FcApp extends BaseElement {
     }
 
     _onBackToList() {
-        this.selectedFlowHash = null
-        this.selectedRuntimeHash = null
+        if (this._previousTab && this._previousTab !== 'flows') {
+            this.activeTab = this._previousTab
+            this.selectedFlowHash = null
+            this.selectedRuntimeHash = null
+            this.selectedPrefix = null
+            this._previousTab = null
+        } else {
+            this.selectedFlowHash = null
+            this.selectedRuntimeHash = null
+        }
     }
 
     async _onSearch(e) {
