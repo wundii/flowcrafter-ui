@@ -17,8 +17,10 @@ FROM node:20-alpine
 WORKDIR /flowcrafter
 
 # Only what the server needs at runtime
-COPY --from=builder /flowcrafter/dist       ./dist
-COPY --from=builder /flowcrafter/server.js  ./server.js
+COPY --from=builder /flowcrafter/dist        ./dist
+COPY --from=builder /flowcrafter/server.js   ./server.js
+COPY --from=builder /flowcrafter/package*.json ./
+RUN npm ci --omit=dev
 
 ENV PORT=3000
 
