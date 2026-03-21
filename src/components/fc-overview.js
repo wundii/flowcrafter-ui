@@ -96,6 +96,7 @@ export class FcOverview extends BaseElement {
     }
 
     _onStubClick(e, stub) {
+        e.stopPropagation()
         this._filter = shortName(stub.source)
     }
 
@@ -305,34 +306,22 @@ export class FcOverview extends BaseElement {
                       `
                     : ''}
 
-                <div class="overflow-x-auto border border-base-300 rounded-lg">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th class="w-1/3">flowType</th>
-                                <th>Stubs</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${filtered.length === 0
-                                ? html`<tr>
-                                      <td colspan="2" class="text-center text-base-content/40 py-8">No flows match the current filters.</td>
-                                  </tr>`
-                                : filtered.map(
-                                      f => html`
-                                          <tr class="hover:bg-base-200 transition-colors">
-                                              <td
-                                                  class="font-mono text-xs cursor-pointer hover:text-primary transition-colors"
-                                                  @click=${() => this._openGraphModal(f)}
-                                              >
-                                                  ${f.label}
-                                              </td>
-                                              <td class="flex flex-wrap gap-1">${f.stubs.map(s => this._renderStubBadge(s))}</td>
-                                          </tr>
-                                      `
-                                  )}
-                        </tbody>
-                    </table>
+                <div class="flex flex-col gap-2">
+                    ${filtered.length === 0
+                        ? html`<div class="text-center text-base-content/40 py-8">No flows match the current filters.</div>`
+                        : filtered.map(
+                              f => html`
+                                  <div
+                                      class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 px-4 py-3 rounded-box border border-base-300 bg-base-200 hover:border-base-content/20 transition-colors cursor-pointer"
+                                      @click=${() => this._openGraphModal(f)}
+                                  >
+                                      <span class="font-mono text-xs text-base-content/80 shrink-0 sm:w-1/3 truncate" title=${f.label}
+                                          >${f.label}</span
+                                      >
+                                      <div class="flex flex-wrap gap-1">${f.stubs.map(s => this._renderStubBadge(s))}</div>
+                                  </div>
+                              `
+                          )}
                 </div>
 
                 <div class="text-xs text-base-content/40 mt-2">${filtered.length} / ${this._flows.length} flows</div>
