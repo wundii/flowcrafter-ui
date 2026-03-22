@@ -2,6 +2,7 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { buildRuns } from '../services/runs.js'
+import { buildRunDiff } from '../services/run-diff.js'
 import './fc-flow-graph.js'
 import './fc-json-editor.js'
 
@@ -43,6 +44,8 @@ export class FcFlowDetail extends BaseElement {
         _analysisError: { state: true },
         _analysisSteps: { state: true },
         _analysisModel: { state: true },
+        compareRunId: { state: true },
+        _dragOverRunId: { state: true },
     }
 
     constructor() {
@@ -68,6 +71,8 @@ export class FcFlowDetail extends BaseElement {
         this._analysisError = null
         this._analysisSteps = []
         this._analysisModel = null
+        this.compareRunId = null
+        this._dragOverRunId = null
     }
 
     updated(changed) {
@@ -229,6 +234,10 @@ export class FcFlowDetail extends BaseElement {
 
     get _selectedRun() {
         return this.runs.find(r => r.runId === this.selectedRunId) ?? null
+    }
+
+    get _compareRun() {
+        return this.runs.find(r => r.runId === this.compareRunId) ?? null
     }
 
     render() {
@@ -475,6 +484,9 @@ export class FcFlowDetail extends BaseElement {
 
             <!-- Runs Panel -->
             ${this._renderRunsPanel()}
+
+            <!-- Run Diff -->
+            ${this._renderDiff()}
 
             <!-- Flow Graph -->
             <h3 class="font-semibold mb-2 text-sm uppercase tracking-wide text-base-content/50">
@@ -741,6 +753,199 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
         `
     }
 
+    _renderMessageDiffTable(md, runA, runB) {
+        if (md.onlyA) return html`<div class="text-xs text-error/70 italic">Nur in ${runA.label}</div>`
+        if (md.onlyB) return html`<div class="text-xs text-success/70 italic">Nur in ${runB.label}</div>`
+        return html`
+            <table class="table table-xs w-full">
+                <thead>
+                    <tr class="text-base-content/40">
+                        <th class="w-1/6">Feld</th>
+                        <th class="w-5/12">${runA.label}</th>
+                        <th class="w-5/12">${runB.label}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${md.payloadDiff
+                        .filter(f => f.changed)
+                        .map(
+                            f => html`
+                                <tr>
+                                    <td class="font-mono text-xs font-semibold">${f.key}</td>
+                                    <td class="font-mono text-xs ${f.onlyA ? 'bg-error/10 text-error' : 'bg-error/5 text-base-content/60'}">
+                                        ${f.onlyA ? `(nur ${runA.label}) ` : ''}${JSON.stringify(f.valueA) ?? '—'}
+                                    </td>
+                                    <td
+                                        class="font-mono text-xs ${f.onlyB
+                                            ? 'bg-success/10 text-success'
+                                            : 'bg-success/5 text-base-content/60'}"
+                                    >
+                                        ${f.onlyB ? `(nur ${runB.label}) ` : ''}${JSON.stringify(f.valueB) ?? '—'}
+                                    </td>
+                                </tr>
+                            `
+                        )}
+                </tbody>
+            </table>
+        `
+    }
+
+    _renderDiff() {
+        const runA = this._selectedRun
+        const runB = this._compareRun
+        if (!runA || !runB || !this.flow?.flowSchema?.stubs) return ''
+
+        const diffs = buildRunDiff(runA, runB, this.flow.flowSchema.stubs)
+        const changedDiffs = diffs.filter(d => d.hasChanges)
+        const unchangedDiffs = diffs.filter(d => !d.hasChanges)
+
+        const statusBadge = status => {
+            const cls =
+                status === 'error'
+                    ? 'badge-error'
+                    : status === 'rejected'
+                      ? 'badge-warning'
+                      : status === 'success'
+                        ? 'badge-success'
+                        : status === 'running'
+                          ? 'badge-info'
+                          : 'badge-ghost'
+            const label =
+                status === 'error'
+                    ? 'Error'
+                    : status === 'rejected'
+                      ? 'Rejected'
+                      : status === 'success'
+                        ? 'OK'
+                        : status === 'idle'
+                          ? 'Idle'
+                          : status
+            return html`<span class="badge badge-xs ${cls}">${label}</span>`
+        }
+
+        const renderStubDiff = d => html`
+            <div class="collapse collapse-arrow border border-base-300 bg-base-100 mb-2">
+                <input type="checkbox" checked />
+                <div class="collapse-title font-mono text-sm flex items-center gap-3 py-2 min-h-0">
+                    <span class="font-semibold">${d.shortName}</span>
+                    ${d.statusChanged
+                        ? html`<span class="flex items-center gap-1">${statusBadge(d.statusA)} → ${statusBadge(d.statusB)}</span>`
+                        : statusBadge(d.statusA)}
+                </div>
+                <div class="collapse-content px-4 pb-3">
+                    ${d.messageDiffs.filter(md => md.hasChanges && md.direction === 'in').length > 0
+                        ? html`<div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-2">↓ Eingehend</div>`
+                        : ''}
+                    ${d.messageDiffs
+                        .filter(md => md.hasChanges && md.direction === 'in')
+                        .map(
+                            md => html`
+                                <div class="mb-3">
+                                    <div class="text-xs font-semibold text-base-content/50 mb-1">${md.shortName}</div>
+                                    ${this._renderMessageDiffTable(md, runA, runB)}
+                                </div>
+                            `
+                        )}
+                    ${d.messageDiffs.filter(md => md.hasChanges && md.direction === 'out').length > 0 || d.resultChanged
+                        ? html`<div
+                              class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-2 ${d.messageDiffs.filter(
+                                  md => md.hasChanges && md.direction === 'in'
+                              ).length > 0
+                                  ? 'mt-4'
+                                  : ''}"
+                          >
+                              ↑ Ausgehend
+                          </div>`
+                        : ''}
+                    ${d.messageDiffs
+                        .filter(md => md.hasChanges && md.direction === 'out')
+                        .map(
+                            md => html`
+                                <div class="mb-3">
+                                    <div class="text-xs font-semibold text-base-content/50 mb-1">${md.shortName}</div>
+                                    ${this._renderMessageDiffTable(md, runA, runB)}
+                                </div>
+                            `
+                        )}
+                    ${d.resultChanged
+                        ? html`<div class="mb-3">
+                              <div class="text-xs font-semibold text-base-content/50 mb-1">Ergebnis</div>
+                              <table class="table table-xs w-full">
+                                  <thead>
+                                      <tr class="text-base-content/40">
+                                          <th class="w-1/6">Feld</th>
+                                          <th class="w-5/12">${runA.label}</th>
+                                          <th class="w-5/12">${runB.label}</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      <tr>
+                                          <td class="font-mono text-xs font-semibold">result</td>
+                                          <td
+                                              class="font-mono text-xs ${d.resultA
+                                                  ? d.resultA.result === false
+                                                      ? 'bg-warning/10 text-warning'
+                                                      : 'bg-success/10 text-success'
+                                                  : 'bg-error/5 text-base-content/40'}"
+                                          >
+                                              ${d.resultA ? String(d.resultA.result) : '—'}
+                                          </td>
+                                          <td
+                                              class="font-mono text-xs ${d.resultB
+                                                  ? d.resultB.result === false
+                                                      ? 'bg-warning/10 text-warning'
+                                                      : 'bg-success/10 text-success'
+                                                  : 'bg-error/5 text-base-content/40'}"
+                                          >
+                                              ${d.resultB ? String(d.resultB.result) : '—'}
+                                          </td>
+                                      </tr>
+                                  </tbody>
+                              </table>
+                          </div>`
+                        : ''}
+                    ${d.exceptionsA.length > 0 || d.exceptionsB.length > 0
+                        ? html`<div class="mt-2">
+                              <span class="text-xs font-semibold text-base-content/50">Exceptions:</span>
+                              ${d.exceptionsA
+                                  .filter(e => !d.exceptionsB.some(eb => eb.message === e.message))
+                                  .map(e => html`<div class="text-xs text-error/70 mt-1">${runA.label}: ${e.message}</div>`)}
+                              ${d.exceptionsB
+                                  .filter(e => !d.exceptionsA.some(ea => ea.message === e.message))
+                                  .map(e => html`<div class="text-xs text-error/70 mt-1">${runB.label}: ${e.message}</div>`)}
+                          </div>`
+                        : ''}
+                </div>
+            </div>
+        `
+
+        return html`
+            <div class="mb-4 border border-info/30 bg-info/5 rounded-box p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-semibold text-sm">Vergleich: ${runA.label} ↔ ${runB.label}</h3>
+                    <button
+                        class="btn btn-xs btn-ghost"
+                        @click=${() => {
+                            this.compareRunId = null
+                        }}
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                ${changedDiffs.length === 0
+                    ? html`<p class="text-sm text-base-content/50 italic">Keine Unterschiede gefunden.</p>`
+                    : changedDiffs.map(renderStubDiff)}
+                ${unchangedDiffs.length > 0
+                    ? html`<div class="mt-2 text-xs text-base-content/30">
+                          ${unchangedDiffs.length} Stub${unchangedDiffs.length > 1 ? 's' : ''} ohne Unterschiede:
+                          ${unchangedDiffs.map(d => d.shortName).join(', ')}
+                      </div>`
+                    : ''}
+            </div>
+        `
+    }
+
     _renderRunsPanel() {
         if (this.runs.length === 0) return ''
 
@@ -751,17 +956,61 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                     <span class="badge badge-ghost badge-xs">${this.runs.length}</span>
                 </div>
 
-                <div class="flex gap-2 overflow-x-auto pb-1">
+                ${this.compareRunId
+                    ? html`<button
+                          class="btn btn-xs btn-ghost text-base-content/50 hover:text-base-content mb-2"
+                          @click=${() => {
+                              this.compareRunId = null
+                          }}
+                      >
+                          ✕ Vergleich beenden
+                      </button>`
+                    : this.runs.length >= 2
+                      ? html`<div class="text-xs text-base-content/30 mb-1">Run auf anderen Run ziehen zum Vergleichen</div>`
+                      : ''}
+
+                <div class="flex gap-2 overflow-x-auto p-1">
                     ${this.runs.map(run => {
                         const selected = run.runId === this.selectedRunId
+                        const isCompare = run.runId === this.compareRunId
+                        const isDragOver = run.runId === this._dragOverRunId
                         return html`
                             <div
                                 data-run-id="${run.runId}"
-                                class="flex-shrink-0 rounded-box border px-3 py-2 text-left cursor-pointer transition-all
-                       ${selected ? 'border-primary bg-primary/10' : 'border-base-300 bg-base-200 hover:border-base-content/30'}"
+                                draggable="true"
+                                class="flex-shrink-0 rounded-box border px-3 py-2 text-left cursor-grab transition-all
+                       ${selected
+                                    ? 'border-primary bg-primary/10'
+                                    : isCompare
+                                      ? 'border-info bg-info/10'
+                                      : isDragOver
+                                        ? 'border-info border-dashed bg-info/5 ring-2 ring-info/30'
+                                        : 'border-base-300 bg-base-200 hover:border-base-content/30'}"
                                 @click=${() => {
                                     this.selectedRunId = run.runId
+                                    this.compareRunId = null
                                     this.querySelector('fc-flow-graph').selectedStub = null
+                                }}
+                                @dragstart=${e => {
+                                    e.dataTransfer.setData('text/plain', run.runId)
+                                    e.dataTransfer.effectAllowed = 'move'
+                                }}
+                                @dragover=${e => {
+                                    e.preventDefault()
+                                    e.dataTransfer.dropEffect = 'move'
+                                    if (this._dragOverRunId !== run.runId) this._dragOverRunId = run.runId
+                                }}
+                                @dragleave=${() => {
+                                    if (this._dragOverRunId === run.runId) this._dragOverRunId = null
+                                }}
+                                @drop=${e => {
+                                    e.preventDefault()
+                                    this._dragOverRunId = null
+                                    const draggedRunId = e.dataTransfer.getData('text/plain')
+                                    if (draggedRunId && draggedRunId !== run.runId) {
+                                        this.selectedRunId = draggedRunId
+                                        this.compareRunId = run.runId
+                                    }
                                 }}
                                 @mouseenter=${() => {
                                     this._hoveredRunId = run.runId
@@ -771,7 +1020,13 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                                 }}
                             >
                                 <div class="flex items-center gap-2 mb-1">
-                                    <span class="font-semibold text-xs ${selected ? 'text-primary' : 'text-base-content/70'}">
+                                    <span
+                                        class="font-semibold text-xs ${selected
+                                            ? 'text-primary'
+                                            : isCompare
+                                              ? 'text-info'
+                                              : 'text-base-content/70'}"
+                                    >
                                         ${run.label}
                                     </span>
                                     <span
