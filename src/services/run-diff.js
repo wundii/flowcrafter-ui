@@ -11,17 +11,36 @@ function getStubStatus(src, messages, exceptions, results) {
     return 'idle'
 }
 
-export function diffJson(objA, objB) {
+function isPlainObject(v) {
+    return v !== null && typeof v === 'object' && !Array.isArray(v)
+}
+
+function flattenDiff(objA, objB, prefix = '') {
+    const results = []
     const keysA = objA ? Object.keys(objA) : []
     const keysB = objB ? Object.keys(objB) : []
     const allKeys = [...new Set([...keysA, ...keysB])]
-    return allKeys.map(key => {
+
+    for (const key of allKeys) {
+        const fullKey = prefix ? `${prefix}.${key}` : key
         const valA = objA?.[key]
         const valB = objB?.[key]
-        const strA = JSON.stringify(valA)
-        const strB = JSON.stringify(valB)
-        return { key, valueA: valA, valueB: valB, changed: strA !== strB, onlyA: !(key in (objB ?? {})), onlyB: !(key in (objA ?? {})) }
-    })
+        const inA = key in (objA ?? {})
+        const inB = key in (objB ?? {})
+
+        if (isPlainObject(valA) && isPlainObject(valB)) {
+            results.push(...flattenDiff(valA, valB, fullKey))
+        } else {
+            const strA = JSON.stringify(valA)
+            const strB = JSON.stringify(valB)
+            results.push({ key: fullKey, valueA: valA, valueB: valB, changed: strA !== strB, onlyA: inA && !inB, onlyB: !inA && inB })
+        }
+    }
+    return results
+}
+
+export function diffJson(objA, objB) {
+    return flattenDiff(objA, objB)
 }
 
 export function buildRunDiff(runA, runB, stubs) {

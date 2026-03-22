@@ -784,27 +784,35 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                     <tbody>
                         ${md.payloadDiff
                             .filter(f => f.changed)
-                            .map(
-                                f => html`
-                                    <tr class="border-t border-base-200">
+                            .map(f => {
+                                const fmtVal = v =>
+                                    v === undefined
+                                        ? '—'
+                                        : typeof v === 'object' && v !== null
+                                          ? JSON.stringify(v, null, 2)
+                                          : JSON.stringify(v)
+                                const isBlock = v => typeof v === 'object' && v !== null
+                                const blockClass = isBlock(f.valueA) || isBlock(f.valueB) ? ' whitespace-pre-wrap break-all' : ''
+                                return html`
+                                    <tr class="border-t border-base-200 align-top">
                                         <td class="font-mono text-xs font-semibold text-base-content/70">${f.key}</td>
                                         <td
-                                            class="font-mono text-xs ${f.onlyA
+                                            class="font-mono text-xs${blockClass} ${f.onlyA
                                                 ? 'bg-error/10 text-error'
                                                 : 'bg-error/5 text-base-content/60'}"
                                         >
-                                            ${JSON.stringify(f.valueA) ?? '—'}
+                                            ${fmtVal(f.valueA)}
                                         </td>
                                         <td
-                                            class="font-mono text-xs ${f.onlyB
+                                            class="font-mono text-xs${blockClass} ${f.onlyB
                                                 ? 'bg-success/10 text-success'
                                                 : 'bg-success/5 text-base-content/60'}"
                                         >
-                                            ${JSON.stringify(f.valueB) ?? '—'}
+                                            ${fmtVal(f.valueB)}
                                         </td>
                                     </tr>
                                 `
-                            )}
+                            })}
                     </tbody>
                 </table>
             </div>
