@@ -745,9 +745,9 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                                             <span class="font-mono text-xs font-semibold text-base-content/60">
                                                                 ${short(msgClass)}
                                                             </span>
-                                                            ${!this.readonly
+                                                            ${!this.readonly && received.length > 0
                                                                 ? html`<button
-                                                                      class="btn btn-xs btn-ghost btn-square opacity-50 hover:opacity-100"
+                                                                      class="btn btn-xs btn-outline btn-primary"
                                                                       title="Message-Input editieren"
                                                                       @click=${() => this._openModal(selStub.source, msgClass, received[0])}
                                                                   >
@@ -769,6 +769,7 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                                                               d="M19.5 7.125L18 8.625"
                                                                           />
                                                                       </svg>
+                                                                      Editieren
                                                                   </button>`
                                                                 : ''}
                                                         </div>

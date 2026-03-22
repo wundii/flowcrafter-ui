@@ -14,6 +14,15 @@ function formatDate(iso) {
     return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' })
 }
 
+function formatDuration(ms) {
+    if (ms < 1000) return `${ms}ms`
+    const s = ms / 1000
+    if (s < 60) return `${s.toFixed(1)}s`
+    const m = Math.floor(s / 60)
+    const rem = Math.round(s % 60)
+    return `${m}m ${rem}s`
+}
+
 export class FcFlowDetail extends BaseElement {
     static properties = {
         hash: { type: String },
@@ -777,6 +786,7 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                                 </div>
                                 <div class="flex items-center gap-1">
                                     <span class="text-xs text-base-content/40 font-mono">${formatDate(run.time)}</span>
+                                    <span class="text-xs text-base-content/30 font-mono">(${formatDuration(run.duration)})</span>
                                     <button
                                         class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
                                         title="Runtime-Hash kopieren"

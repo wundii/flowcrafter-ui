@@ -82,7 +82,7 @@ export class FcFlowList extends BaseElement {
                     String(d.getMonth() + 1).padStart(2, '0') +
                     '-' +
                     String(d.getDate()).padStart(2, '0') +
-                    'T00:00:00' +
+                    'T00:00:00.000' +
                     formatTzOffset(d)
             }
             if (this._dateTo) {
@@ -93,7 +93,7 @@ export class FcFlowList extends BaseElement {
                     String(d.getMonth() + 1).padStart(2, '0') +
                     '-' +
                     String(d.getDate()).padStart(2, '0') +
-                    'T23:59:59' +
+                    'T23:59:59.999' +
                     formatTzOffset(d)
             }
             const res = await api.getFlows(opts)
