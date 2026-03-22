@@ -190,5 +190,5 @@ docker compose -f docker-compose.esdb.yml up
 - **Shadow DOM** ist in allen Komponenten deaktiviert (`BaseElement.createRenderRoot()` gibt `this` zurück), damit globale Tailwind/DaisyUI-Klassen greifen.
 - **Queue-Chart** pollt alle 3 Sekunden `/api/queue/count` und zeigt eine Live-Sparkline in der Navbar.
 - **Hash-Suche** in der Navbar akzeptiert sowohl `flowHash` als auch `runtimeHash` — bei `runtimeHash` wird automatisch der zugehörige Flow aufgelöst.
-- **Flow-Graph** (`fc-flow-graph`) stellt die Stub-Knoten des Flows als SVG-Diagramm dar und erlaubt das manuelle Auslösen eines Stubs via JSON-Editor-Modal. Jeder angezeigte Message-Inhalt (ein- und ausgehend) besitzt einen Kopier-Button, der den JSON-Inhalt in die Zwischenablage kopiert.
+- **Flow-Graph** (`fc-flow-graph`) stellt die Stub-Knoten des Flows als SVG-Diagramm dar und erlaubt das manuelle Auslösen eines Stubs via JSON-Editor-Modal. Wenn eine Message-Source von mehreren Stubs konsumiert wird, öffnet sich ein Auswahl-Modal zur selektiven Stub-Ausführung (`includeStubs`). Jeder angezeigte Message-Inhalt (ein- und ausgehend) besitzt einen Kopier-Button, der den JSON-Inhalt in die Zwischenablage kopiert.
 - **Overview** (`fc-overview`) zeigt alle registrierten Flow-Schemas mit ihren Stubs, inklusive PHP-Source-Viewer und Graph-Ansicht.

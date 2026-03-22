@@ -64,9 +64,10 @@ export const api = {
      * @param {string} flowHash
      * @param {string} messageSource  fully-qualified class name
      * @param {object} message        plain object (will be sent as JSON)
+     * @param {string[]} [includeStubs]  stub sources to include (empty = all)
      */
-    runFlow(flowHash, messageSource, message) {
-        return postJson('/api/flows/run', { flowHash, messageSource, message })
+    runFlow(flowHash, messageSource, message, includeStubs = []) {
+        return postJson('/api/flows/run', { flowHash, messageSource, message, includeStubs })
     },
 
     /** @param {{ sort?: 'asc'|'desc' }} [opts] */
@@ -75,8 +76,8 @@ export const api = {
         return fetchJson(`/api/queues?${p}`)
     },
 
-    queueFlow(flowHash, messageSource, message) {
-        return postJson('/api/queue', { flowHash, messageSource, message })
+    queueFlow(flowHash, messageSource, message, includeStubs = []) {
+        return postJson('/api/queue', { flowHash, messageSource, message, includeStubs })
     },
 
     getQueueCount() {

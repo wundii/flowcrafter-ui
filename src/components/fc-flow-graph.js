@@ -257,6 +257,7 @@ export class FcFlowGraph extends BaseElement {
         _stubSourceError: { state: true },
         _stubSourceName: { state: true },
         _stubSourceCurrent: { state: true },
+        _stubSelection: { state: true }, // { stubs: [{source, checked}], queued: bool } | null
     }
 
     constructor() {
@@ -277,6 +278,7 @@ export class FcFlowGraph extends BaseElement {
         this._stubSourceError = null
         this._stubSourceName = null
         this._stubSourceCurrent = true
+        this._stubSelection = null
         injectAnimation()
     }
 
@@ -362,17 +364,39 @@ export class FcFlowGraph extends BaseElement {
         this._modalMsg = { ...this._modalMsg, payload: e.detail.value, valid: e.detail.valid }
     }
 
+    _getStubsForMessageSource(messageClass) {
+        const stubs = this.flow?.flowSchema?.stubs ?? []
+        return stubs.filter(s => s.messages.includes(messageClass))
+    }
+
     async _onSend(queued = false) {
         if (!this._modalMsg?.valid || this._sending) return
+
+        const targetStubs = this._getStubsForMessageSource(this._modalMsg.messageClass)
+        if (targetStubs.length > 1) {
+            this._stubSelection = {
+                stubs: targetStubs.map(s => ({ source: s.source, checked: true })),
+                queued,
+            }
+            this.updateComplete.then(() => {
+                this.querySelector('#fc-stub-selection-modal')?.showModal()
+            })
+            return
+        }
+
+        await this._executeSend(queued)
+    }
+
+    async _executeSend(queued = false, includeStubs = []) {
         this._sending = true
         this._sendError = null
         try {
             const message = JSON.parse(this._modalMsg.payload)
             let runtimeHash = null
             if (queued) {
-                await api.queueFlow(this.flow.flowHash, this._modalMsg.messageClass, message)
+                await api.queueFlow(this.flow.flowHash, this._modalMsg.messageClass, message, includeStubs)
             } else {
-                const result = await api.runFlow(this.flow.flowHash, this._modalMsg.messageClass, message)
+                const result = await api.runFlow(this.flow.flowHash, this._modalMsg.messageClass, message, includeStubs)
                 runtimeHash = result?.runtimeHash ?? null
             }
             this._closeModal()
@@ -388,6 +412,24 @@ export class FcFlowGraph extends BaseElement {
         } finally {
             this._sending = false
         }
+    }
+
+    _toggleStubSelection(index) {
+        const stubs = [...this._stubSelection.stubs]
+        stubs[index] = { ...stubs[index], checked: !stubs[index].checked }
+        this._stubSelection = { ...this._stubSelection, stubs }
+    }
+
+    _closeStubSelection() {
+        this.querySelector('#fc-stub-selection-modal')?.close()
+        this._stubSelection = null
+    }
+
+    async _confirmStubSelection() {
+        const { queued, stubs } = this._stubSelection
+        const includeStubs = stubs.filter(s => s.checked).map(s => s.source)
+        this._closeStubSelection()
+        await this._executeSend(queued, includeStubs)
     }
 
     render() {
@@ -1142,6 +1184,54 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                     <form method="dialog" class="modal-backdrop backdrop-blur-sm">
                         <button @click=${() => this._closeSourceModal()}>close</button>
                     </form>
+                </dialog>
+
+                <!-- ── Stub Selection Modal ── -->
+                <dialog id="fc-stub-selection-modal" class="modal">
+                    ${this._stubSelection
+                        ? html`
+                              <div class="modal-box max-w-lg">
+                                  <div class="flex items-center justify-between mb-4">
+                                      <h3 class="font-bold text-lg">Stub-Auswahl</h3>
+                                      <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${() => this._closeStubSelection()}>
+                                          ✕
+                                      </button>
+                                  </div>
+                                  <p class="text-sm text-base-content/60 mb-4">
+                                      Die Message-Source wird von mehreren Stubs verwendet. Bitte wähle die Stubs aus, die ausgeführt werden
+                                      sollen:
+                                  </p>
+                                  <div class="flex flex-col gap-2 mb-6">
+                                      ${this._stubSelection.stubs.map(
+                                          (s, i) => html`
+                                              <label class="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-base-200">
+                                                  <input
+                                                      type="checkbox"
+                                                      class="checkbox checkbox-sm checkbox-primary"
+                                                      .checked=${s.checked}
+                                                      @change=${() => this._toggleStubSelection(i)}
+                                                  />
+                                                  <span class="font-mono text-sm">${short(s.source)}</span>
+                                              </label>
+                                          `
+                                      )}
+                                  </div>
+                                  <div class="flex justify-end gap-2">
+                                      <button class="btn btn-ghost btn-sm" @click=${() => this._closeStubSelection()}>Abbrechen</button>
+                                      <button
+                                          class="btn btn-primary btn-sm"
+                                          ?disabled=${!this._stubSelection.stubs.some(s => s.checked)}
+                                          @click=${() => this._confirmStubSelection()}
+                                      >
+                                          Bestätigen
+                                      </button>
+                                  </div>
+                              </div>
+                              <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                                  <button @click=${() => this._closeStubSelection()}>close</button>
+                              </form>
+                          `
+                        : ''}
                 </dialog>
             </div>
         `

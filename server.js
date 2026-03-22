@@ -125,6 +125,7 @@ Ein Flow besteht aus:
 - WICHTIG: Nur der allererste Run einer Flow-Instanz (zeitlich fruehester) startet mit einer Init-Message (messageEnum:"init") und durchlaeuft den Init-Stub. Alle nachfolgenden Runs können ohne Init-Stub starten — sie setzen den Flow an einer beliebigen Stelle fort (z.B. nach einem Fehler). Das Fehlen des Init-Stubs in einem Folge-Run ist KEIN Fehler und KEINE Auffaelligkeit, sondern gewolltes Verhalten
 - Messages in flowMessages sind nicht sortiert
 - Mehrere Runs sind normal und gewollt: Ein Run bricht typischerweise ab, wenn ein Stub einen Fehler im eigenen Code hat oder eine externe Abhaengigkeit einen Fehler zurueckliefert. In diesem Fall wird ein neuer Run mit gleicher oder geänderten message gestartet um den Flow fortzusetzen. Das ist erwartetes Verhalten und KEINE Auffaelligkeit.
+- includeStubs: Beim Starten eines Runs kann der Benutzer eine Auswahl treffen, welche Stubs ausgefuehrt werden sollen (includeStubs). Wenn eine messageSource von mehreren Stubs konsumiert wird, kann der Benutzer gezielt einzelne Stubs ein- oder ausschliessen. Wenn in einem Run bestimmte Stubs nicht ausgefuehrt wurden obwohl sie laut Schema die Message konsumieren, ist das KEIN Fehler — es kann eine bewusste includeStubs-Auswahl gewesen sein.
 
 Antworte AUSSCHLIESSLICH mit validem JSON in genau dieser Struktur:
 {
