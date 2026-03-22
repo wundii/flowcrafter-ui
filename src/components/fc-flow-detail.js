@@ -765,8 +765,14 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                                     <span class="font-semibold text-xs ${selected ? 'text-primary' : 'text-base-content/70'}">
                                         ${run.label}
                                     </span>
-                                    <span class="badge badge-xs leading-none ${run.status === 'error' ? 'badge-error' : 'badge-success'}">
-                                        ${run.status === 'error' ? 'Error' : 'OK'}
+                                    <span
+                                        class="badge badge-xs leading-none ${run.status === 'error'
+                                            ? 'badge-error'
+                                            : run.status === 'incorrect'
+                                              ? 'badge-warning'
+                                              : 'badge-success'}"
+                                    >
+                                        ${run.status === 'error' ? 'Error' : run.status === 'incorrect' ? 'Incorrect' : 'OK'}
                                     </span>
                                 </div>
                                 <div class="flex items-center gap-1">

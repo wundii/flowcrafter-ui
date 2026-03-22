@@ -25,7 +25,7 @@ export function buildRuns(flow) {
             label: `Run #${i + 1}`,
             time: run.time,
             queueId: run.queueId ?? null,
-            status: runExceptions.length > 0 ? 'error' : 'success',
+            status: runExceptions.length > 0 ? 'error' : runResults.some(r => r.result === false) ? 'incorrect' : 'success',
             messages: runMessages,
             exceptions: runExceptions,
             results: runResults,
