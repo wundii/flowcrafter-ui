@@ -18,58 +18,67 @@ import './fc-flow-chart.js'
 import './fc-overview.js'
 
 const TABS = ['overview', 'flows', 'exceptions', 'queues']
+const SEARCH_LIMIT = 5
 
 export class FcApp extends BaseElement {
     static properties = {
-        _authed: { state: true },
-        _serviceReady: { state: true },
-        _editingConnection: { state: true },
-        _isDark: { state: true },
-        _pwModal: { state: true },
-        _serverDescription: { state: true },
-        _serverInfo: { state: true },
-        _toolboxOpen: { state: true },
-        activeTab: { state: true },
-        selectedPrefix: { state: true },
-        selectedFlowHash: { state: true },
-        selectedRuntimeHash: { state: true },
-        _searchQuery: { state: true },
-        _serverOffline: { state: true },
-        _aiModal: { state: true },
         _aiConfigured: { state: true },
+        _aiModal: { state: true },
         _aiModel: { state: true },
         _aiModels: { state: true },
-        _flowListPage: { state: true },
+        _authed: { state: true },
+        _editingConnection: { state: true },
         _exceptionListPage: { state: true },
+        _flowListPage: { state: true },
+        _isDark: { state: true },
+        _pwModal: { state: true },
+        _searchQuery: { state: true },
+        _searchResults: { state: true },
+        _serverDescription: { state: true },
+        _serverInfo: { state: true },
+        _serverOffline: { state: true },
+        _serviceReady: { state: true },
+        _toolboxOpen: { state: true },
+        activeTab: { state: true },
+        selectedFlowHash: { state: true },
+        selectedPrefix: { state: true },
+        selectedRuntimeHash: { state: true },
     }
 
     constructor() {
         super()
-        this._authed = false
-        this._serviceReady = false
-        this._editingConnection = false
-        this._isDark = theme.get() === 'dark'
-        this._pwModal = null
-        this._serverDescription = null
-        this._serverInfo = null
-        this._toolboxOpen = false
-        this.activeTab = 'overview'
-        this.selectedPrefix = null
-        this.selectedFlowHash = null
-        this.selectedRuntimeHash = null
-        this._searchQuery = ''
-        this._serverOffline = false
-        this._infoTimer = null
-        this._aiModal = null
         this._aiConfigured = false
+        this._aiModal = null
         this._aiModel = null
         this._aiModels = []
-        this._flowListPage = 0
+        this._authed = false
+        this._editingConnection = false
         this._exceptionListPage = 0
+        this._flowListPage = 0
+        this._infoTimer = null
+        this._isDark = theme.get() === 'dark'
+        this._pwModal = null
+        this._searchQuery = ''
+        this._searchResults = null
+        this._serverDescription = null
+        this._serverInfo = null
+        this._serverOffline = false
+        this._serviceReady = false
+        this._toolboxOpen = false
+        this.activeTab = 'overview'
+        this.selectedFlowHash = null
+        this.selectedPrefix = null
+        this.selectedRuntimeHash = null
     }
 
     async connectedCallback() {
         super.connectedCallback()
+        this._onDocClick = e => {
+            if (this._searchResults && !e.target.closest('.fc-search-input, .fc-search-input + button, .fc-search-dropdown')) {
+                this._searchResults = null
+            }
+        }
+        document.addEventListener('click', this._onDocClick)
         if (auth.isAuthenticated()) {
             const s = await auth.status()
             this._authed = s.authenticated
@@ -138,6 +147,7 @@ export class FcApp extends BaseElement {
     disconnectedCallback() {
         super.disconnectedCallback()
         this._stopInfoPolling()
+        document.removeEventListener('click', this._onDocClick)
     }
 
     updated(changed) {
@@ -290,32 +300,73 @@ export class FcApp extends BaseElement {
         const q = this._searchQuery.trim()
         if (!q) return
 
-        // Try to resolve as runtimeHash first via API
-        try {
-            const flow = await api.getFlowByRuntimeHash(q)
-            if (flow?.flowHash) {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(q)
+
+        if (isUuid) {
+            // Try to resolve as runtimeHash first via API
+            try {
+                const flow = await api.getFlowByRuntimeHash(q)
+                if (flow?.flowHash) {
+                    this._searchQuery = ''
+                    this._searchResults = null
+                    this.activeTab = 'flows'
+                    this.selectedPrefix = null
+                    this.selectedFlowHash = flow.flowHash
+                    this.selectedRuntimeHash = q
+                    return
+                }
+            } catch {
+                // not a runtimeHash — fall through to flowHash search
+            }
+
+            // Try as flowHash
+            try {
+                await api.getFlow(q)
                 this._searchQuery = ''
+                this._searchResults = null
                 this.activeTab = 'flows'
                 this.selectedPrefix = null
-                this.selectedFlowHash = flow.flowHash
-                this.selectedRuntimeHash = q
-                return
+                this.selectedRuntimeHash = null
+                this.selectedFlowHash = q
+            } catch {
+                this._shakeSearch()
             }
-        } catch {
-            // not a runtimeHash — fall through to flowHash search
+            return
         }
 
-        // Try as flowHash
+        // Subject search
         try {
-            await api.getFlow(q)
-            this._searchQuery = ''
-            this.activeTab = 'flows'
-            this.selectedPrefix = null
-            this.selectedRuntimeHash = null
-            this.selectedFlowHash = q
+            const res = await api.searchFlows({ subject: q, top: SEARCH_LIMIT })
+            const items = res.items ?? []
+            if (items.length === 1) {
+                this._searchQuery = ''
+                this._searchResults = null
+                this.activeTab = 'flows'
+                this.selectedPrefix = null
+                this.selectedRuntimeHash = null
+                this.selectedFlowHash = items[0].flowHash
+            } else if (items.length > 1) {
+                this._searchResults = items
+                this._searchTotal = res.total ?? items.length
+            } else {
+                this._shakeSearch()
+            }
         } catch {
             this._shakeSearch()
         }
+    }
+
+    _selectSearchResult(flowHash) {
+        this._searchQuery = ''
+        this._searchResults = null
+        this.activeTab = 'flows'
+        this.selectedPrefix = null
+        this.selectedRuntimeHash = null
+        this.selectedFlowHash = flowHash
+    }
+
+    _closeSearchResults() {
+        this._searchResults = null
     }
 
     _shakeSearch() {
@@ -516,16 +567,76 @@ export class FcApp extends BaseElement {
 
                         <!-- Mobile: logo only (no dropdown) -->
                         <div class="sm:hidden">${logoIcon(24)}</div>
-                        <div class="join min-w-0">
-                            <input
-                                type="text"
-                                class="fc-search-input input input-sm join-item w-28 sm:w-48 md:w-64 font-mono text-xs border-transparent bg-base-content/2"
-                                placeholder="Hash suchen…"
-                                .value=${this._searchQuery}
-                                @input=${e => (this._searchQuery = e.target.value)}
-                                @keydown=${this._onSearch}
-                            />
-                            <button class="btn btn-sm btn-ghost join-item border-transparent" @click=${this._onSearch}>↵</button>
+                        <div class="relative">
+                            <div class="join min-w-0">
+                                <input
+                                    type="text"
+                                    class="fc-search-input input input-sm join-item w-28 sm:w-48 md:w-64 font-mono text-xs border-transparent bg-base-content/2"
+                                    placeholder="Hash / Subject…"
+                                    .value=${this._searchQuery}
+                                    @input=${e => {
+                                        this._searchQuery = e.target.value
+                                        this._searchResults = null
+                                    }}
+                                    @keydown=${this._onSearch}
+                                />
+                                <button class="btn btn-sm btn-ghost join-item border-transparent" @click=${this._onSearch}>↵</button>
+                            </div>
+                            ${this._searchResults?.length
+                                ? html`
+                                      <div
+                                          class="fc-search-dropdown absolute top-full left-0 mt-1 w-84 max-h-80 overflow-y-auto bg-base-100 border border-base-content/10 rounded-box shadow-xl z-50"
+                                      >
+                                          <div class="px-3 py-1.5 text-[10px] uppercase tracking-wider text-base-content/40 font-semibold">
+                                              Suchergebnisse
+                                          </div>
+                                          ${this._searchResults.slice(0, SEARCH_LIMIT).map(
+                                              item => html`
+                                                  <button
+                                                      class="group w-full text-left px-3 py-2.5 hover:bg-primary/10 transition-colors border-t border-base-content/5"
+                                                      @click=${() => this._selectSearchResult(item.flowHash)}
+                                                  >
+                                                      <div class="flex items-center justify-between gap-2">
+                                                          <span
+                                                              class="text-sm font-semibold truncate group-hover:text-primary transition-colors"
+                                                              >${item.flowSource?.split('\\').pop()}</span
+                                                          >
+                                                          <span class="text-xs text-base-content/35 flex-shrink-0"
+                                                              >${new Date(item.time).toLocaleString('de-DE', {
+                                                                  dateStyle: 'short',
+                                                                  timeStyle: 'short',
+                                                              })}</span
+                                                          >
+                                                      </div>
+                                                      ${item.flowSubject
+                                                          ? html`<div class="text-sm text-base-content/60 truncate mt-0.5">
+                                                                ${item.flowSubject}
+                                                            </div>`
+                                                          : ''}
+                                                      <div class="text-xs font-mono text-base-content/30 mt-0.5">
+                                                          ${item.flowHash}
+                                                          ${item.exceptionCount > 0
+                                                              ? html`<span class="text-error/60 ml-2"
+                                                                    >${item.exceptionCount}
+                                                                    Exception${item.exceptionCount > 1 ? 's' : ''}</span
+                                                                >`
+                                                              : ''}
+                                                      </div>
+                                                  </button>
+                                              `
+                                          )}
+                                          ${this._searchTotal > SEARCH_LIMIT
+                                              ? html`
+                                                    <div
+                                                        class="px-3 py-2 text-[11px] text-base-content/40 text-center border-t border-base-content/5 bg-base-200/50"
+                                                    >
+                                                        ${SEARCH_LIMIT} von ${this._searchTotal} Ergebnissen
+                                                    </div>
+                                                `
+                                              : ''}
+                                      </div>
+                                  `
+                                : ''}
                         </div>
                     </div>
 

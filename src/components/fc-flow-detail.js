@@ -662,7 +662,7 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                                                     <div class="text-xs font-semibold uppercase tracking-wider text-base-content/40 mb-1.5">
                                                         Zusammenfassung
                                                     </div>
-                                                    <p class="text-sm text-base-content/80 leading-relaxed">${this._analysis.summary}</p>
+                                                    <p class="text-sm text-base-content/80 leading-r  elaxed">${this._analysis.summary}</p>
                                                 </div>
 
                                                 <!-- Findings -->
