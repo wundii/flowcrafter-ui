@@ -119,6 +119,7 @@ Ein Flow besteht aus:
 - Messages fliessen zwischen Stubs mit den Zustaenden: WAIT -> PROCESS -> FINISH
 - Jede Message hat Zeitstempel, predecessorHash-Ketten und ist an einen flowRuntimeHash (Run) gebunden
 - Exceptions werden mit vollstaendigem Stack-Trace erfasst
+- FlowResults erfassen boolsche Rueckgabewerte von Stubs. Jeder Stub kann bool|MessageDataInterface|MessageReturnInterface zurueckgeben. Ein FlowResult enthaelt: stubSource, stubHash, result (true/false), flowRuntimeHash. Ein result=false bedeutet, dass der Stub die Verarbeitung abgelehnt hat (Status "rejected"), ist aber KEIN Fehler — der Flow kann trotzdem weiterlaufen
 - Pro Flow Instanze koennen mehrere Runs existieren (Wiederausfuehrung mit neuen Messages)
 - Jeder Run in einer Flow Instanze wird durch eine Message ausgelöst, diese Message besitzt kein predecessorHash
 - WICHTIG: Nur der allererste Run einer Flow-Instanz (zeitlich fruehester) startet mit einer Init-Message (messageEnum:"init") und durchlaeuft den Init-Stub. Alle nachfolgenden Runs können ohne Init-Stub starten — sie setzen den Flow an einer beliebigen Stelle fort (z.B. nach einem Fehler). Das Fehlen des Init-Stubs in einem Folge-Run ist KEIN Fehler und KEINE Auffaelligkeit, sondern gewolltes Verhalten

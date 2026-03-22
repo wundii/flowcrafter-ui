@@ -827,7 +827,9 @@ ${ex.traceString}</pre
                                                   ${selRess.map(
                                                       r => html`
                                                           <div class="flex items-center gap-2 mb-3">
-                                                              <span class="font-mono text-xs font-semibold text-base-content/60">Ergebnis</span>
+                                                              <span class="font-mono text-xs font-semibold text-base-content/60"
+                                                                  >Ergebnis</span
+                                                              >
                                                           </div>
                                                           <div
                                                               class="rounded-lg p-3 mb-2 text-xs"
