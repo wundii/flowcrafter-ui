@@ -754,39 +754,92 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
     }
 
     _renderMessageDiffTable(md, runA, runB) {
-        if (md.onlyA) return html`<div class="text-xs text-error/70 italic">Nur in ${runA.label}</div>`
-        if (md.onlyB) return html`<div class="text-xs text-success/70 italic">Nur in ${runB.label}</div>`
+        if (md.onlyA)
+            return html`<div class="flex items-center gap-2 text-xs px-2 py-1.5 rounded bg-error/5 border border-error/10">
+                <span class="text-error">✕</span>
+                <span class="text-base-content/60">Nur in <strong>${runA.label}</strong></span>
+            </div>`
+        if (md.onlyB)
+            return html`<div class="flex items-center gap-2 text-xs px-2 py-1.5 rounded bg-success/5 border border-success/10">
+                <span class="text-success">✓</span>
+                <span class="text-base-content/60">Nur in <strong>${runB.label}</strong></span>
+            </div>`
         return html`
-            <table class="table table-xs w-full">
-                <thead>
-                    <tr class="text-base-content/40">
-                        <th class="w-1/6">Feld</th>
-                        <th class="w-5/12">${runA.label}</th>
-                        <th class="w-5/12">${runB.label}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${md.payloadDiff
-                        .filter(f => f.changed)
-                        .map(
-                            f => html`
-                                <tr>
-                                    <td class="font-mono text-xs font-semibold">${f.key}</td>
-                                    <td class="font-mono text-xs ${f.onlyA ? 'bg-error/10 text-error' : 'bg-error/5 text-base-content/60'}">
-                                        ${f.onlyA ? `(nur ${runA.label}) ` : ''}${JSON.stringify(f.valueA) ?? '—'}
-                                    </td>
-                                    <td
-                                        class="font-mono text-xs ${f.onlyB
-                                            ? 'bg-success/10 text-success'
-                                            : 'bg-success/5 text-base-content/60'}"
-                                    >
-                                        ${f.onlyB ? `(nur ${runB.label}) ` : ''}${JSON.stringify(f.valueB) ?? '—'}
-                                    </td>
-                                </tr>
-                            `
-                        )}
-                </tbody>
-            </table>
+            <div class="rounded-lg border border-base-300 overflow-hidden">
+                <table class="table table-xs w-full mb-0">
+                    <thead>
+                        <tr class="bg-base-200/50">
+                            <th class="w-1/6 text-base-content/40 font-medium">Feld</th>
+                            <th class="w-5/12 text-base-content/40 font-medium">${runA.label}</th>
+                            <th class="w-5/12 text-base-content/40 font-medium">${runB.label}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${md.payloadDiff
+                            .filter(f => f.changed)
+                            .map(
+                                f => html`
+                                    <tr class="border-t border-base-200">
+                                        <td class="font-mono text-xs font-semibold text-base-content/70">${f.key}</td>
+                                        <td
+                                            class="font-mono text-xs ${f.onlyA
+                                                ? 'bg-error/10 text-error'
+                                                : 'bg-error/5 text-base-content/60'}"
+                                        >
+                                            ${JSON.stringify(f.valueA) ?? '—'}
+                                        </td>
+                                        <td
+                                            class="font-mono text-xs ${f.onlyB
+                                                ? 'bg-success/10 text-success'
+                                                : 'bg-success/5 text-base-content/60'}"
+                                        >
+                                            ${JSON.stringify(f.valueB) ?? '—'}
+                                        </td>
+                                    </tr>
+                                `
+                            )}
+                    </tbody>
+                </table>
+            </div>
+        `
+    }
+
+    _renderResultDiffTable(d, runA, runB) {
+        return html`
+            <div class="rounded-lg border border-base-300 overflow-hidden">
+                <table class="table table-xs w-full mb-0">
+                    <thead>
+                        <tr class="bg-base-200/50">
+                            <th class="w-1/6 text-base-content/40 font-medium">Feld</th>
+                            <th class="w-5/12 text-base-content/40 font-medium">${runA.label}</th>
+                            <th class="w-5/12 text-base-content/40 font-medium">${runB.label}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-t border-base-200">
+                            <td class="font-mono text-xs font-semibold text-base-content/70">result</td>
+                            <td
+                                class="font-mono text-xs ${d.resultA
+                                    ? d.resultA.result === false
+                                        ? 'bg-warning/10 text-warning'
+                                        : 'bg-success/10 text-success'
+                                    : 'bg-base-200/50 text-base-content/30'}"
+                            >
+                                ${d.resultA ? String(d.resultA.result) : '—'}
+                            </td>
+                            <td
+                                class="font-mono text-xs ${d.resultB
+                                    ? d.resultB.result === false
+                                        ? 'bg-warning/10 text-warning'
+                                        : 'bg-success/10 text-success'
+                                    : 'bg-base-200/50 text-base-content/30'}"
+                            >
+                                ${d.resultB ? String(d.resultB.result) : '—'}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         `
     }
 
@@ -823,121 +876,196 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
             return html`<span class="badge badge-xs ${cls}">${label}</span>`
         }
 
+        const hasIncoming = d => d.messageDiffs.filter(md => md.hasChanges && md.direction === 'in').length > 0
+        const hasOutgoing = d => d.messageDiffs.filter(md => md.hasChanges && md.direction === 'out').length > 0 || d.resultChanged
+
         const renderStubDiff = d => html`
-            <div class="collapse collapse-arrow border border-base-300 bg-base-100 mb-2">
+            <div class="collapse collapse-arrow border border-base-300 bg-base-100 rounded-xl mb-3 shadow-sm">
                 <input type="checkbox" checked />
-                <div class="collapse-title font-mono text-sm flex items-center gap-3 py-2 min-h-0">
-                    <span class="font-semibold">${d.shortName}</span>
+                <div class="collapse-title flex items-center gap-3 py-3 min-h-0">
+                    <span class="font-mono text-sm font-semibold">${d.shortName}</span>
                     ${d.statusChanged
-                        ? html`<span class="flex items-center gap-1">${statusBadge(d.statusA)} → ${statusBadge(d.statusB)}</span>`
+                        ? html`<span class="flex items-center gap-1.5 text-xs">
+                              ${statusBadge(d.statusA)}
+                              <svg
+                                  class="w-3 h-3 text-base-content/30"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-width="2"
+                                  viewBox="0 0 24 24"
+                              >
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                              </svg>
+                              ${statusBadge(d.statusB)}
+                          </span>`
                         : statusBadge(d.statusA)}
                 </div>
-                <div class="collapse-content px-4 pb-3">
-                    ${d.messageDiffs.filter(md => md.hasChanges && md.direction === 'in').length > 0
-                        ? html`<div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-2">↓ Eingehend</div>`
+                <div class="collapse-content px-4 pb-4">
+                    <!-- Eingehend -->
+                    ${hasIncoming(d)
+                        ? html`
+                              <div class="flex items-center gap-2 mb-3 ${hasOutgoing(d) ? '' : 'mb-2'}">
+                                  <span
+                                      class="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-blue-400/80"
+                                  >
+                                      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
+                                      </svg>
+                                      Eingehend
+                                  </span>
+                                  <div class="flex-1 border-t border-base-300"></div>
+                              </div>
+                              <div class="space-y-3 ${hasOutgoing(d) ? 'mb-5' : ''}">
+                                  ${d.messageDiffs
+                                      .filter(md => md.hasChanges && md.direction === 'in')
+                                      .map(
+                                          md => html`
+                                              <div>
+                                                  <div class="text-xs font-mono font-semibold text-base-content/50 mb-1.5">
+                                                      ${md.shortName}
+                                                  </div>
+                                                  ${this._renderMessageDiffTable(md, runA, runB)}
+                                              </div>
+                                          `
+                                      )}
+                              </div>
+                          `
                         : ''}
-                    ${d.messageDiffs
-                        .filter(md => md.hasChanges && md.direction === 'in')
-                        .map(
-                            md => html`
-                                <div class="mb-3">
-                                    <div class="text-xs font-semibold text-base-content/50 mb-1">${md.shortName}</div>
-                                    ${this._renderMessageDiffTable(md, runA, runB)}
-                                </div>
-                            `
-                        )}
-                    ${d.messageDiffs.filter(md => md.hasChanges && md.direction === 'out').length > 0 || d.resultChanged
-                        ? html`<div
-                              class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-2 ${d.messageDiffs.filter(
-                                  md => md.hasChanges && md.direction === 'in'
-                              ).length > 0
-                                  ? 'mt-4'
-                                  : ''}"
-                          >
-                              ↑ Ausgehend
-                          </div>`
+
+                    <!-- Ausgehend -->
+                    ${hasOutgoing(d)
+                        ? html`
+                              <div class="flex items-center gap-2 mb-3">
+                                  <span
+                                      class="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-emerald-400/80"
+                                  >
+                                      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
+                                      </svg>
+                                      Ausgehend
+                                  </span>
+                                  <div class="flex-1 border-t border-base-300"></div>
+                              </div>
+                              <div class="space-y-3">
+                                  ${d.messageDiffs
+                                      .filter(md => md.hasChanges && md.direction === 'out')
+                                      .map(
+                                          md => html`
+                                              <div>
+                                                  <div class="text-xs font-mono font-semibold text-base-content/50 mb-1.5">
+                                                      ${md.shortName}
+                                                  </div>
+                                                  ${this._renderMessageDiffTable(md, runA, runB)}
+                                              </div>
+                                          `
+                                      )}
+                                  ${d.resultChanged
+                                      ? html`
+                                            <div>
+                                                <div class="text-xs font-mono font-semibold text-base-content/50 mb-1.5">FlowResult</div>
+                                                ${this._renderResultDiffTable(d, runA, runB)}
+                                            </div>
+                                        `
+                                      : ''}
+                              </div>
+                          `
                         : ''}
-                    ${d.messageDiffs
-                        .filter(md => md.hasChanges && md.direction === 'out')
-                        .map(
-                            md => html`
-                                <div class="mb-3">
-                                    <div class="text-xs font-semibold text-base-content/50 mb-1">${md.shortName}</div>
-                                    ${this._renderMessageDiffTable(md, runA, runB)}
-                                </div>
-                            `
-                        )}
-                    ${d.resultChanged
-                        ? html`<div class="mb-3">
-                              <div class="text-xs font-semibold text-base-content/50 mb-1">Ergebnis</div>
-                              <table class="table table-xs w-full">
-                                  <thead>
-                                      <tr class="text-base-content/40">
-                                          <th class="w-1/6">Feld</th>
-                                          <th class="w-5/12">${runA.label}</th>
-                                          <th class="w-5/12">${runB.label}</th>
-                                      </tr>
-                                  </thead>
-                                  <tbody>
-                                      <tr>
-                                          <td class="font-mono text-xs font-semibold">result</td>
-                                          <td
-                                              class="font-mono text-xs ${d.resultA
-                                                  ? d.resultA.result === false
-                                                      ? 'bg-warning/10 text-warning'
-                                                      : 'bg-success/10 text-success'
-                                                  : 'bg-error/5 text-base-content/40'}"
-                                          >
-                                              ${d.resultA ? String(d.resultA.result) : '—'}
-                                          </td>
-                                          <td
-                                              class="font-mono text-xs ${d.resultB
-                                                  ? d.resultB.result === false
-                                                      ? 'bg-warning/10 text-warning'
-                                                      : 'bg-success/10 text-success'
-                                                  : 'bg-error/5 text-base-content/40'}"
-                                          >
-                                              ${d.resultB ? String(d.resultB.result) : '—'}
-                                          </td>
-                                      </tr>
-                                  </tbody>
-                              </table>
-                          </div>`
-                        : ''}
+
+                    <!-- Exceptions -->
                     ${d.exceptionsA.length > 0 || d.exceptionsB.length > 0
-                        ? html`<div class="mt-2">
-                              <span class="text-xs font-semibold text-base-content/50">Exceptions:</span>
-                              ${d.exceptionsA
-                                  .filter(e => !d.exceptionsB.some(eb => eb.message === e.message))
-                                  .map(e => html`<div class="text-xs text-error/70 mt-1">${runA.label}: ${e.message}</div>`)}
-                              ${d.exceptionsB
-                                  .filter(e => !d.exceptionsA.some(ea => ea.message === e.message))
-                                  .map(e => html`<div class="text-xs text-error/70 mt-1">${runB.label}: ${e.message}</div>`)}
-                          </div>`
+                        ? html`
+                              <div class="flex items-center gap-2 mb-3 mt-5">
+                                  <span class="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-error/80">
+                                      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                          <path
+                                              stroke-linecap="round"
+                                              stroke-linejoin="round"
+                                              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                          />
+                                      </svg>
+                                      Exceptions
+                                  </span>
+                                  <div class="flex-1 border-t border-error/20"></div>
+                              </div>
+                              <div class="space-y-2">
+                                  ${d.exceptionsA
+                                      .filter(e => !d.exceptionsB.some(eb => eb.message === e.message))
+                                      .map(
+                                          e => html`
+                                              <div
+                                                  class="flex items-start gap-2 text-xs px-3 py-2 rounded-lg bg-error/5 border border-error/10"
+                                              >
+                                                  <span class="badge badge-xs badge-error mt-0.5">${runA.label}</span>
+                                                  <span class="text-error/80 font-mono">${e.message}</span>
+                                              </div>
+                                          `
+                                      )}
+                                  ${d.exceptionsB
+                                      .filter(e => !d.exceptionsA.some(ea => ea.message === e.message))
+                                      .map(
+                                          e => html`
+                                              <div
+                                                  class="flex items-start gap-2 text-xs px-3 py-2 rounded-lg bg-error/5 border border-error/10"
+                                              >
+                                                  <span class="badge badge-xs badge-error mt-0.5">${runB.label}</span>
+                                                  <span class="text-error/80 font-mono">${e.message}</span>
+                                              </div>
+                                          `
+                                      )}
+                              </div>
+                          `
                         : ''}
                 </div>
             </div>
         `
 
         return html`
-            <div class="mb-4 border border-info/30 bg-info/5 rounded-box p-4">
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="font-semibold text-sm">Vergleich: ${runA.label} ↔ ${runB.label}</h3>
+            <div class="mb-6 rounded-2xl border border-info/20 bg-gradient-to-br from-info/5 via-transparent to-transparent p-5 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center">
+                            <svg class="w-4 h-4 text-info" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+                                />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-sm">Vergleich</h3>
+                            <p class="text-xs text-base-content/40">${runA.label} ↔ ${runB.label}</p>
+                        </div>
+                    </div>
                     <button
-                        class="btn btn-xs btn-ghost"
+                        class="btn btn-sm btn-ghost btn-square text-base-content/40 hover:text-base-content"
                         @click=${() => {
                             this.compareRunId = null
                         }}
                     >
-                        ✕
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                     </button>
                 </div>
 
                 ${changedDiffs.length === 0
-                    ? html`<p class="text-sm text-base-content/50 italic">Keine Unterschiede gefunden.</p>`
+                    ? html`<div class="flex items-center gap-2 text-sm text-base-content/50 py-4 justify-center">
+                          <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                              <path
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                          </svg>
+                          Keine Unterschiede gefunden
+                      </div>`
                     : changedDiffs.map(renderStubDiff)}
                 ${unchangedDiffs.length > 0
-                    ? html`<div class="mt-2 text-xs text-base-content/30">
+                    ? html`<div class="mt-3 flex items-center gap-2 text-xs text-base-content/30">
+                          <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          </svg>
                           ${unchangedDiffs.length} Stub${unchangedDiffs.length > 1 ? 's' : ''} ohne Unterschiede:
                           ${unchangedDiffs.map(d => d.shortName).join(', ')}
                       </div>`
