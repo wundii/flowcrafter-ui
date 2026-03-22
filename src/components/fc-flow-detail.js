@@ -85,6 +85,9 @@ export class FcFlowDetail extends BaseElement {
         if (changed.has('selectedRunId') && this.selectedRunId) {
             this.updateComplete.then(() => this._scrollToSelected())
         }
+        if (changed.has('compareRunId') && this.compareRunId) {
+            this.updateComplete.then(() => this.querySelector('#fc-diff-modal')?.showModal())
+        }
     }
 
     disconnectedCallback() {
@@ -485,8 +488,8 @@ export class FcFlowDetail extends BaseElement {
             <!-- Runs Panel -->
             ${this._renderRunsPanel()}
 
-            <!-- Run Diff -->
-            ${this._renderDiff()}
+            <!-- Run Diff Modal -->
+            ${this._renderDiffModal()}
 
             <!-- Flow Graph -->
             <h3 class="font-semibold mb-2 text-sm uppercase tracking-wide text-base-content/50">
@@ -843,7 +846,7 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
         `
     }
 
-    _renderDiff() {
+    _renderDiffModal() {
         const runA = this._selectedRun
         const runB = this._compareRun
         if (!runA || !runB || !this.flow?.flowSchema?.stubs) return ''
@@ -1020,57 +1023,71 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
         `
 
         return html`
-            <div class="mb-6 rounded-2xl border border-info/20 bg-gradient-to-br from-info/5 via-transparent to-transparent p-5 shadow-sm">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center">
-                            <svg class="w-4 h-4 text-info" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
-                                />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="font-semibold text-sm">Vergleich</h3>
-                            <p class="text-xs text-base-content/40">${runA.label} ↔ ${runB.label}</p>
+            <dialog
+                id="fc-diff-modal"
+                class="modal"
+                @close=${() => {
+                    this.compareRunId = null
+                }}
+            >
+                <div class="modal-box w-[90vw] max-w-[90vw] h-[85vh] max-h-[85vh] p-0 flex flex-col overflow-hidden">
+                    <!-- Header -->
+                    <div class="bg-gradient-to-br from-info/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-info/10 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-info" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+                                        />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-base leading-tight">Run-Vergleich</h3>
+                                    <span class="text-xs text-base-content/50">${runA.label} ↔ ${runB.label}</span>
+                                </div>
+                            </div>
+                            <button
+                                class="btn btn-ghost btn-sm btn-square btn-circle"
+                                @click=${() => this.querySelector('#fc-diff-modal')?.close()}
+                            >
+                                ✕
+                            </button>
                         </div>
                     </div>
-                    <button
-                        class="btn btn-sm btn-ghost btn-square text-base-content/40 hover:text-base-content"
-                        @click=${() => {
-                            this.compareRunId = null
-                        }}
-                    >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+
+                    <!-- Content -->
+                    <div class="flex-1 overflow-y-auto p-5">
+                        ${changedDiffs.length === 0
+                            ? html`<div class="flex items-center gap-2 text-sm text-base-content/50 py-8 justify-center">
+                                  <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                      <path
+                                          stroke-linecap="round"
+                                          stroke-linejoin="round"
+                                          d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                      />
+                                  </svg>
+                                  Keine Unterschiede gefunden
+                              </div>`
+                            : changedDiffs.map(renderStubDiff)}
+                        ${unchangedDiffs.length > 0
+                            ? html`<div class="mt-4 flex items-center gap-2 text-xs text-base-content/30">
+                                  <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                  </svg>
+                                  ${unchangedDiffs.length} Stub${unchangedDiffs.length > 1 ? 's' : ''} ohne Unterschiede:
+                                  ${unchangedDiffs.map(d => d.shortName).join(', ')}
+                              </div>`
+                            : ''}
+                    </div>
                 </div>
 
-                ${changedDiffs.length === 0
-                    ? html`<div class="flex items-center gap-2 text-sm text-base-content/50 py-4 justify-center">
-                          <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                              <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                          </svg>
-                          Keine Unterschiede gefunden
-                      </div>`
-                    : changedDiffs.map(renderStubDiff)}
-                ${unchangedDiffs.length > 0
-                    ? html`<div class="mt-3 flex items-center gap-2 text-xs text-base-content/30">
-                          <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                          </svg>
-                          ${unchangedDiffs.length} Stub${unchangedDiffs.length > 1 ? 's' : ''} ohne Unterschiede:
-                          ${unchangedDiffs.map(d => d.shortName).join(', ')}
-                      </div>`
-                    : ''}
-            </div>
+                <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                    <button>close</button>
+                </form>
+            </dialog>
         `
     }
 
@@ -1084,18 +1101,9 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                     <span class="badge badge-ghost badge-xs">${this.runs.length}</span>
                 </div>
 
-                ${this.compareRunId
-                    ? html`<button
-                          class="btn btn-xs btn-ghost text-base-content/50 hover:text-base-content mb-2"
-                          @click=${() => {
-                              this.compareRunId = null
-                          }}
-                      >
-                          ✕ Vergleich beenden
-                      </button>`
-                    : this.runs.length >= 2
-                      ? html`<div class="text-xs text-base-content/30 mb-1">Run auf anderen Run ziehen zum Vergleichen</div>`
-                      : ''}
+                ${this.runs.length >= 2
+                    ? html`<div class="text-xs text-base-content/30 mb-1">Run auf anderen Run ziehen zum Vergleichen</div>`
+                    : ''}
 
                 <div class="flex gap-2 overflow-x-auto p-1">
                     ${this.runs.map(run => {
