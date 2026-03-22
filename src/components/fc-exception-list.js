@@ -147,11 +147,12 @@ export class FcExceptionList extends BaseElement {
                 </div>
             `
 
-        if (this.exceptions.length === 0 && this._page === 0)
+        if (this.exceptions.length === 0 && this._page === 0 && !this._dateFrom && !this._dateTo)
             return html` <div class="alert alert-success"><span>Keine Exceptions gefunden.</span></div> `
 
         const from = this._page * PAGE_SIZE + 1
         const to = this._page * PAGE_SIZE + this.exceptions.length
+        const isEmpty = this.exceptions.length === 0
 
         return html`
             <!-- Toolbar -->
@@ -197,9 +198,12 @@ export class FcExceptionList extends BaseElement {
 
                 <!-- Rechts: Datenanzeige + Reload -->
                 <div class="flex items-center gap-3 flex-shrink-0 ml-auto">
-                    <span class="text-sm text-base-content/60">
-                        ${from}–${to} ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
-                    </span>
+                    ${isEmpty
+                        ? ''
+                        : html`<span class="text-sm text-base-content/60">
+                              ${from}–${to}
+                              ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
+                          </span>`}
                     <button
                         class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
                         title="Neu laden"
@@ -216,84 +220,88 @@ export class FcExceptionList extends BaseElement {
                 </div>
             </div>
 
-            <!-- Exception cards -->
-            <div class="flex flex-col gap-2">
-                ${this.exceptions.map((ex, idx) => {
-                    const id = ex.id ?? idx
-                    const open = this.expanded.has(id)
-                    const hasTrace = !!ex.traceString
+            ${isEmpty
+                ? html`<div class="alert alert-success"><span>Keine Exceptions für den gewählten Zeitraum gefunden.</span></div>`
+                : html`
+                      <!-- Exception cards -->
+                      <div class="flex flex-col gap-2">
+                          ${this.exceptions.map((ex, idx) => {
+                              const id = ex.id ?? idx
+                              const open = this.expanded.has(id)
+                              const hasTrace = !!ex.traceString
 
-                    return html`
-                        <div class="rounded-box border border-error/25 bg-base-200 overflow-hidden">
-                            <div class="px-4 py-3 flex flex-col gap-1.5">
-                                <!-- Row 1: Stub + Time -->
-                                <div class="flex items-center justify-between gap-2">
-                                    <span class="font-semibold text-sm text-base-content truncate" title="${ex.stubSource}">
-                                        ${shortClass(ex.stubSource)}
-                                    </span>
-                                    <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>
-                                </div>
-                                <!-- Row 2: Error message -->
-                                <div class="text-sm text-error leading-snug break-words">${ex.message}</div>
-                                <!-- Row 3: File + FlowHash + Trace toggle -->
-                                <div class="flex items-center justify-between gap-2">
-                                    <div class="flex items-baseline gap-3 min-w-0 text-xs text-base-content/50">
-                                        ${ex.file
-                                            ? html`
-                                                  <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
-                                                      ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
-                                                  </span>
-                                              `
-                                            : ''}
-                                        <button
-                                            class="font-mono text-primary/70 hover:text-primary flex-shrink-0"
-                                            style="font-size:11px;"
-                                            title="Flow ${ex.flowHash} öffnen"
-                                            @click=${e => {
-                                                e.stopPropagation()
-                                                this._navigateToFlow(ex.flowHash)
-                                            }}
-                                        >
-                                            ⤢ ${ex.flowHash}
-                                        </button>
-                                    </div>
-                                    ${hasTrace
-                                        ? html`
-                                              <button
-                                                  class="btn btn-xs btn-ghost text-base-content/40 flex-shrink-0"
-                                                  @click=${() => this._toggleRow(id)}
-                                              >
-                                                  ${open ? '▲ Trace' : '▼ Trace'}
-                                              </button>
-                                          `
-                                        : ''}
-                                </div>
-                            </div>
-
-                            ${open && hasTrace
-                                ? html`
-                                      <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
-                                          <pre
-                                              class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
-                                          >
-${ex.traceString}</pre
-                                          >
+                              return html`
+                                  <div class="rounded-box border border-error/25 bg-base-200 overflow-hidden">
+                                      <div class="px-4 py-3 flex flex-col gap-1.5">
+                                          <!-- Row 1: Stub + Time -->
+                                          <div class="flex items-center justify-between gap-2">
+                                              <span class="font-semibold text-sm text-base-content truncate" title="${ex.stubSource}">
+                                                  ${shortClass(ex.stubSource)}
+                                              </span>
+                                              <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>
+                                          </div>
+                                          <!-- Row 2: Error message -->
+                                          <div class="text-sm text-error leading-snug break-words">${ex.message}</div>
+                                          <!-- Row 3: File + FlowHash + Trace toggle -->
+                                          <div class="flex items-center justify-between gap-2">
+                                              <div class="flex items-baseline gap-3 min-w-0 text-xs text-base-content/50">
+                                                  ${ex.file
+                                                      ? html`
+                                                            <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
+                                                                ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
+                                                            </span>
+                                                        `
+                                                      : ''}
+                                                  <button
+                                                      class="font-mono text-primary/70 hover:text-primary flex-shrink-0"
+                                                      style="font-size:11px;"
+                                                      title="Flow ${ex.flowHash} öffnen"
+                                                      @click=${e => {
+                                                          e.stopPropagation()
+                                                          this._navigateToFlow(ex.flowHash)
+                                                      }}
+                                                  >
+                                                      ⤢ ${ex.flowHash}
+                                                  </button>
+                                              </div>
+                                              ${hasTrace
+                                                  ? html`
+                                                        <button
+                                                            class="btn btn-xs btn-ghost text-base-content/40 flex-shrink-0"
+                                                            @click=${() => this._toggleRow(id)}
+                                                        >
+                                                            ${open ? '▲ Trace' : '▼ Trace'}
+                                                        </button>
+                                                    `
+                                                  : ''}
+                                          </div>
                                       </div>
-                                  `
-                                : ''}
-                        </div>
-                    `
-                })}
-            </div>
 
-            <!-- Pagination -->
-            <div class="flex justify-center mt-4">
-                <div class="join">
-                    <button class="join-item btn btn-sm" ?disabled=${this._page === 0} @click=${this._onPrev}>«</button>
-                    <button class="join-item btn btn-sm">Seite ${this._page + 1}</button>
-                    <button class="join-item btn btn-sm" ?disabled=${!this._hasMore} @click=${this._onNext}>»</button>
-                </div>
-            </div>
+                                      ${open && hasTrace
+                                          ? html`
+                                                <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
+                                                    <pre
+                                                        class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
+                                                    >
+${ex.traceString}</pre
+                                                    >
+                                                </div>
+                                            `
+                                          : ''}
+                                  </div>
+                              `
+                          })}
+                      </div>
+
+                      <!-- Pagination -->
+                      <div class="flex justify-center mt-4">
+                          <div class="join">
+                              <button class="join-item btn btn-sm" ?disabled=${this._page === 0} @click=${this._onPrev}>«</button>
+                              <button class="join-item btn btn-sm">Seite ${this._page + 1}</button>
+                              <button class="join-item btn btn-sm" ?disabled=${!this._hasMore} @click=${this._onNext}>»</button>
+                          </div>
+                      </div>
+                  `}
         `
     }
 }

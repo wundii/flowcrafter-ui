@@ -164,11 +164,12 @@ export class FcFlowList extends BaseElement {
                 </div>
             `
 
-        if (this.flows.length === 0 && this._page === 0)
+        if (this.flows.length === 0 && this._page === 0 && !this._dateFrom && !this._dateTo)
             return html` <div class="alert alert-info"><span>Keine Flows gefunden.</span></div> `
 
         const from = this._page * PAGE_SIZE + 1
         const to = this._page * PAGE_SIZE + this.flows.length
+        const isEmpty = this.flows.length === 0
 
         return html`
             <!-- Toolbar -->
@@ -183,9 +184,12 @@ export class FcFlowList extends BaseElement {
                     </button>
                     <!-- Datenanzeige + Reload: mobil rechts, desktop hidden -->
                     <div class="flex items-center gap-2 lg:hidden flex-shrink-0">
-                        <span class="text-sm text-base-content/60">
-                            ${from}–${to} ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
-                        </span>
+                        ${isEmpty
+                            ? ''
+                            : html`<span class="text-sm text-base-content/60">
+                                  ${from}–${to}
+                                  ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
+                              </span>`}
                         <button
                             class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
                             title="Neu laden"
@@ -243,9 +247,12 @@ export class FcFlowList extends BaseElement {
 
                 <!-- Rechts: Datenanzeige + Reload (nur desktop) -->
                 <div class="hidden lg:flex items-center gap-3 flex-shrink-0">
-                    <span class="text-sm text-base-content/60">
-                        ${from}–${to} ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
-                    </span>
+                    ${isEmpty
+                        ? ''
+                        : html`<span class="text-sm text-base-content/60">
+                              ${from}–${to}
+                              ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
+                          </span>`}
                     <button
                         class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
                         title="Neu laden"
@@ -262,51 +269,57 @@ export class FcFlowList extends BaseElement {
                 </div>
             </div>
 
-            <!-- Flow cards -->
-            <div class="flex flex-col gap-2">
-                ${this.flows.map(flow => {
-                    const hasFailed = flow.exceptionCount > 0
-                    return html`
-                        <div
-                            class="rounded-box border bg-base-200 overflow-hidden cursor-pointer
+            ${isEmpty
+                ? html`<div class="alert alert-info"><span>Keine Flows für den gewählten Zeitraum gefunden.</span></div>`
+                : html`
+                      <!-- Flow cards -->
+                      <div class="flex flex-col gap-2">
+                          ${this.flows.map(flow => {
+                              const hasFailed = flow.exceptionCount > 0
+                              return html`
+                                  <div
+                                      class="rounded-box border bg-base-200 overflow-hidden cursor-pointer
                      hover:border-base-content/20 transition-colors
                      ${hasFailed ? 'border-error/25' : 'border-base-300'}"
-                            @click=${() => this._onSelect(flow)}
-                        >
-                            <div class="px-4 py-3 flex flex-col gap-1.5">
-                                <!-- Row 1: Source + Status -->
-                                <div class="flex items-center justify-between gap-2">
-                                    <div class="flex items-center gap-2 min-w-0">
-                                        ${hasFailed
-                                            ? html`<span class="badge badge-error badge-sm leading-none">Failed</span>`
-                                            : html`<span class="badge badge-success badge-sm leading-none">OK</span>`}
-                                        <span class="font-semibold text-sm text-base-content truncate">
-                                            ${shortClass(flow.flowSource)}
-                                        </span>
-                                    </div>
-                                    <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(flow.time)}</span>
-                                </div>
-                                <!-- Row 2: Hash -->
-                                <div class="font-mono text-xs text-base-content/40 truncate">${flow.flowHash}</div>
-                                <!-- Row 3: Subject + Type -->
-                                <div class="flex items-baseline justify-between gap-2">
-                                    <span class="text-sm text-base-content/50 truncate"> ${flow.flowSubject || ''} </span>
-                                    <span class="badge badge-outline badge-xs text-base-content/50 flex-shrink-0">${flow.flowType}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `
-                })}
-            </div>
+                                      @click=${() => this._onSelect(flow)}
+                                  >
+                                      <div class="px-4 py-3 flex flex-col gap-1.5">
+                                          <!-- Row 1: Source + Status -->
+                                          <div class="flex items-center justify-between gap-2">
+                                              <div class="flex items-center gap-2 min-w-0">
+                                                  ${hasFailed
+                                                      ? html`<span class="badge badge-error badge-sm leading-none">Failed</span>`
+                                                      : html`<span class="badge badge-success badge-sm leading-none">OK</span>`}
+                                                  <span class="font-semibold text-sm text-base-content truncate">
+                                                      ${shortClass(flow.flowSource)}
+                                                  </span>
+                                              </div>
+                                              <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(flow.time)}</span>
+                                          </div>
+                                          <!-- Row 2: Hash -->
+                                          <div class="font-mono text-xs text-base-content/40 truncate">${flow.flowHash}</div>
+                                          <!-- Row 3: Subject + Type -->
+                                          <div class="flex items-baseline justify-between gap-2">
+                                              <span class="text-sm text-base-content/50 truncate"> ${flow.flowSubject || ''} </span>
+                                              <span class="badge badge-outline badge-xs text-base-content/50 flex-shrink-0"
+                                                  >${flow.flowType}</span
+                                              >
+                                          </div>
+                                      </div>
+                                  </div>
+                              `
+                          })}
+                      </div>
 
-            <!-- Pagination -->
-            <div class="flex justify-center mt-4">
-                <div class="join">
-                    <button class="join-item btn btn-sm" ?disabled=${this._page === 0} @click=${this._onPrev}>«</button>
-                    <button class="join-item btn btn-sm">Seite ${this._page + 1}</button>
-                    <button class="join-item btn btn-sm" ?disabled=${!this._hasMore} @click=${this._onNext}>»</button>
-                </div>
-            </div>
+                      <!-- Pagination -->
+                      <div class="flex justify-center mt-4">
+                          <div class="join">
+                              <button class="join-item btn btn-sm" ?disabled=${this._page === 0} @click=${this._onPrev}>«</button>
+                              <button class="join-item btn btn-sm">Seite ${this._page + 1}</button>
+                              <button class="join-item btn btn-sm" ?disabled=${!this._hasMore} @click=${this._onNext}>»</button>
+                          </div>
+                      </div>
+                  `}
         `
     }
 }
