@@ -114,6 +114,7 @@ flowcrafter-ui/
 │   │   ├── auth.js              # Login / Logout / Passwort-Verwaltung
 │   │   ├── connection.js        # FlowCrafter-Service-URL speichern & prüfen
 │   │   ├── runs.js              # Hilfsfunktion: Flows nach Runtime-Hash gruppieren
+│   │   ├── run-diff.js          # Diff-Logik zum Vergleich zweier Runs (Stub-Status, Messages, Results)
 │   │   └── theme.js             # Dark/Light-Theme (localStorage)
 │   ├── assets/
 │   │   └── logo.js              # SVG-Logo als Lit-Template
@@ -189,6 +190,7 @@ docker compose -f docker-compose.esdb.yml up
 
 - **Shadow DOM** ist in allen Komponenten deaktiviert (`BaseElement.createRenderRoot()` gibt `this` zurück), damit globale Tailwind/DaisyUI-Klassen greifen.
 - **Queue-Chart** pollt alle 3 Sekunden `/api/queue/count` und zeigt eine Live-Sparkline in der Navbar.
-- **Hash-Suche** in der Navbar akzeptiert sowohl `flowHash` als auch `runtimeHash` — bei `runtimeHash` wird automatisch der zugehörige Flow aufgelöst.
+- **Suche** in der Navbar erkennt automatisch ob ein UUID-Hash oder ein Freitext eingegeben wird. UUIDs werden als `flowHash` / `runtimeHash` aufgelöst, alle anderen Eingaben lösen eine `flowSubject`-Suche aus. Bei mehreren Treffern erscheint ein Dropdown mit den ersten Ergebnissen; bei genau einem Treffer wird direkt zum Flow navigiert.
 - **Flow-Graph** (`fc-flow-graph`) stellt die Stub-Knoten des Flows als SVG-Diagramm dar und erlaubt das manuelle Auslösen eines Stubs via JSON-Editor-Modal. Wenn eine Message-Source von mehreren Stubs konsumiert wird, öffnet sich ein Auswahl-Modal zur selektiven Stub-Ausführung (`includeStubs`). Jeder angezeigte Message-Inhalt (ein- und ausgehend) besitzt einen Kopier-Button, der den JSON-Inhalt in die Zwischenablage kopiert.
+- **Run-Vergleich** per Drag & Drop: In der Flow-Detail-Ansicht kann ein Run auf einen anderen gezogen werden, um ein Diff-Modal zu öffnen. Dieses zeigt pro Stub den Status-Vergleich, eingehende/ausgehende Message-Diffs (Payload-Felder mit Änderungs-Hervorhebung), FlowResult-Vergleich und Exceptions beider Runs.
 - **Overview** (`fc-overview`) zeigt alle registrierten Flow-Schemas mit ihren Stubs, inklusive PHP-Source-Viewer und Graph-Ansicht.

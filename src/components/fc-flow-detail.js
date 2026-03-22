@@ -441,42 +441,46 @@ export class FcFlowDetail extends BaseElement {
         return html`
             <!-- Meta -->
             <div class="card bg-base-200 border border-base-300 mb-4">
-                <div class="card-body py-3 px-4">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                        <div>
-                            <div class="text-base-content/50 text-xs mb-1">Typ</div>
-                            <span class="badge badge-outline badge-xs text-base-content/50">${f.flowType}</span>
+                <div class="card-body py-4 px-5">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-x-4 gap-y-3">
+                        <div class="flex flex-col gap-1">
+                            <span class="text-[10px] uppercase tracking-wider text-base-content/40 font-semibold">Typ</span>
+                            <span class="badge badge-outline badge-sm text-base-content/60">${f.flowType}</span>
                         </div>
-                        <div>
-                            <div class="text-base-content/50 text-xs mb-1">Source</div>
-                            <span class="font-mono text-xs">${shortClass(f.flowSource)}</span>
+                        <div class="flex flex-col gap-1">
+                            <span class="text-[10px] uppercase tracking-wider text-base-content/40 font-semibold">Source</span>
+                            <span class="font-mono text-sm font-medium truncate" title="${f.flowSource}">${shortClass(f.flowSource)}</span>
                         </div>
-                        <div>
-                            <div class="text-base-content/50 text-xs mb-1">Erstellt</div>
-                            <span class="text-xs">${formatDate(f.time)}</span>
+                        <div class="flex flex-col gap-1">
+                            <span class="text-[10px] uppercase tracking-wider text-base-content/40 font-semibold">Subject</span>
+                            <span class="text-sm ${f.flowSubject ? '' : 'text-base-content/30'}">${f.flowSubject || '–'}</span>
                         </div>
-                        <div>
-                            <div class="text-base-content/50 text-xs mb-1">Status</div>
-                            <div class="flex items-center gap-1 flex-wrap">
+                        <div class="flex flex-col gap-1">
+                            <span class="text-[10px] uppercase tracking-wider text-base-content/40 font-semibold">Erstellt</span>
+                            <span class="text-sm">${formatDate(f.time)}</span>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <span class="text-[10px] uppercase tracking-wider text-base-content/40 font-semibold">Status</span>
+                            <div class="flex items-center gap-1.5 flex-wrap">
                                 ${hasExceptions
-                                    ? html`<span class="badge badge-error badge-sm leading-none">Failed</span>`
-                                    : html`<span class="badge badge-success badge-sm leading-none">OK</span>`}
+                                    ? html`<span class="badge badge-error badge-sm">Failed</span>`
+                                    : html`<span class="badge badge-success badge-sm">OK</span>`}
                                 ${f.isExecutable === false
-                                    ? html`<span class="badge badge-sm border-slate-500/50 bg-slate-600/40 text-slate-300 leading-none"
+                                    ? html`<span class="badge badge-sm border-slate-500/50 bg-slate-600/40 text-slate-300"
                                           >Nicht ausführbar</span
                                       >`
                                     : ''}
                             </div>
                         </div>
                     </div>
-                    <div class="mt-1 flex items-center gap-1">
-                        <span class="text-xs font-mono text-base-content/40 truncate">${f.flowHash}</span>
+                    <div class="mt-2 pt-2 border-t border-base-content/5 flex items-center gap-1.5">
+                        <span class="text-xs font-mono text-base-content/35 truncate">${f.flowHash}</span>
                         <button
-                            class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
+                            class="btn btn-ghost btn-xs px-1 text-base-content/25 hover:text-base-content/70"
                             title="Hash kopieren"
                             @click=${() => navigator.clipboard.writeText(f.flowHash)}
                         >
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                 <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
                             </svg>
