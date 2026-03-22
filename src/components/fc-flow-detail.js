@@ -785,30 +785,31 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                         ${md.payloadDiff
                             .filter(f => f.changed)
                             .map(f => {
-                                const fmtVal = v =>
-                                    v === undefined
-                                        ? '—'
-                                        : typeof v === 'object' && v !== null
-                                          ? JSON.stringify(v, null, 2)
-                                          : JSON.stringify(v)
                                 const isBlock = v => typeof v === 'object' && v !== null
-                                const blockClass = isBlock(f.valueA) || isBlock(f.valueB) ? ' whitespace-pre-wrap break-all' : ''
+                                const renderVal = v => {
+                                    if (v === undefined) return '—'
+                                    if (isBlock(v))
+                                        return html`<pre class="whitespace-pre-wrap break-all m-0 font-mono text-xs">
+${JSON.stringify(v, null, 2)}</pre
+                                        >`
+                                    return JSON.stringify(v)
+                                }
                                 return html`
                                     <tr class="border-t border-base-200 align-top">
                                         <td class="font-mono text-xs font-semibold text-base-content/70">${f.key}</td>
                                         <td
-                                            class="font-mono text-xs${blockClass} ${f.onlyA
+                                            class="font-mono text-xs ${f.onlyA
                                                 ? 'bg-error/10 text-error'
                                                 : 'bg-error/5 text-base-content/60'}"
                                         >
-                                            ${fmtVal(f.valueA)}
+                                            ${renderVal(f.valueA)}
                                         </td>
                                         <td
-                                            class="font-mono text-xs${blockClass} ${f.onlyB
+                                            class="font-mono text-xs ${f.onlyB
                                                 ? 'bg-success/10 text-success'
                                                 : 'bg-success/5 text-base-content/60'}"
                                         >
-                                            ${fmtVal(f.valueB)}
+                                            ${renderVal(f.valueB)}
                                         </td>
                                     </tr>
                                 `
