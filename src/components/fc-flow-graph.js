@@ -1190,18 +1190,51 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                 <dialog id="fc-stub-selection-modal" class="modal">
                     ${this._stubSelection
                         ? html`
-                              <div class="modal-box max-w-lg">
-                                  <div class="flex items-center justify-between mb-4">
-                                      <h3 class="font-bold text-lg">Stub-Auswahl</h3>
-                                      <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${() => this._closeStubSelection()}>
-                                          ✕
-                                      </button>
+                              <div class="modal-box max-w-lg p-0 flex flex-col overflow-hidden">
+                                  <!-- Header -->
+                                  <div
+                                      class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0"
+                                  >
+                                      <div class="flex items-start justify-between">
+                                          <div class="flex items-start gap-3">
+                                              <div
+                                                  class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"
+                                              >
+                                                  <svg
+                                                      class="w-5 h-5 text-primary"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                      viewBox="0 0 24 24"
+                                                  >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                      />
+                                                  </svg>
+                                              </div>
+                                              <div>
+                                                  <h3 class="font-bold text-base leading-tight">Stub-Auswahl</h3>
+                                                  <p class="text-xs text-base-content/50 mt-1">
+                                                      Die Message-Source wird von mehreren Stubs verwendet. Bitte wähle die Stubs aus, die
+                                                      ausgeführt werden sollen:
+                                                  </p>
+                                              </div>
+                                          </div>
+                                          <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
+                                              <button
+                                                  class="btn btn-sm btn-ghost btn-square btn-circle"
+                                                  @click=${() => this._closeStubSelection()}
+                                              >
+                                                  ✕
+                                              </button>
+                                          </div>
+                                      </div>
                                   </div>
-                                  <p class="text-sm text-base-content/60 mb-4">
-                                      Die Message-Source wird von mehreren Stubs verwendet. Bitte wähle die Stubs aus, die ausgeführt werden
-                                      sollen:
-                                  </p>
-                                  <div class="flex flex-col gap-2 mb-6">
+
+                                  <!-- Stub list -->
+                                  <div class="flex flex-col gap-2 px-5 py-4">
                                       ${this._stubSelection.stubs.map(
                                           (s, i) => html`
                                               <label class="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-base-200">
@@ -1216,7 +1249,9 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                           `
                                       )}
                                   </div>
-                                  <div class="flex justify-end gap-2">
+
+                                  <!-- Footer -->
+                                  <div class="flex justify-end gap-2 px-5 py-3 border-t border-base-300 flex-shrink-0">
                                       <button class="btn btn-ghost btn-sm" @click=${() => this._closeStubSelection()}>Abbrechen</button>
                                       <button
                                           class="btn btn-primary btn-sm"
