@@ -477,6 +477,7 @@ export class FcFlowDetail extends BaseElement {
                 .runId=${this.selectedRunId}
                 .runMessages=${graphRun?.messages ?? null}
                 .runExceptions=${graphRun?.exceptions ?? null}
+                .runResults=${graphRun?.results ?? null}
                 class="block mb-6"
             ></fc-flow-graph>
         `

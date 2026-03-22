@@ -39,8 +39,10 @@ function outputPortY(stub, j) {
 }
 
 // ─── Status ───────────────────────────────────────────────────────────────────
-function getNodeStatus(src, flowMessages, flowExceptions) {
+function getNodeStatus(src, flowMessages, flowExceptions, flowResults) {
     if (flowExceptions.some(e => e.stubSource === src)) return 'error'
+    const stubResults = flowResults.filter(r => r.stubSource === src)
+    if (stubResults.length > 0 && stubResults.some(r => r.result === false)) return 'rejected'
     const msgs = flowMessages.filter(m => m.stubSource === src)
     if (msgs.some(m => m.messageType === 'finish')) return 'success'
     if (msgs.some(m => m.messageType === 'process')) return 'running'
@@ -50,6 +52,7 @@ function getNodeStatus(src, flowMessages, flowExceptions) {
 
 const STATUS = {
     success: { color: '#22c55e', label: '✓', bg: 'rgba(34,197,94,0.10)' },
+    rejected: { color: '#f97316', label: '✗', bg: 'rgba(249,115,22,0.10)' },
     error: { color: '#ef4444', label: '✕', bg: 'rgba(239,68,68,0.10)' },
     running: { color: '#3b82f6', label: '▷', bg: 'rgba(59,130,246,0.10)' },
     waiting: { color: '#eab308', label: '…', bg: 'rgba(234,179,8,0.10)' },
@@ -134,8 +137,8 @@ function getThemeColors() {
 }
 
 // ─── SVG string builder ───────────────────────────────────────────────────────
-function buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExceptions, colOf, topOffset, bgColor, bg2Color) {
-    const statusOf = src => getNodeStatus(src, flowMessages, flowExceptions)
+function buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExceptions, flowResults, colOf, topOffset, bgColor, bg2Color) {
+    const statusOf = src => getNodeStatus(src, flowMessages, flowExceptions, flowResults)
     const colorOf = src => STATUS[statusOf(src)].color
 
     const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -243,6 +246,7 @@ export class FcFlowGraph extends BaseElement {
         runId: { type: String },
         runMessages: { type: Array }, // overrides flow.flowMessages for a specific run
         runExceptions: { type: Array }, // overrides flow.flowExceptions for a specific run
+        runResults: { type: Array }, // overrides flow.flowResults for a specific run
         selectedStub: { state: true },
         _modalMsg: { state: true }, // { stubSource, messageClass, payload, valid }
         _sending: { state: true },
@@ -262,6 +266,7 @@ export class FcFlowGraph extends BaseElement {
         this.runId = null
         this.runMessages = null
         this.runExceptions = null
+        this.runResults = null
         this.selectedStub = null
         this._modalMsg = null
         this._sending = false
@@ -391,13 +396,15 @@ export class FcFlowGraph extends BaseElement {
         const { stubs } = this.flow.flowSchema
         const flowMessages = this.runMessages ?? this.flow.flowMessages ?? []
         const flowExceptions = this.runExceptions ?? this.flow.flowExceptions ?? []
+        const flowResults = this.runResults ?? this.flow.flowResults ?? []
 
         const { edges, positions, svgW, svgH, stubMap, colOf, topOffset } = buildLayout(stubs)
 
-        const statusOf = src => getNodeStatus(src, flowMessages, flowExceptions)
+        const statusOf = src => getNodeStatus(src, flowMessages, flowExceptions, flowResults)
         const styleOf = src => STATUS[statusOf(src)]
         const msgsOf = src => flowMessages.filter(m => m.stubSource === src)
         const excsOf = src => flowExceptions.filter(e => e.stubSource === src)
+        const ressOf = src => flowResults.filter(r => r.stubSource === src)
         const outgoingOf = rt => flowMessages.find(m => m.messageSource === rt)
 
         const theme = getThemeColors()
@@ -408,6 +415,7 @@ export class FcFlowGraph extends BaseElement {
             stubMap,
             flowMessages,
             flowExceptions,
+            flowResults,
             colOf,
             topOffset,
             theme.bg1,
@@ -417,6 +425,7 @@ export class FcFlowGraph extends BaseElement {
         const selStub = this.selectedStub ? stubMap[this.selectedStub] : null
         const selMsgs = this.selectedStub ? msgsOf(this.selectedStub) : []
         const selExcs = this.selectedStub ? excsOf(this.selectedStub) : []
+        const selRess = this.selectedStub ? ressOf(this.selectedStub) : []
 
         return html`
             <div style="position:relative;">
@@ -428,6 +437,7 @@ export class FcFlowGraph extends BaseElement {
                             const st = styleOf(stub.source)
                             const msgs = msgsOf(stub.source)
                             const excs = excsOf(stub.source)
+                            const ress = ressOf(stub.source)
                             const selected = this.selectedStub === stub.source
                             const nh = nodeHeight(stub)
                             const maxPorts = Math.max(stub.messages.length, stub.returnTypes.length, 1)
@@ -550,45 +560,64 @@ export class FcFlowGraph extends BaseElement {
                                                                           : excs[0].message}
                                                                   </span>
                                                               `
-                                                            : outRt
+                                                            : i === 0 && ress.length > 0
                                                               ? html`
                                                                     <span
-                                                                        style="font-size:10px;color:#6b7280;font-weight:600;
+                                                                        style="font-size:10px;color:${ress[0].result
+                                                                            ? '#22c55e'
+                                                                            : '#f97316'};font-weight:600;
+                                         font-family:monospace;white-space:nowrap;
+                                         overflow:hidden;text-overflow:ellipsis;"
+                                                                        >${ress[0].result ? 'true' : 'false'}</span
+                                                                    >
+                                                                    <span
+                                                                        style="font-size:9px;color:${ress[0].result
+                                                                            ? '#22c55e'
+                                                                            : '#f97316'};opacity:0.7;
+                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+                                                                    >
+                                                                        Ergebnis
+                                                                    </span>
+                                                                `
+                                                              : outRt
+                                                                ? html`
+                                                                      <span
+                                                                          style="font-size:10px;color:#6b7280;font-weight:600;
                                          font-family:monospace;white-space:nowrap;
                                          overflow:hidden;text-overflow:ellipsis;
                                          cursor:${outData ? 'pointer' : 'default'};"
-                                                                        title="${outRt}"
-                                                                        @mouseenter=${outData
-                                                                            ? e =>
-                                                                                  this._showTooltip(
-                                                                                      e,
-                                                                                      short(outRt),
-                                                                                      outData.messageSource,
-                                                                                      outData.message
-                                                                                  )
-                                                                            : null}
-                                                                        @mouseleave=${this._hideTooltip}
-                                                                        >${short(outRt)}</span
-                                                                    >
-                                                                    <span
-                                                                        style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
+                                                                          title="${outRt}"
+                                                                          @mouseenter=${outData
+                                                                              ? e =>
+                                                                                    this._showTooltip(
+                                                                                        e,
+                                                                                        short(outRt),
+                                                                                        outData.messageSource,
+                                                                                        outData.message
+                                                                                    )
+                                                                              : null}
+                                                                          @mouseleave=${this._hideTooltip}
+                                                                          >${short(outRt)}</span
+                                                                      >
+                                                                      <span
+                                                                          style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
                                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
                                          cursor:${outData ? 'pointer' : 'default'};"
-                                                                        @mouseenter=${outData
-                                                                            ? e =>
-                                                                                  this._showTooltip(
-                                                                                      e,
-                                                                                      short(outRt),
-                                                                                      outData.messageSource,
-                                                                                      outData.message
-                                                                                  )
-                                                                            : null}
-                                                                        @mouseleave=${this._hideTooltip}
-                                                                    >
-                                                                        ${outData ? fmtJson(outData.message) : '—'}
-                                                                    </span>
-                                                                `
-                                                              : ''}
+                                                                          @mouseenter=${outData
+                                                                              ? e =>
+                                                                                    this._showTooltip(
+                                                                                        e,
+                                                                                        short(outRt),
+                                                                                        outData.messageSource,
+                                                                                        outData.message
+                                                                                    )
+                                                                              : null}
+                                                                          @mouseleave=${this._hideTooltip}
+                                                                      >
+                                                                          ${outData ? fmtJson(outData.message) : '—'}
+                                                                      </span>
+                                                                  `
+                                                                : ''}
                                                     </div>
                                                 </div>
                                             `
@@ -790,80 +819,114 @@ ${ex.traceString}</pre
                                                     `
                                                 )}
                                             `
-                                          : html`
-                                                <div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3">
-                                                    ↑ Ausgehende Messages
-                                                </div>
-                                                ${selStub.returnTypes.length === 0
-                                                    ? html`<p class="text-xs text-base-content/30 italic">Terminal-Stub (keine Ausgabe)</p>`
-                                                    : selStub.returnTypes.map(rt => {
-                                                          const outData = outgoingOf(rt)
-                                                          return html`
-                                                              <div class="mb-3">
-                                                                  <div class="flex items-center gap-2 mb-1">
-                                                                      <span class="font-mono text-xs font-semibold text-base-content/60"
-                                                                          >${short(rt)}</span
-                                                                      >
-                                                                  </div>
-                                                                  ${outData
-                                                                      ? html`<div class="rounded-lg bg-base-300 p-3 mb-1">
-                                                                            <div class="flex items-center gap-2 mb-2">
-                                                                                <span
-                                                                                    class="badge badge-xs leading-none ${outData.messageType ===
-                                                                                    'finish'
-                                                                                        ? 'badge-success'
-                                                                                        : outData.messageType === 'process'
-                                                                                          ? 'badge-info'
-                                                                                          : 'badge-warning'}"
-                                                                                    >${outData.messageType}</span
-                                                                                >
-                                                                                <span class="text-xs text-base-content/40"
-                                                                                    >${fmtDate(outData.time)}</span
-                                                                                >
-                                                                                <button
-                                                                                    class="btn btn-ghost btn-xs px-1 ml-auto text-base-content/30 hover:text-base-content/70"
-                                                                                    title="Inhalt kopieren"
-                                                                                    @click=${() =>
-                                                                                        navigator.clipboard.writeText(
-                                                                                            JSON.stringify(outData.message, null, 2)
-                                                                                        )}
-                                                                                >
-                                                                                    <svg
-                                                                                        class="w-3 h-3"
-                                                                                        fill="none"
-                                                                                        stroke="currentColor"
-                                                                                        stroke-width="2"
-                                                                                        viewBox="0 0 24 24"
-                                                                                    >
-                                                                                        <rect
-                                                                                            x="9"
-                                                                                            y="9"
-                                                                                            width="13"
-                                                                                            height="13"
-                                                                                            rx="2"
-                                                                                            ry="2"
-                                                                                        ></rect>
-                                                                                        <path
-                                                                                            d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
-                                                                                        ></path>
-                                                                                    </svg>
-                                                                                </button>
-                                                                            </div>
-                                                                            <pre
-                                                                                class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"
-                                                                            >
-${JSON.stringify(outData.message, null, 2)}</pre
-                                                                            >
-                                                                        </div>`
-                                                                      : !this.readonly
-                                                                        ? html`<div class="text-xs text-base-content/30 italic px-2">
-                                                                              nicht gesendet
-                                                                          </div>`
-                                                                        : ''}
+                                          : selRess.length
+                                            ? html`
+                                                  <div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3">
+                                                      ↑ Ausgehend
+                                                  </div>
+                                                  ${selRess.map(
+                                                      r => html`
+                                                          <div class="flex items-center gap-2 mb-3">
+                                                              <span class="font-mono text-xs font-semibold text-base-content/60">Ergebnis</span>
+                                                          </div>
+                                                          <div
+                                                              class="rounded-lg p-3 mb-2 text-xs"
+                                                              style="background:${r.result
+                                                                  ? 'rgba(34,197,94,0.10)'
+                                                                  : 'rgba(249,115,22,0.10)'}; border:1px solid ${r.result
+                                                                  ? 'rgba(34,197,94,0.3)'
+                                                                  : 'rgba(249,115,22,0.3)'};"
+                                                          >
+                                                              <div class="flex items-center gap-2">
+                                                                  <span
+                                                                      class="badge badge-xs leading-none"
+                                                                      style="background:${r.result
+                                                                          ? '#22c55e'
+                                                                          : '#f97316'}; color:white; border:none;"
+                                                                      >${r.result ? 'true' : 'false'}</span
+                                                                  >
+                                                                  <span class="text-base-content/40">${fmtDate(r.time)}</span>
                                                               </div>
-                                                          `
-                                                      })}
-                                            `}
+                                                          </div>
+                                                      `
+                                                  )}
+                                              `
+                                            : html`
+                                                  <div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3">
+                                                      ↑ Ausgehende Messages
+                                                  </div>
+                                                  ${selStub.returnTypes.length === 0
+                                                      ? html`<p class="text-xs text-base-content/30 italic">
+                                                            Terminal-Stub (keine Ausgabe)
+                                                        </p>`
+                                                      : selStub.returnTypes.map(rt => {
+                                                            const outData = outgoingOf(rt)
+                                                            return html`
+                                                                <div class="mb-3">
+                                                                    <div class="flex items-center gap-2 mb-1">
+                                                                        <span class="font-mono text-xs font-semibold text-base-content/60"
+                                                                            >${short(rt)}</span
+                                                                        >
+                                                                    </div>
+                                                                    ${outData
+                                                                        ? html`<div class="rounded-lg bg-base-300 p-3 mb-1">
+                                                                              <div class="flex items-center gap-2 mb-2">
+                                                                                  <span
+                                                                                      class="badge badge-xs leading-none ${outData.messageType ===
+                                                                                      'finish'
+                                                                                          ? 'badge-success'
+                                                                                          : outData.messageType === 'process'
+                                                                                            ? 'badge-info'
+                                                                                            : 'badge-warning'}"
+                                                                                      >${outData.messageType}</span
+                                                                                  >
+                                                                                  <span class="text-xs text-base-content/40"
+                                                                                      >${fmtDate(outData.time)}</span
+                                                                                  >
+                                                                                  <button
+                                                                                      class="btn btn-ghost btn-xs px-1 ml-auto text-base-content/30 hover:text-base-content/70"
+                                                                                      title="Inhalt kopieren"
+                                                                                      @click=${() =>
+                                                                                          navigator.clipboard.writeText(
+                                                                                              JSON.stringify(outData.message, null, 2)
+                                                                                          )}
+                                                                                  >
+                                                                                      <svg
+                                                                                          class="w-3 h-3"
+                                                                                          fill="none"
+                                                                                          stroke="currentColor"
+                                                                                          stroke-width="2"
+                                                                                          viewBox="0 0 24 24"
+                                                                                      >
+                                                                                          <rect
+                                                                                              x="9"
+                                                                                              y="9"
+                                                                                              width="13"
+                                                                                              height="13"
+                                                                                              rx="2"
+                                                                                              ry="2"
+                                                                                          ></rect>
+                                                                                          <path
+                                                                                              d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                                                          ></path>
+                                                                                      </svg>
+                                                                                  </button>
+                                                                              </div>
+                                                                              <pre
+                                                                                  class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"
+                                                                              >
+${JSON.stringify(outData.message, null, 2)}</pre
+                                                                              >
+                                                                          </div>`
+                                                                        : !this.readonly
+                                                                          ? html`<div class="text-xs text-base-content/30 italic px-2">
+                                                                                nicht gesendet
+                                                                            </div>`
+                                                                          : ''}
+                                                                </div>
+                                                            `
+                                                        })}
+                                              `}
                                   </div>
                               </div>
                           </div>
