@@ -886,8 +886,9 @@ ${ex.traceString}</pre
                                                                   <span
                                                                       class="badge badge-xs leading-none"
                                                                       style="background:${r.result
-                                                                          ? '#22c55e'
-                                                                          : '#f97316'}; color:white; border:none;"
+                                                                          ? '#00d390'
+                                                                          : '#f97316'}; color:#004c39; border:none;"
+
                                                                       >${r.result ? 'true' : 'false'}</span
                                                                   >
                                                                   <span class="text-base-content/40">${fmtDate(r.time)}</span>
