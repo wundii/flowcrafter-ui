@@ -470,6 +470,7 @@ export class FcFlowDetail extends BaseElement {
                                           >Nicht ausführbar</span
                                       >`
                                     : ''}
+                                ${f.isReadOnly ? html`<span class="badge badge-warning badge-sm">Schreibgeschützt</span>` : ''}
                             </div>
                         </div>
                     </div>
