@@ -32,11 +32,6 @@ export class FcFlowChart extends BaseElement {
         this._error = false
     }
 
-    connectedCallback() {
-        super.connectedCallback()
-        this._load()
-    }
-
     updated(changed) {
         if (changed.has('type')) this._load()
     }

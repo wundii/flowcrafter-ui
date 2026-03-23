@@ -54,13 +54,14 @@ export class FcFlowList extends BaseElement {
     connectedCallback() {
         super.connectedCallback()
         this._page = this.page ?? 0
-        this._load()
     }
 
     updated(changed) {
-        if (changed.has('type') && changed.get('type') !== undefined) {
-            this._page = 0
-            this._emitPageChange()
+        if (changed.has('type')) {
+            if (changed.get('type') !== undefined) {
+                this._page = 0
+                this._emitPageChange()
+            }
             this._load()
         }
     }
