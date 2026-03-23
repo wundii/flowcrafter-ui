@@ -121,7 +121,7 @@ flowcrafter-ui/
 │   ├── base-element.js          # Lit BaseElement (Shadow DOM deaktiviert)
 │   ├── main.js                  # Einstiegspunkt
 │   └── main.css                 # Tailwind + DaisyUI
-├── server.js                    # Node-Server: Auth, Connection, AI-Config, Analyse-Proxy
+├── server.js                    # Node-Server: Auth, Connection, AI-Config, Analyse-Proxy, Prometheus-Metriken
 ├── index.html
 ├── vite.config.js               # Tailwind-Plugin + Proxy-Config → :3000
 └── package.json
@@ -147,6 +147,22 @@ flowcrafter-ui/
 | POST    | `/api/ai-config`            | API-Key & Modell speichern            |
 | DELETE  | `/api/ai-config`            | KI-Konfiguration löschen              |
 | POST    | `/api/analyze`              | Flow-Analyse starten (NDJSON-Stream)  |
+| GET     | `/metrics`                  | Prometheus-Metriken (siehe unten)     |
+
+---
+
+## Monitoring
+
+Der Node.js-Server stellt unter `GET /metrics` einen Prometheus-kompatiblen Endpoint bereit (kein Auth erforderlich):
+
+| Metrik                                         | Typ     | Beschreibung                                    |
+| ---------------------------------------------- | ------- | ----------------------------------------------- |
+| `flowcrafter_ui_uptime_seconds`                | Gauge   | Uptime des Node-Servers in Sekunden             |
+| `flowcrafter_ui_http_requests_total`           | Counter | HTTP-Requests nach `method`, `path` und `status` |
+| `flowcrafter_ui_http_request_duration_ms_total` | Counter | Gesamt-Dauer aller Requests in ms nach Route    |
+| `flowcrafter_ui_http_request_duration_ms_count` | Counter | Anzahl Requests pro Route                       |
+
+Pfade werden normalisiert (`/api/auth/*`, `/api/fc/*`, `/static`), um die Label-Kardinalität niedrig zu halten.
 
 ---
 

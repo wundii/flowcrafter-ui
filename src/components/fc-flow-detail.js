@@ -440,7 +440,20 @@ export class FcFlowDetail extends BaseElement {
 
         return html`
             <!-- Meta -->
-            <div class="card bg-base-200 border border-base-300 mb-4">
+            <div class="card bg-base-200 border border-base-300 mb-4 relative overflow-hidden">
+                ${f.isReadOnly
+                    ? html`<div
+                          class="absolute top-0 right-0 z-10 overflow-hidden"
+                          style="width:120px;height:120px;pointer-events:none;"
+                      >
+                          <div
+                              class="absolute text-[10px] font-bold uppercase tracking-widest text-center text-warning-content bg-warning shadow-md"
+                              style="width:170px;top:26px;right:-36px;transform:rotate(45deg);padding:4px 0;letter-spacing:.12em;"
+                          >
+                              Read-Only
+                          </div>
+                      </div>`
+                    : ''}
                 <div class="card-body py-4 px-5">
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-x-4 gap-y-3">
                         <div class="flex flex-col gap-1">
@@ -470,7 +483,6 @@ export class FcFlowDetail extends BaseElement {
                                           >Nicht ausführbar</span
                                       >`
                                     : ''}
-                                ${f.isReadOnly ? html`<span class="badge badge-warning badge-sm">Schreibgeschützt</span>` : ''}
                             </div>
                         </div>
                     </div>

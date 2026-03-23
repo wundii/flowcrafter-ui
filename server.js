@@ -306,11 +306,72 @@ function json(res, data, status = 200) {
     res.end(JSON.stringify(data))
 }
 
+// ─── Metrics ─────────────────────────────────────────────────────────────────
+const metrics = {
+    requests: new Map(), // key: "method:path:status" → count
+    durations: new Map(), // key: "method:path" → [sum, count]
+    startTime: Date.now(),
+}
+
+function normalizeMetricsPath(p) {
+    if (p.startsWith('/api/auth')) return '/api/auth/*'
+    if (p.startsWith('/api/fc/')) return '/api/fc/*'
+    if (p === '/api/connection') return '/api/connection'
+    if (p === '/api/ai-config') return '/api/ai-config'
+    if (p === '/api/fc-ping') return '/api/fc-ping'
+    if (p === '/api/analyze') return '/api/analyze'
+    if (p === '/metrics') return '/metrics'
+    return '/static'
+}
+
+function recordMetric(method, path, status, durationMs) {
+    const normPath = normalizeMetricsPath(path)
+    const reqKey = `${method}:${normPath}:${status}`
+    metrics.requests.set(reqKey, (metrics.requests.get(reqKey) ?? 0) + 1)
+
+    const durKey = `${method}:${normPath}`
+    const prev = metrics.durations.get(durKey) ?? [0, 0]
+    metrics.durations.set(durKey, [prev[0] + durationMs, prev[1] + 1])
+}
+
+function renderMetrics() {
+    const lines = []
+    const uptimeSeconds = Math.floor((Date.now() - metrics.startTime) / 1000)
+
+    lines.push('# HELP flowcrafter_ui_uptime_seconds Time since the Node server started')
+    lines.push('# TYPE flowcrafter_ui_uptime_seconds gauge')
+    lines.push(`flowcrafter_ui_uptime_seconds ${uptimeSeconds}`)
+
+    lines.push('# HELP flowcrafter_ui_http_requests_total Total HTTP requests by method, path, and status')
+    lines.push('# TYPE flowcrafter_ui_http_requests_total counter')
+    for (const [key, count] of [...metrics.requests.entries()].sort()) {
+        const [method, path, status] = key.split(':')
+        lines.push(`flowcrafter_ui_http_requests_total{method="${method}",path="${path}",status="${status}"} ${count}`)
+    }
+
+    lines.push('# HELP flowcrafter_ui_http_request_duration_ms_total Total request duration in ms by method and path')
+    lines.push('# TYPE flowcrafter_ui_http_request_duration_ms_total counter')
+    lines.push('# HELP flowcrafter_ui_http_request_duration_ms_count Number of requests by method and path')
+    lines.push('# TYPE flowcrafter_ui_http_request_duration_ms_count counter')
+    for (const [key, [sum, count]] of [...metrics.durations.entries()].sort()) {
+        const [method, path] = key.split(':')
+        lines.push(`flowcrafter_ui_http_request_duration_ms_total{method="${method}",path="${path}"} ${sum.toFixed(1)}`)
+        lines.push(`flowcrafter_ui_http_request_duration_ms_count{method="${method}",path="${path}"} ${count}`)
+    }
+
+    return lines.join('\n') + '\n'
+}
+
 // ─── Server ───────────────────────────────────────────────────────────────────
 const server = createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost`)
     const path = url.pathname.replace(/\/$/, '')
     const method = req.method
+    const reqStart = Date.now()
+
+    res.on('finish', () => {
+        recordMetric(method, path, res.statusCode, Date.now() - reqStart)
+    })
 
     // CORS preflight
     if (method === 'OPTIONS') {
@@ -320,6 +381,13 @@ const server = createServer(async (req, res) => {
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         })
         return res.end()
+    }
+
+    // ── Metrics endpoint ─────────────────────────────────────────────────────
+    if (method === 'GET' && path === '/metrics') {
+        const body = renderMetrics()
+        res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4; charset=utf-8' })
+        return res.end(body)
     }
 
     // ── Auth API ─────────────────────────────────────────────────────────────
