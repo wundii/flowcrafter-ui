@@ -32,10 +32,6 @@ export class FcFlowChart extends BaseElement {
         this._error = false
     }
 
-    updated(changed) {
-        if (changed.has('type')) this._load()
-    }
-
     async _load() {
         this._loading = true
         this._error = false

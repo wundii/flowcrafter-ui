@@ -30,11 +30,6 @@ export class FcExceptionChart extends BaseElement {
         this._error = false
     }
 
-    connectedCallback() {
-        super.connectedCallback()
-        this._load()
-    }
-
     async _load() {
         this._loading = true
         this._error = false

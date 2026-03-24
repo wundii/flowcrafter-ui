@@ -31,9 +31,13 @@ export class FcTypeList extends BaseElement {
         this.loading = true
         this.error = null
         try {
-            const [flowsRes, exceptionsRes] = await Promise.all([
-                api.getFlows({ sort: 'desc', top: 1000 }),
-                api.getExceptions({ top: 1000 }),
+            const from = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+            const to = new Date().toISOString()
+
+            const [schemasRes, flowsRes, exceptionsRes] = await Promise.all([
+                api.getSchemas(),
+                api.getFlows({ sort: 'desc', top: 1000, from, to }),
+                api.getExceptions({ top: 1000, from, to }),
             ])
             const flows = flowsRes.items ?? []
             const exceptions = exceptionsRes.items ?? []
@@ -41,20 +45,26 @@ export class FcTypeList extends BaseElement {
             // Hashes of flows that have at least one exception
             const failedHashes = new Set(exceptions.map(e => e.flowHash))
 
-            // Group by flowType prefix (everything before .v\d+, case-insensitive)
+            // Build map from schemas, then enrich with flow data
             const map = new Map()
-            for (const flow of flows) {
-                const prefix = flowTypePrefix(flow.flowType)
+            for (const schema of schemasRes) {
+                const prefix = flowTypePrefix(schema.type)
                 if (!map.has(prefix)) {
                     map.set(prefix, {
                         prefix,
-                        flowType: flow.flowType,
+                        flowType: schema.type,
                         sources: new Set(),
                         total: 0,
                         failed: 0,
                         lastTime: null,
                     })
                 }
+            }
+
+            // Enrich with flow statistics
+            for (const flow of flows) {
+                const prefix = flowTypePrefix(flow.flowType)
+                if (!map.has(prefix)) continue
                 const s = map.get(prefix)
                 s.sources.add(flow.flowSource)
                 s.total++
@@ -64,7 +74,7 @@ export class FcTypeList extends BaseElement {
 
             // Compute successRate
             for (const s of map.values()) {
-                s.successRate = s.total > 0 ? Math.round(((s.total - s.failed) / s.total) * 100) : 100
+                s.successRate = s.total > 0 ? Math.round(((s.total - s.failed) / s.total) * 100) : null
             }
 
             this.schemas = [...map.values()]
@@ -153,7 +163,15 @@ export class FcTypeList extends BaseElement {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                 ${this._sortedSchemas().map(schema => {
                     const hasFailed = schema.failed > 0
-                    const rateColor = schema.successRate === 100 ? 'text-success' : schema.successRate >= 80 ? 'text-warning' : 'text-error'
+                    const hasRuns = schema.total > 0
+                    const rateColor =
+                        schema.successRate === null
+                            ? 'text-base-content/30'
+                            : schema.successRate === 100
+                              ? 'text-success'
+                              : schema.successRate >= 80
+                                ? 'text-warning'
+                                : 'text-error'
 
                     return html`
                         <div
@@ -180,7 +198,9 @@ export class FcTypeList extends BaseElement {
                                     <div class="text-xs text-base-content/40 mt-0.5">Fehler</div>
                                 </div>
                                 <div class="px-2">
-                                    <div class="text-2xl font-bold ${rateColor}">${schema.successRate}%</div>
+                                    <div class="text-2xl font-bold ${rateColor}">
+                                        ${hasRuns ? html`${schema.successRate}%` : html`—`}
+                                    </div>
                                     <div class="text-xs text-base-content/40 mt-0.5">OK-Rate</div>
                                 </div>
                             </div>
