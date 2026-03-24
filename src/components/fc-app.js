@@ -28,8 +28,7 @@ export class FcApp extends BaseElement {
         _aiModels: { state: true },
         _authed: { state: true },
         _editingConnection: { state: true },
-        _exceptionListPage: { state: true },
-        _flowListPage: { state: true },
+        _flowListCache: { state: true },
         _isDark: { state: true },
         _pwModal: { state: true },
         _searchQuery: { state: true },
@@ -53,8 +52,7 @@ export class FcApp extends BaseElement {
         this._aiModels = []
         this._authed = false
         this._editingConnection = false
-        this._exceptionListPage = 0
-        this._flowListPage = 0
+        this._flowListCache = null
         this._infoTimer = null
         this._isDark = theme.get() === 'dark'
         this._pwModal = null
@@ -261,7 +259,7 @@ export class FcApp extends BaseElement {
     _onSchemaSelected(e) {
         this.selectedPrefix = e.detail.prefix
         this.selectedFlowHash = null
-        this._flowListPage = 0
+        this._flowListCache = null
     }
 
     _onFlowSelected(e) {
@@ -436,18 +434,18 @@ export class FcApp extends BaseElement {
             if (this.selectedPrefix) {
                 return html`
                     <div class="flex flex-col md:flex-row gap-4">
-                        <div class="w-full md:w-1/3">
+                        <div class="w-full md:w-1/3 md:sticky md:top-20 md:self-start">
                             <fc-flow-chart .type=${this.selectedPrefix}></fc-flow-chart>
                         </div>
                         <div class="w-full md:w-2/3">
                             <fc-flow-list
                                 .type=${this.selectedPrefix}
-                                .page=${this._flowListPage}
+                                .cachedState=${this._flowListCache}
                                 @flow-selected=${this._onFlowSelected}
                                 @back=${this._onBackToSchema}
                                 @list-refreshed=${this._onRefreshFlowChart}
-                                @page-changed=${e => {
-                                    this._flowListPage = e.detail.page
+                                @list-state-changed=${e => {
+                                    this._flowListCache = e.detail
                                 }}
                             ></fc-flow-list>
                         </div>
@@ -459,7 +457,7 @@ export class FcApp extends BaseElement {
         if (this.activeTab === 'queues') return html`<fc-queue-list></fc-queue-list>`
         return html`
             <div class="flex flex-col md:flex-row gap-4">
-                <div class="w-full md:w-1/3">
+                <div class="w-full md:w-1/3 md:sticky md:top-20 md:self-start">
                     <fc-exception-chart></fc-exception-chart>
                 </div>
                 <div class="w-full md:w-2/3">

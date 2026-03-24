@@ -2,7 +2,7 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 20
 
 function formatTzOffset(date) {
     const off = -date.getTimezoneOffset()
@@ -26,79 +26,135 @@ function formatDate(iso) {
 export class FcFlowList extends BaseElement {
     static properties = {
         type: { type: String },
-        page: { type: Number },
-        flows: { state: true },
+        cachedState: { type: Object },
+        _items: { state: true },
         loading: { state: true },
         error: { state: true },
-        _page: { state: true },
+        _offset: { state: true },
+        _loadingMore: { state: true },
         _hasMore: { state: true },
         _total: { state: true },
         _dateFrom: { state: true },
         _dateTo: { state: true },
+        _statusFilter: { state: true },
     }
 
     constructor() {
         super()
         this.type = null
-        this.page = 0
-        this.flows = []
+        this.cachedState = null
+        this._items = []
         this.loading = true
         this.error = null
-        this._page = 0
+        this._offset = 0
+        this._loadingMore = false
         this._hasMore = false
         this._total = null
         this._dateFrom = ''
         this._dateTo = ''
+        this._statusFilter = 'all'
+        this._observer = null
+        this._restored = false
     }
 
     connectedCallback() {
         super.connectedCallback()
-        this._page = this.page ?? 0
+        if (this.cachedState?.items?.length) {
+            this._items = this.cachedState.items
+            this._offset = this.cachedState.offset
+            this._hasMore = this.cachedState.hasMore
+            this._total = this.cachedState.total
+            this._dateFrom = this.cachedState.dateFrom ?? ''
+            this._dateTo = this.cachedState.dateTo ?? ''
+            this._statusFilter = this.cachedState.statusFilter ?? 'all'
+            this.loading = false
+            this._restored = true
+        }
+    }
+
+    disconnectedCallback() {
+        super.disconnectedCallback()
+        this._observer?.disconnect()
+        this._observer = null
     }
 
     updated(changed) {
         if (changed.has('type')) {
             if (changed.get('type') !== undefined) {
-                this._page = 0
-                this._emitPageChange()
+                this._items = []
+                this._offset = 0
             }
-            this._load()
+            if (!this._restored) {
+                this._load()
+            }
         }
+        if (this._restored) {
+            this._restored = false
+            this.dispatchEvent(new CustomEvent('list-refreshed', { bubbles: true, composed: true }))
+            requestAnimationFrame(() => {
+                window.scrollTo(0, this.cachedState?.scrollY ?? 0)
+            })
+        }
+        this._setupObserver()
     }
 
-    _emitPageChange() {
-        this.dispatchEvent(new CustomEvent('page-changed', { detail: { page: this._page }, bubbles: true, composed: true }))
+    _setupObserver() {
+        const sentinel = this.querySelector('#flow-scroll-sentinel')
+        if (!sentinel) {
+            this._observer?.disconnect()
+            this._observer = null
+            return
+        }
+        if (this._observedSentinel === sentinel) return
+        this._observer?.disconnect()
+        this._observer = new IntersectionObserver(
+            entries => {
+                if (entries[0].isIntersecting && this._hasMore && !this._loadingMore) {
+                    this._loadMore()
+                }
+            },
+            { rootMargin: '200px' }
+        )
+        this._observer.observe(sentinel)
+        this._observedSentinel = sentinel
+    }
+
+    _buildDateOpts(opts) {
+        if (this._dateFrom) {
+            const d = new Date(this._dateFrom + 'T00:00:00')
+            opts.from =
+                d.getFullYear() +
+                '-' +
+                String(d.getMonth() + 1).padStart(2, '0') +
+                '-' +
+                String(d.getDate()).padStart(2, '0') +
+                'T00:00:00.000' +
+                formatTzOffset(d)
+        }
+        if (this._dateTo) {
+            const d = new Date(this._dateTo + 'T23:59:59')
+            opts.to =
+                d.getFullYear() +
+                '-' +
+                String(d.getMonth() + 1).padStart(2, '0') +
+                '-' +
+                String(d.getDate()).padStart(2, '0') +
+                'T23:59:59.999' +
+                formatTzOffset(d)
+        }
     }
 
     async _load() {
         this.loading = true
         this.error = null
+        this._items = []
+        this._offset = 0
         try {
-            const opts = { type: this.type ?? undefined, top: PAGE_SIZE, skip: this._page * PAGE_SIZE }
-            if (this._dateFrom) {
-                const d = new Date(this._dateFrom + 'T00:00:00')
-                opts.from =
-                    d.getFullYear() +
-                    '-' +
-                    String(d.getMonth() + 1).padStart(2, '0') +
-                    '-' +
-                    String(d.getDate()).padStart(2, '0') +
-                    'T00:00:00.000' +
-                    formatTzOffset(d)
-            }
-            if (this._dateTo) {
-                const d = new Date(this._dateTo + 'T23:59:59')
-                opts.to =
-                    d.getFullYear() +
-                    '-' +
-                    String(d.getMonth() + 1).padStart(2, '0') +
-                    '-' +
-                    String(d.getDate()).padStart(2, '0') +
-                    'T23:59:59.999' +
-                    formatTzOffset(d)
-            }
+            const opts = { type: this.type ?? undefined, top: PAGE_SIZE, skip: 0 }
+            this._buildDateOpts(opts)
             const res = await api.getFlows(opts)
-            this.flows = res.items ?? []
+            this._items = res.items ?? []
+            this._offset = this._items.length
             this._hasMore = res.hasMore ?? false
             this._total = res.total ?? null
         } catch (err) {
@@ -109,7 +165,57 @@ export class FcFlowList extends BaseElement {
         }
     }
 
+    async _loadMore() {
+        if (!this._hasMore || this._loadingMore) return
+        this._loadingMore = true
+        try {
+            const opts = { type: this.type ?? undefined, top: PAGE_SIZE, skip: this._offset }
+            this._buildDateOpts(opts)
+            const res = await api.getFlows(opts)
+            const newItems = res.items ?? []
+            this._items = [...this._items, ...newItems]
+            this._offset += newItems.length
+            this._hasMore = res.hasMore ?? false
+            this._total = res.total ?? null
+        } catch (err) {
+            this.error = err.message
+        } finally {
+            this._loadingMore = false
+            this._checkSentinelVisible()
+        }
+    }
+
+    _checkSentinelVisible() {
+        if (!this._hasMore) return
+        const sentinel = this.querySelector('#flow-scroll-sentinel')
+        if (!sentinel) return
+        const rect = sentinel.getBoundingClientRect()
+        if (rect.top < window.innerHeight + 200) {
+            requestAnimationFrame(() => this._loadMore())
+        }
+    }
+
+    _emitStateCache() {
+        this.dispatchEvent(
+            new CustomEvent('list-state-changed', {
+                detail: {
+                    items: this._items,
+                    offset: this._offset,
+                    hasMore: this._hasMore,
+                    total: this._total,
+                    scrollY: window.scrollY,
+                    dateFrom: this._dateFrom,
+                    dateTo: this._dateTo,
+                    statusFilter: this._statusFilter,
+                },
+                bubbles: true,
+                composed: true,
+            })
+        )
+    }
+
     _onSelect(flow) {
+        this._emitStateCache()
         this.dispatchEvent(
             new CustomEvent('flow-selected', {
                 detail: { hash: flow.flowHash },
@@ -123,29 +229,13 @@ export class FcFlowList extends BaseElement {
         this.dispatchEvent(new CustomEvent('back', { bubbles: true, composed: true }))
     }
 
-    _onPrev() {
-        this._page = Math.max(0, this._page - 1)
-        this._emitPageChange()
-        this._load()
-    }
-
-    _onNext() {
-        this._page += 1
-        this._emitPageChange()
-        this._load()
-    }
-
     _applyDateFilter() {
-        this._page = 0
-        this._emitPageChange()
         this._load()
     }
 
     _clearDateFilter() {
         this._dateFrom = ''
         this._dateTo = ''
-        this._page = 0
-        this._emitPageChange()
         this._load()
     }
 
@@ -165,12 +255,16 @@ export class FcFlowList extends BaseElement {
                 </div>
             `
 
-        if (this.flows.length === 0 && this._page === 0 && !this._dateFrom && !this._dateTo)
+        if (this._items.length === 0 && !this._dateFrom && !this._dateTo)
             return html` <div class="alert alert-info"><span>Keine Flows gefunden.</span></div> `
 
-        const from = this._page * PAGE_SIZE + 1
-        const to = this._page * PAGE_SIZE + this.flows.length
-        const isEmpty = this.flows.length === 0
+        const filtered =
+            this._statusFilter === 'all'
+                ? this._items
+                : this._statusFilter === 'ok'
+                  ? this._items.filter(f => f.exceptionCount === 0)
+                  : this._items.filter(f => f.exceptionCount > 0)
+        const isEmpty = filtered.length === 0
 
         return html`
             <!-- Toolbar -->
@@ -188,7 +282,9 @@ export class FcFlowList extends BaseElement {
                         ${isEmpty
                             ? ''
                             : html`<span class="text-sm text-base-content/60">
-                                  ${from}–${to}
+                                  ${filtered.length}${this._statusFilter !== 'all'
+                                      ? html`<span class="text-base-content/40">/${this._items.length}</span>`
+                                      : ''}
                                   ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                               </span>`}
                         <button
@@ -207,8 +303,40 @@ export class FcFlowList extends BaseElement {
                     </div>
                 </div>
 
-                <!-- Mitte: Datumsfilter -->
-                <div class="flex items-center lg:justify-center lg:flex-1 flex-nowrap">
+                <!-- Mitte: Statusfilter + Datumsfilter -->
+                <div class="flex items-center lg:justify-center lg:flex-1 flex-nowrap gap-2">
+                    <div class="flex items-center gap-1">
+                        <button
+                            class="btn btn-xs btn-ghost ${this._statusFilter === 'all'
+                                ? 'btn-active border border-base-content/30'
+                                : 'text-base-content/40 hover:text-base-content'}"
+                            @click=${() => {
+                                this._statusFilter = 'all'
+                            }}
+                        >
+                            Alle
+                        </button>
+                        <button
+                            class="btn btn-xs btn-ghost ${this._statusFilter === 'ok'
+                                ? 'btn-active border border-success/40 text-success'
+                                : 'text-base-content/40 hover:text-success'}"
+                            @click=${() => {
+                                this._statusFilter = 'ok'
+                            }}
+                        >
+                            OK
+                        </button>
+                        <button
+                            class="btn btn-xs btn-ghost ${this._statusFilter === 'failed'
+                                ? 'btn-active border border-error/40 text-error'
+                                : 'text-base-content/40 hover:text-error'}"
+                            @click=${() => {
+                                this._statusFilter = 'failed'
+                            }}
+                        >
+                            Failed
+                        </button>
+                    </div>
                     <div class="join">
                         <input
                             type="date"
@@ -251,7 +379,7 @@ export class FcFlowList extends BaseElement {
                     ${isEmpty
                         ? ''
                         : html`<span class="text-sm text-base-content/60">
-                              ${from}–${to}
+                              ${this._items.length}
                               ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                           </span>`}
                     <button
@@ -275,7 +403,7 @@ export class FcFlowList extends BaseElement {
                 : html`
                       <!-- Flow cards -->
                       <div class="flex flex-col gap-2">
-                          ${this.flows.map(flow => {
+                          ${filtered.map(flow => {
                               const hasFailed = flow.exceptionCount > 0
                               return html`
                                   <div
@@ -312,14 +440,12 @@ export class FcFlowList extends BaseElement {
                           })}
                       </div>
 
-                      <!-- Pagination -->
-                      <div class="flex justify-center mt-4">
-                          <div class="join">
-                              <button class="join-item btn btn-sm" ?disabled=${this._page === 0} @click=${this._onPrev}>«</button>
-                              <button class="join-item btn btn-sm">Seite ${this._page + 1}</button>
-                              <button class="join-item btn btn-sm" ?disabled=${!this._hasMore} @click=${this._onNext}>»</button>
-                          </div>
-                      </div>
+                      ${this._loadingMore
+                          ? html`<div class="flex justify-center py-4">
+                                <span class="loading loading-spinner loading-md"></span>
+                            </div>`
+                          : ''}
+                      <div id="flow-scroll-sentinel" style="height:1px"></div>
                   `}
         `
     }

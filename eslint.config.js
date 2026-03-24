@@ -31,6 +31,7 @@ export default [
                 clearInterval: 'readonly',
                 navigator: 'readonly',
                 getComputedStyle: 'readonly',
+                IntersectionObserver: 'readonly',
                 // Node globals (server.js)
                 process: 'readonly',
                 Buffer: 'readonly',
