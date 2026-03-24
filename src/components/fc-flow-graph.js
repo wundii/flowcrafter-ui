@@ -535,45 +535,37 @@ export class FcFlowGraph extends BaseElement {
                                                     <!-- IN port -->
                                                     <div
                                                         style="display:flex;flex-direction:column;justify-content:center;
-                                    padding-left:20px;padding-right:4px;overflow:hidden;"
+                                    padding-left:20px;padding-right:4px;overflow:hidden;min-width:0;"
                                                     >
                                                         ${inMsg
                                                             ? html`
-                                                                  <span
-                                                                      style="font-size:10px;color:${inColor};font-weight:600;
+                                                                  <div
+                                                                      style="cursor:${inData ? 'pointer' : 'default'};overflow:hidden;"
+                                                                      @mouseenter=${inData
+                                                                          ? e =>
+                                                                                this._showTooltip(
+                                                                                    e,
+                                                                                    short(inMsg),
+                                                                                    inData.messageSource,
+                                                                                    inData.message
+                                                                                )
+                                                                          : null}
+                                                                      @mouseleave=${this._hideTooltip}
+                                                                  >
+                                                                      <span
+                                                                          style="font-size:10px;color:${inColor};font-weight:600;
                                          font-family:monospace;white-space:nowrap;
-                                         overflow:hidden;text-overflow:ellipsis;
-                                         cursor:${inData ? 'pointer' : 'default'};"
-                                                                      title="${inMsg}"
-                                                                      @mouseenter=${inData
-                                                                          ? e =>
-                                                                                this._showTooltip(
-                                                                                    e,
-                                                                                    short(inMsg),
-                                                                                    inData.messageSource,
-                                                                                    inData.message
-                                                                                )
-                                                                          : null}
-                                                                      @mouseleave=${this._hideTooltip}
-                                                                      >${short(inMsg)}</span
-                                                                  >
-                                                                  <span
-                                                                      style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
-                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-                                         cursor:${inData ? 'pointer' : 'default'};"
-                                                                      @mouseenter=${inData
-                                                                          ? e =>
-                                                                                this._showTooltip(
-                                                                                    e,
-                                                                                    short(inMsg),
-                                                                                    inData.messageSource,
-                                                                                    inData.message
-                                                                                )
-                                                                          : null}
-                                                                      @mouseleave=${this._hideTooltip}
-                                                                  >
-                                                                      ${inData ? fmtJson(inData.message) : '—'}
-                                                                  </span>
+                                         overflow:hidden;text-overflow:ellipsis;display:block;"
+                                                                          title="${inMsg}"
+                                                                          >${short(inMsg)}</span
+                                                                      >
+                                                                      <span
+                                                                          style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
+                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;"
+                                                                      >
+                                                                          ${inData ? fmtJson(inData.message) : '—'}
+                                                                      </span>
+                                                                  </div>
                                                               `
                                                             : ''}
                                                     </div>
@@ -581,20 +573,20 @@ export class FcFlowGraph extends BaseElement {
                                                     <!-- OUT port content -->
                                                     <div
                                                         style="display:flex;flex-direction:column;justify-content:center;
-                                    align-items:flex-end;padding-right:12px;overflow:hidden;height:100%;"
+                                    padding-right:12px;overflow:hidden;height:100%;min-width:0;"
                                                     >
                                                         ${i === 0 && excs.length > 0
                                                             ? html`
                                                                   <span
                                                                       style="font-size:10px;color:#ef4444;font-weight:600;
                                          font-family:monospace;white-space:nowrap;
-                                         overflow:hidden;text-overflow:ellipsis;"
+                                         overflow:hidden;text-overflow:ellipsis;text-align:right;"
                                                                       title="${excs[0].message}"
                                                                       >✕ Exception</span
                                                                   >
                                                                   <span
                                                                       style="font-size:9px;color:#ef4444;opacity:0.7;
-                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;"
                                                                       title="${excs[0].message}"
                                                                   >
                                                                       ${excs[0].message.length > 28
@@ -609,55 +601,47 @@ export class FcFlowGraph extends BaseElement {
                                                                             ? '#22c55e'
                                                                             : '#f97316'};font-weight:600;
                                          font-family:monospace;white-space:nowrap;
-                                         overflow:hidden;text-overflow:ellipsis;"
+                                         overflow:hidden;text-overflow:ellipsis;text-align:right;"
                                                                         >${ress[0].result ? 'true' : 'false'}</span
                                                                     >
                                                                     <span
                                                                         style="font-size:9px;color:${ress[0].result
                                                                             ? '#22c55e'
                                                                             : '#f97316'};opacity:0.7;
-                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;"
                                                                     >
                                                                         Ergebnis
                                                                     </span>
                                                                 `
                                                               : outRt
                                                                 ? html`
-                                                                      <span
-                                                                          style="font-size:10px;color:#6b7280;font-weight:600;
+                                                                      <div
+                                                                          style="cursor:${outData ? 'pointer' : 'default'};overflow:hidden;"
+                                                                          @mouseenter=${outData
+                                                                              ? e =>
+                                                                                    this._showTooltip(
+                                                                                        e,
+                                                                                        short(outRt),
+                                                                                        outData.messageSource,
+                                                                                        outData.message
+                                                                                    )
+                                                                              : null}
+                                                                          @mouseleave=${this._hideTooltip}
+                                                                      >
+                                                                          <span
+                                                                              style="font-size:10px;color:#6b7280;font-weight:600;
                                          font-family:monospace;white-space:nowrap;
-                                         overflow:hidden;text-overflow:ellipsis;
-                                         cursor:${outData ? 'pointer' : 'default'};"
-                                                                          title="${outRt}"
-                                                                          @mouseenter=${outData
-                                                                              ? e =>
-                                                                                    this._showTooltip(
-                                                                                        e,
-                                                                                        short(outRt),
-                                                                                        outData.messageSource,
-                                                                                        outData.message
-                                                                                    )
-                                                                              : null}
-                                                                          @mouseleave=${this._hideTooltip}
-                                                                          >${short(outRt)}</span
-                                                                      >
-                                                                      <span
-                                                                          style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
-                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-                                         cursor:${outData ? 'pointer' : 'default'};"
-                                                                          @mouseenter=${outData
-                                                                              ? e =>
-                                                                                    this._showTooltip(
-                                                                                        e,
-                                                                                        short(outRt),
-                                                                                        outData.messageSource,
-                                                                                        outData.message
-                                                                                    )
-                                                                              : null}
-                                                                          @mouseleave=${this._hideTooltip}
-                                                                      >
-                                                                          ${outData ? fmtJson(outData.message) : '—'}
-                                                                      </span>
+                                         overflow:hidden;text-overflow:ellipsis;display:block;text-align:left;"
+                                                                              title="${outRt}"
+                                                                              >${short(outRt)}</span
+                                                                          >
+                                                                          <span
+                                                                              style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
+                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;"
+                                                                          >
+                                                                              ${outData ? fmtJson(outData.message) : '—'}
+                                                                          </span>
+                                                                      </div>
                                                                   `
                                                                 : ''}
                                                     </div>
