@@ -155,12 +155,12 @@ flowcrafter-ui/
 
 Der Node.js-Server stellt unter `GET /metrics` einen Prometheus-kompatiblen Endpoint bereit (kein Auth erforderlich):
 
-| Metrik                                         | Typ     | Beschreibung                                    |
-| ---------------------------------------------- | ------- | ----------------------------------------------- |
-| `flowcrafter_ui_uptime_seconds`                | Gauge   | Uptime des Node-Servers in Sekunden             |
-| `flowcrafter_ui_http_requests_total`           | Counter | HTTP-Requests nach `method`, `path` und `status` |
-| `flowcrafter_ui_http_request_duration_ms_total` | Counter | Gesamt-Dauer aller Requests in ms nach Route    |
-| `flowcrafter_ui_http_request_duration_ms_count` | Counter | Anzahl Requests pro Route                       |
+| Metrik                                          | Typ     | Beschreibung                                     |
+| ----------------------------------------------- | ------- | ------------------------------------------------ |
+| `flowcrafter_ui_uptime_seconds`                 | Gauge   | Uptime des Node-Servers in Sekunden              |
+| `flowcrafter_ui_http_requests_total`            | Counter | HTTP-Requests nach `method`, `path` und `status` |
+| `flowcrafter_ui_http_request_duration_ms_total` | Counter | Gesamt-Dauer aller Requests in ms nach Route     |
+| `flowcrafter_ui_http_request_duration_ms_count` | Counter | Anzahl Requests pro Route                        |
 
 Pfade werden normalisiert (`/api/auth/*`, `/api/fc/*`, `/static`), um die Label-Kardinalität niedrig zu halten.
 

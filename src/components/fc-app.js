@@ -585,7 +585,7 @@ export class FcApp extends BaseElement {
                             ${this._searchResults?.length
                                 ? html`
                                       <div
-                                          class="fc-search-dropdown absolute top-full left-0 mt-1 w-84 max-h-80 overflow-y-auto bg-base-100 border border-base-content/10 rounded-box shadow-xl z-50"
+                                          class="fc-search-dropdown absolute top-full left-0 mt-1 w-84 bg-base-100 border border-base-content/10 rounded-box shadow-xl z-50"
                                       >
                                           <div class="px-3 py-1.5 text-[10px] uppercase tracking-wider text-base-content/40 font-semibold">
                                               Suchergebnisse

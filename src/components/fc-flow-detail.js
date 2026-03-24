@@ -442,10 +442,7 @@ export class FcFlowDetail extends BaseElement {
             <!-- Meta -->
             <div class="card bg-base-200 border border-base-300 mb-4 relative overflow-hidden">
                 ${f.isReadOnly
-                    ? html`<div
-                          class="absolute top-0 right-0 z-10 overflow-hidden"
-                          style="width:120px;height:120px;pointer-events:none;"
-                      >
+                    ? html`<div class="absolute top-0 right-0 z-10 overflow-hidden" style="width:120px;height:120px;pointer-events:none;">
                           <div
                               class="absolute text-[10px] font-bold uppercase tracking-widest text-center text-warning-content bg-warning shadow-md"
                               style="width:170px;top:26px;right:-36px;transform:rotate(45deg);padding:4px 0;letter-spacing:.12em;"

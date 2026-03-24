@@ -284,6 +284,7 @@ export class FcFlowGraph extends BaseElement {
 
     _showTooltip(e, label, messageSource, data) {
         if (!data) return
+        clearTimeout(this._tooltipTimer)
         const hostRect = this.getBoundingClientRect()
         const elRect = e.currentTarget.getBoundingClientRect()
         this._tooltip = {
@@ -296,7 +297,11 @@ export class FcFlowGraph extends BaseElement {
     }
 
     _hideTooltip() {
-        this._tooltip = null
+        this._tooltipTimer = setTimeout(() => (this._tooltip = null), 150)
+    }
+
+    _onTooltipEnter() {
+        clearTimeout(this._tooltipTimer)
     }
 
     _openModal(stubSource, messageClass, msgData) {
@@ -670,8 +675,10 @@ export class FcFlowGraph extends BaseElement {
                     ? html`
                           <div
                               style="position:absolute; left:${this._tooltip.x}px; top:${this._tooltip.y}px;
-                           z-index:50; max-width:360px; pointer-events:none;"
+                           z-index:50; max-width:360px;"
                               class="rounded-box border border-base-300 bg-base-100 shadow-xl p-3"
+                              @mouseenter=${() => this._onTooltipEnter()}
+                              @mouseleave=${() => this._hideTooltip()}
                           >
                               <div class="font-semibold text-sm text-base-content mb-0.5">${this._tooltip.label}</div>
                               <div class="text-xs font-mono text-base-content/40 mb-2">${this._tooltip.messageSource}</div>
@@ -872,7 +879,6 @@ ${ex.traceString}</pre
                                                                       style="background:${r.result
                                                                           ? '#00d390'
                                                                           : '#f97316'}; color:#004c39; border:none;"
-
                                                                       >${r.result ? 'true' : 'false'}</span
                                                                   >
                                                                   <span class="text-base-content/40">${fmtDate(r.time)}</span>

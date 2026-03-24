@@ -124,6 +124,7 @@ export class FcTypeList extends BaseElement {
                 <span class="text-sm text-base-content/60">
                     <span class="font-semibold">${this.schemas.length}</span>
                     Type${this.schemas.length !== 1 ? 's' : ''}
+                    <span class="text-base-content/40 ml-1">— Runs der letzten 14 Tage</span>
                 </span>
                 <div class="flex items-center gap-1">
                     <button
@@ -198,9 +199,7 @@ export class FcTypeList extends BaseElement {
                                     <div class="text-xs text-base-content/40 mt-0.5">Fehler</div>
                                 </div>
                                 <div class="px-2">
-                                    <div class="text-2xl font-bold ${rateColor}">
-                                        ${hasRuns ? html`${schema.successRate}%` : html`—`}
-                                    </div>
+                                    <div class="text-2xl font-bold ${rateColor}">${hasRuns ? html`${schema.successRate}%` : html`—`}</div>
                                     <div class="text-xs text-base-content/40 mt-0.5">OK-Rate</div>
                                 </div>
                             </div>
