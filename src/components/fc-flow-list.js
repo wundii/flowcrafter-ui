@@ -430,7 +430,9 @@ export class FcFlowList extends BaseElement {
                                               </div>
                                               <div class="flex flex-col items-end gap-0.5 flex-shrink-0">
                                                   ${flow.timeLastRun
-                                                      ? html`<span class="text-xs text-base-content/50">Letzter Lauf: ${formatDate(flow.timeLastRun)}</span>`
+                                                      ? html`<span class="text-xs text-base-content/50"
+                                                            >Letzter Lauf: ${formatDate(flow.timeLastRun)}</span
+                                                        >`
                                                       : ''}
                                                   <span class="text-xs text-base-content/50">Erstellt: ${formatDate(flow.time)}</span>
                                               </div>

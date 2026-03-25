@@ -44,13 +44,9 @@ export class FcFlowChart extends BaseElement {
             const isoFrom = from.toISOString().replace('Z', '+00:00')
             const isoTo = now.toISOString().replace('Z', '+00:00')
             const opts = { type: this.type ?? undefined, from: isoFrom, to: isoTo }
+            const flowStats = await api.getFlowStats(opts)
 
-            const [flowRes, runStats] = await Promise.all([
-                api.getFlows({ ...opts, sort: 'desc', top: 10000, skip: 0 }),
-                api.getRunStats(opts),
-            ])
-
-            this._data = this._aggregate(flowRes.items ?? [], runStats)
+            this._data = this._aggregate(flowStats)
         } catch {
             this._error = true
             this._data = this._emptyDays()
@@ -70,16 +66,15 @@ export class FcFlowChart extends BaseElement {
         return days
     }
 
-    _aggregate(items, runStats) {
+    _aggregate(flowStats) {
         const days = this._emptyDays()
         const map = Object.fromEntries(days.map(d => [d.date, d]))
-        for (const f of items) {
-            const key = dateKey(new Date(f.time))
-            if (map[key]) map[key].flows++
-        }
 
-        for (const s of runStats) {
-            if (map[s.date]) map[s.date].runs = s.count
+        for (const s of flowStats) {
+            if (map[s.date]) {
+                map[s.date].flows = s.instances
+                map[s.date].runs = s.runs
+            }
         }
 
         return days
@@ -130,11 +125,17 @@ export class FcFlowChart extends BaseElement {
                     <span class="text-sm font-semibold text-base-content">Verlauf der letzten 14 Tage</span>
                     <div class="flex items-center gap-4">
                         <span class="flex items-center gap-1.5 text-xs text-base-content/50">
-                            <span class="inline-block w-6 h-0 border-t-2 border-solid flex-shrink-0" style="border-color:oklch(var(--p))"></span>
+                            <span
+                                class="inline-block w-6 h-0 border-t-2 border-solid flex-shrink-0"
+                                style="border-color:oklch(var(--p))"
+                            ></span>
                             Flows (${totalFlows})
                         </span>
                         <span class="flex items-center gap-1.5 text-xs text-base-content/50">
-                            <span class="inline-block w-6 h-0 border-t-2 border-dashed flex-shrink-0" style="border-color:oklch(var(--s))"></span>
+                            <span
+                                class="inline-block w-6 h-0 border-t-2 border-dashed flex-shrink-0"
+                                style="border-color:oklch(var(--s))"
+                            ></span>
                             Runs (${totalRuns})
                         </span>
                     </div>

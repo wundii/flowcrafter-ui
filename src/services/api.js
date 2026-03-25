@@ -114,12 +114,12 @@ export const api = {
     },
 
     /** @param {{ from?: string, to?: string, type?: string }} [opts] */
-    getRunStats({ from, to, type } = {}) {
+    getFlowStats({ from, to, type } = {}) {
         const p = new URLSearchParams()
         if (from) p.set('from', from)
         if (to) p.set('to', to)
         if (type) p.set('type', type)
-        return fetchJson(`/api/runs/stats?${p}`)
+        return fetchJson(`/api/flows/stats?${p}`)
     },
 
     /** @returns {Promise<Array>} mock schema data */
