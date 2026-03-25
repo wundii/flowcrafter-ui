@@ -41,16 +41,16 @@ export class FcFlowChart extends BaseElement {
             from.setDate(from.getDate() - (DAYS - 1))
             from.setHours(0, 0, 0, 0)
 
-            const res = await api.getFlows({
-                type: this.type ?? undefined,
-                sort: 'desc',
-                top: 10000,
-                skip: 0,
-                from: from.toISOString().replace('Z', '+00:00'),
-                to: now.toISOString().replace('Z', '+00:00'),
-            })
-            const items = res.items ?? []
-            this._data = this._aggregate(items)
+            const isoFrom = from.toISOString().replace('Z', '+00:00')
+            const isoTo = now.toISOString().replace('Z', '+00:00')
+            const opts = { type: this.type ?? undefined, from: isoFrom, to: isoTo }
+
+            const [flowRes, runStats] = await Promise.all([
+                api.getFlows({ ...opts, sort: 'desc', top: 10000, skip: 0 }),
+                api.getRunStats(opts),
+            ])
+
+            this._data = this._aggregate(flowRes.items ?? [], runStats)
         } catch {
             this._error = true
             this._data = this._emptyDays()
@@ -65,18 +65,23 @@ export class FcFlowChart extends BaseElement {
         for (let i = DAYS - 1; i >= 0; i--) {
             const d = new Date(now)
             d.setDate(d.getDate() - i)
-            days.push({ date: dateKey(d), count: 0 })
+            days.push({ date: dateKey(d), flows: 0, runs: 0 })
         }
         return days
     }
 
-    _aggregate(items) {
+    _aggregate(items, runStats) {
         const days = this._emptyDays()
         const map = Object.fromEntries(days.map(d => [d.date, d]))
         for (const f of items) {
             const key = dateKey(new Date(f.time))
-            if (map[key]) map[key].count++
+            if (map[key]) map[key].flows++
         }
+
+        for (const s of runStats) {
+            if (map[s.date]) map[s.date].runs = s.count
+        }
+
         return days
     }
 
@@ -90,8 +95,9 @@ export class FcFlowChart extends BaseElement {
         }
 
         const data = this._data
-        const max = Math.max(...data.map(d => d.count), 1)
-        const total = data.reduce((s, d) => s + d.count, 0)
+        const max = Math.max(...data.map(d => Math.max(d.flows, d.runs)), 1)
+        const totalFlows = data.reduce((s, d) => s + d.flows, 0)
+        const totalRuns = data.reduce((s, d) => s + d.runs, 0)
 
         const W = 400
         const H = 220
@@ -99,23 +105,39 @@ export class FcFlowChart extends BaseElement {
         const chartH = H - PAD_TOP - PAD_BOT
         const step = chartW / (DAYS - 1)
 
-        const coords = data.map((d, i) => {
+        const flowCoords = data.map((d, i) => {
             const x = PAD_X + i * step
-            const y = PAD_TOP + chartH - (d.count / max) * chartH
+            const y = PAD_TOP + chartH - (d.flows / max) * chartH
+            return { x, y, ...d }
+        })
+        const runCoords = data.map((d, i) => {
+            const x = PAD_X + i * step
+            const y = PAD_TOP + chartH - (d.runs / max) * chartH
             return { x, y, ...d }
         })
 
-        const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
-        const areaPath = `${linePath} L${coords.at(-1).x.toFixed(1)},${PAD_TOP + chartH} L${PAD_X},${PAD_TOP + chartH} Z`
+        const flowLine = flowCoords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
+        const flowArea = `${flowLine} L${flowCoords.at(-1).x.toFixed(1)},${PAD_TOP + chartH} L${PAD_X},${PAD_TOP + chartH} Z`
+        const runLine = runCoords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
+        const runArea = `${runLine} L${runCoords.at(-1).x.toFixed(1)},${PAD_TOP + chartH} L${PAD_X},${PAD_TOP + chartH} Z`
 
         const yTicks = [0, Math.round(max / 2), max]
-        const xLabels = coords.filter((_, i) => i % 2 === 0 || i === DAYS - 1)
+        const xLabels = flowCoords.filter((_, i) => i % 2 === 0 || i === DAYS - 1)
 
         return html`
             <div class="rounded-box border border-base-300 bg-base-200 p-4">
-                <div class="flex items-baseline justify-between mb-3">
+                <div class="flex items-center justify-between mb-3">
                     <span class="text-sm font-semibold text-base-content">Verlauf der letzten 14 Tage</span>
-                    <span class="text-xs text-base-content/50">${total} gesamt</span>
+                    <div class="flex items-center gap-4">
+                        <span class="flex items-center gap-1.5 text-xs text-base-content/50">
+                            <span class="inline-block w-6 h-0 border-t-2 border-solid flex-shrink-0" style="border-color:oklch(var(--p))"></span>
+                            Flows (${totalFlows})
+                        </span>
+                        <span class="flex items-center gap-1.5 text-xs text-base-content/50">
+                            <span class="inline-block w-6 h-0 border-t-2 border-dashed flex-shrink-0" style="border-color:oklch(var(--s))"></span>
+                            Runs (${totalRuns})
+                        </span>
+                    </div>
                 </div>
 
                 <svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" preserveAspectRatio="xMidYMid meet">
@@ -123,6 +145,10 @@ export class FcFlowChart extends BaseElement {
                         <linearGradient id="flow-area-grad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" class="[stop-color:oklch(var(--p))]" stop-opacity="0.3" />
                             <stop offset="100%" class="[stop-color:oklch(var(--p))]" stop-opacity="0" />
+                        </linearGradient>
+                        <linearGradient id="run-area-grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" class="[stop-color:oklch(var(--s))]" stop-opacity="0.2" />
+                            <stop offset="100%" class="[stop-color:oklch(var(--s))]" stop-opacity="0" />
                         </linearGradient>
                     </defs>
 
@@ -137,12 +163,22 @@ export class FcFlowChart extends BaseElement {
                         `
                     })}
 
-                    <!-- Area fill with vertical gradient -->
-                    <path d="${areaPath}" fill="url(#flow-area-grad)" />
-
-                    <!-- Line -->
+                    <!-- Runs area + line -->
+                    <path d="${runArea}" fill="url(#run-area-grad)" />
                     <path
-                        d="${linePath}"
+                        d="${runLine}"
+                        fill="none"
+                        class="stroke-secondary"
+                        stroke-width="1.5"
+                        stroke-linejoin="round"
+                        stroke-linecap="round"
+                        stroke-dasharray="4 3"
+                    />
+
+                    <!-- Flows area + line -->
+                    <path d="${flowArea}" fill="url(#flow-area-grad)" />
+                    <path
+                        d="${flowLine}"
                         fill="none"
                         class="stroke-primary"
                         stroke-width="2"
@@ -150,12 +186,22 @@ export class FcFlowChart extends BaseElement {
                         stroke-linecap="round"
                     />
 
-                    <!-- Data points -->
-                    ${coords.map(
+                    <!-- Flow data points -->
+                    ${flowCoords.map(
                         c => svg`
                         <circle cx="${c.x}" cy="${c.y}" r="3"
                                 class="fill-primary stroke-base-200" stroke-width="1.5">
-                            <title>${shortDate(c.date)}: ${c.count} Flows</title>
+                            <title>${shortDate(c.date)}: ${c.flows} Flows / ${c.runs} Runs</title>
+                        </circle>
+                    `
+                    )}
+
+                    <!-- Run data points -->
+                    ${runCoords.map(
+                        c => svg`
+                        <circle cx="${c.x}" cy="${c.y}" r="2.5"
+                                class="fill-secondary stroke-base-200" stroke-width="1">
+                            <title>${shortDate(c.date)}: ${c.runs} Runs / ${c.flows} Flows</title>
                         </circle>
                     `
                     )}
