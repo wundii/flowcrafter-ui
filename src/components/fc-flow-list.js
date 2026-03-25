@@ -258,12 +258,17 @@ export class FcFlowList extends BaseElement {
         if (this._items.length === 0 && !this._dateFrom && !this._dateTo)
             return html` <div class="alert alert-info"><span>Keine Flows gefunden.</span></div> `
 
+        const byLastRun = [...this._items].sort((a, b) => {
+            const ta = a.timeLastRun || a.time || ''
+            const tb = b.timeLastRun || b.time || ''
+            return tb.localeCompare(ta)
+        })
         const filtered =
             this._statusFilter === 'all'
-                ? this._items
+                ? byLastRun
                 : this._statusFilter === 'ok'
-                  ? this._items.filter(f => f.exceptionCount === 0)
-                  : this._items.filter(f => f.exceptionCount > 0)
+                  ? byLastRun.filter(f => f.exceptionCount === 0)
+                  : byLastRun.filter(f => f.exceptionCount > 0)
         const isEmpty = filtered.length === 0
 
         return html`
@@ -413,8 +418,8 @@ export class FcFlowList extends BaseElement {
                                       @click=${() => this._onSelect(flow)}
                                   >
                                       <div class="px-4 py-3 flex flex-col gap-1.5">
-                                          <!-- Row 1: Source + Status -->
-                                          <div class="flex items-center justify-between gap-2">
+                                          <!-- Row 1: Source + Status + Dates -->
+                                          <div class="flex items-start justify-between gap-2">
                                               <div class="flex items-center gap-2 min-w-0">
                                                   ${hasFailed
                                                       ? html`<span class="badge badge-error badge-sm leading-none">Failed</span>`
@@ -423,7 +428,12 @@ export class FcFlowList extends BaseElement {
                                                       ${shortClass(flow.flowSource)}
                                                   </span>
                                               </div>
-                                              <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(flow.time)}</span>
+                                              <div class="flex flex-col items-end gap-0.5 flex-shrink-0">
+                                                  ${flow.timeLastRun
+                                                      ? html`<span class="text-xs text-base-content/50">Letzter Lauf: ${formatDate(flow.timeLastRun)}</span>`
+                                                      : ''}
+                                                  <span class="text-xs text-base-content/50">Erstellt: ${formatDate(flow.time)}</span>
+                                              </div>
                                           </div>
                                           <!-- Row 2: Hash -->
                                           <div class="font-mono text-xs text-base-content/40 truncate">${flow.flowHash}</div>

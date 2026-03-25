@@ -6,6 +6,12 @@ function flowTypePrefix(flowType) {
     return (flowType ?? '').replace(/\.v\d+$/, '').toLowerCase()
 }
 
+function formatDate(iso) {
+    if (!iso) return '–'
+    const d = new Date(iso)
+    return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + d.toLocaleTimeString('de-DE')
+}
+
 export class FcTypeList extends BaseElement {
     static properties = {
         schemas: { state: true },
@@ -57,6 +63,7 @@ export class FcTypeList extends BaseElement {
                         total: 0,
                         failed: 0,
                         lastTime: null,
+                        lastCreated: null,
                     })
                 }
             }
@@ -69,7 +76,9 @@ export class FcTypeList extends BaseElement {
                 s.sources.add(flow.flowSource)
                 s.total++
                 if (failedHashes.has(flow.flowHash)) s.failed++
-                if (!s.lastTime || flow.time > s.lastTime) s.lastTime = flow.time
+                const runTime = flow.timeLastRun || flow.time
+                if (!s.lastTime || runTime > s.lastTime) s.lastTime = runTime
+                if (!s.lastCreated || flow.time > s.lastCreated) s.lastCreated = flow.time
             }
 
             // Compute successRate
@@ -205,8 +214,11 @@ export class FcTypeList extends BaseElement {
                             </div>
 
                             <!-- Footer -->
-                            <div class="px-4 py-2.5 border-t border-base-300 flex items-center justify-end">
-                                <span class="text-xs text-primary/60 font-medium">Flows →</span>
+                            <div class="px-4 py-2.5 border-t border-base-300 flex flex-col gap-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] text-base-content/40">Letzter Lauf</span>
+                                    <span class="text-xs text-base-content/50 font-mono">${formatDate(schema.lastTime)}</span>
+                                </div>
                             </div>
                         </div>
                     `
