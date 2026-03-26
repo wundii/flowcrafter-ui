@@ -247,6 +247,7 @@ export class FcFlowGraph extends BaseElement {
         runMessages: { type: Array }, // overrides flow.flowMessages for a specific run
         runExceptions: { type: Array }, // overrides flow.flowExceptions for a specific run
         runResults: { type: Array }, // overrides flow.flowResults for a specific run
+        priorRuns: { type: Array }, // all runs up to and including the selected run (oldest first)
         selectedStub: { state: true },
         _modalMsg: { state: true }, // { stubSource, messageClass, payload, valid }
         _sending: { state: true },
@@ -268,6 +269,7 @@ export class FcFlowGraph extends BaseElement {
         this.runMessages = null
         this.runExceptions = null
         this.runResults = null
+        this.priorRuns = null
         this.selectedStub = null
         this._modalMsg = null
         this._sending = false
@@ -454,6 +456,22 @@ export class FcFlowGraph extends BaseElement {
         const ressOf = src => flowResults.filter(r => r.stubSource === src)
         const outgoingOf = rt => flowMessages.find(m => m.messageSource === rt)
 
+        // Accumulated label + color: for stubs without activity in the current run,
+        // show the label and color from the most recent prior run that had activity for that stub.
+        const accIndicatorOf = src => {
+            if (this.priorRuns?.length) {
+                for (let i = this.priorRuns.length - 1; i >= 0; i--) {
+                    const run = this.priorRuns[i]
+                    const hasActivity =
+                        run.messages.some(m => m.stubSource === src) ||
+                        run.exceptions.some(e => e.stubSource === src) ||
+                        run.results.some(r => r.stubSource === src)
+                    if (hasActivity) return STATUS[getNodeStatus(src, run.messages, run.exceptions, run.results)]
+                }
+            }
+            return styleOf(src)
+        }
+
         const theme = getThemeColors()
         const svgContent = buildSvgString(
             edges,
@@ -508,7 +526,9 @@ export class FcFlowGraph extends BaseElement {
                                         style="height:${HEADER_H}px; display:flex; align-items:center; gap:8px;
                             padding:0 10px; border-bottom:1px solid ${st.color}33;"
                                     >
-                                        <span style="font-size:12px; color:${st.color}; flex-shrink:0;">${st.label}</span>
+                                        <span style="font-size:12px; color:${accIndicatorOf(stub.source).color}; flex-shrink:0;"
+                                            >${accIndicatorOf(stub.source).label}</span
+                                        >
                                         <span
                                             style="font-weight:700; font-size:11px; color:var(--color-base-content); flex:1;
                                overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"

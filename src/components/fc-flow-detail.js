@@ -437,6 +437,8 @@ export class FcFlowDetail extends BaseElement {
         const run = this._selectedRun
         const hasExceptions = run ? run.exceptions.length > 0 : f.flowExceptions?.length > 0
         const graphRun = this.runs.find(r => r.runId === (this._hoveredRunId ?? this.selectedRunId)) ?? null
+        const graphRunIdx = graphRun ? this.runs.indexOf(graphRun) : -1
+        const priorRuns = graphRunIdx >= 0 ? this.runs.slice(0, graphRunIdx + 1) : null
 
         return html`
             <!-- Meta -->
@@ -516,6 +518,7 @@ export class FcFlowDetail extends BaseElement {
                 .runMessages=${graphRun?.messages ?? null}
                 .runExceptions=${graphRun?.exceptions ?? null}
                 .runResults=${graphRun?.results ?? null}
+                .priorRuns=${priorRuns}
                 class="block mb-6"
             ></fc-flow-graph>
         `
