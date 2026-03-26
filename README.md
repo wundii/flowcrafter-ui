@@ -101,7 +101,7 @@ flowcrafter-ui/
 │   │   ├── fc-type-list.js      # Übersichtskacheln pro Flow-Typ (Anzahl, Erfolgsrate)
 │   │   ├── fc-flow-list.js      # Paginierte Tabelle aller Flow-Instanzen mit Datumsfilter
 │   │   ├── fc-flow-detail.js    # Detail-Ansicht: Runs, Messages, Exceptions, AI-Analyse, Raw-JSON
-│   │   ├── fc-flow-chart.js     # SVG-Liniendiagramm: Flows pro Tag (14 Tage)
+│   │   ├── fc-flow-chart.js     # SVG-Liniendiagramm: Flows & Runs pro Tag (14 Tage, via /api/flows/stats)
 │   │   ├── fc-flow-graph.js     # SVG-Graph der Flow-Struktur mit Stub-Knoten und Kopier-Buttons
 │   │   ├── fc-exception-list.js # Paginierte Exception-Tabelle mit Datumsfilter und Stacktrace
 │   │   ├── fc-exception-chart.js # SVG-Liniendiagramm: Exceptions pro Tag (14 Tage)
@@ -110,7 +110,7 @@ flowcrafter-ui/
 │   │   ├── fc-source-viewer.js  # Readonly CodeMirror-Editor für PHP-Sourcecode
 │   │   └── fc-json-editor.js    # CodeMirror JSON-Editor mit Live-Linting
 │   ├── services/
-│   │   ├── api.js               # HTTP-Client für die FlowCrafter-API + AI-Analyse (NDJSON-Streaming)
+│   │   ├── api.js               # HTTP-Client für die FlowCrafter-API (inkl. Flow-Stats & AI-Analyse mit NDJSON-Streaming)
 │   │   ├── auth.js              # Login / Logout / Passwort-Verwaltung
 │   │   ├── connection.js        # FlowCrafter-Service-URL speichern & prüfen
 │   │   ├── runs.js              # Hilfsfunktion: Flows nach Runtime-Hash gruppieren
@@ -147,6 +147,8 @@ flowcrafter-ui/
 | POST    | `/api/ai-config`            | API-Key & Modell speichern            |
 | DELETE  | `/api/ai-config`            | KI-Konfiguration löschen              |
 | POST    | `/api/analyze`              | Flow-Analyse starten (NDJSON-Stream)  |
+| POST    | `/api/fc-ping`              | FlowCrafter-Erreichbarkeit testen     |
+| ALL     | `/api/fc/*`                 | Proxy zu FlowCrafter-API (mit Auth)   |
 | GET     | `/metrics`                  | Prometheus-Metriken (siehe unten)     |
 
 ---

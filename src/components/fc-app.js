@@ -156,6 +156,9 @@ export class FcApp extends BaseElement {
                 dialog.showModal()
             } else if (!this._serverOffline && dialog.open) {
                 dialog.close()
+                if (changed.get('_serverOffline') === true) {
+                    this._reloadCurrentView()
+                }
             }
         }
     }
@@ -408,6 +411,10 @@ export class FcApp extends BaseElement {
 
     _onRefreshExceptionChart() {
         this.querySelector('fc-exception-chart')?._load()
+    }
+
+    _reloadCurrentView() {
+        this.querySelectorAll('*').forEach(el => el._load?.())
     }
 
     _onFlowTypeSelected(_e) {

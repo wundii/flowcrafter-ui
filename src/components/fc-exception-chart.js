@@ -6,6 +6,8 @@ const DAYS = 14
 const PAD_X = 32
 const PAD_TOP = 16
 const PAD_BOT = 28
+const W = 400
+const H = 220
 
 function dateKey(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -16,11 +18,17 @@ function shortDate(iso) {
     return `${d}.${m}.`
 }
 
+function longDate(iso) {
+    const [y, m, d] = iso.split('-')
+    return `${d}.${m}.${y}`
+}
+
 export class FcExceptionChart extends BaseElement {
     static properties = {
         _data: { state: true },
         _loading: { state: true },
         _error: { state: true },
+        _tooltip: { state: true },
     }
 
     constructor() {
@@ -28,6 +36,7 @@ export class FcExceptionChart extends BaseElement {
         this._data = []
         this._loading = true
         this._error = false
+        this._tooltip = null
     }
 
     async _load() {
@@ -77,6 +86,24 @@ export class FcExceptionChart extends BaseElement {
         return days
     }
 
+    _onPointEnter(e, coord) {
+        const svgEl = e.currentTarget.closest('svg')
+        const container = svgEl.closest('.fc-chart-wrap')
+        const cRect = container.getBoundingClientRect()
+        const sRect = svgEl.getBoundingClientRect()
+        const scaleX = sRect.width / W
+        const scaleY = sRect.height / H
+        this._tooltip = {
+            x: sRect.left - cRect.left + coord.x * scaleX,
+            y: sRect.top - cRect.top + coord.y * scaleY,
+            coord,
+        }
+    }
+
+    _onPointLeave() {
+        this._tooltip = null
+    }
+
     render() {
         if (this._loading) {
             return html`
@@ -90,9 +117,6 @@ export class FcExceptionChart extends BaseElement {
         const max = Math.max(...data.map(d => d.count), 1)
         const total = data.reduce((s, d) => s + d.count, 0)
 
-        // Responsive: use viewBox, let CSS scale
-        const W = 400
-        const H = 220
         const chartW = W - PAD_X - 8
         const chartH = H - PAD_TOP - PAD_BOT
         const step = chartW / (DAYS - 1)
@@ -106,14 +130,11 @@ export class FcExceptionChart extends BaseElement {
         const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
         const areaPath = `${linePath} L${coords.at(-1).x.toFixed(1)},${PAD_TOP + chartH} L${PAD_X},${PAD_TOP + chartH} Z`
 
-        // Y-axis ticks (0, mid, max)
         const yTicks = [0, Math.round(max / 2), max]
-
-        // X-axis labels — show every 2nd day to avoid clutter
         const xLabels = coords.filter((_, i) => i % 2 === 0 || i === DAYS - 1)
 
         return html`
-            <div class="rounded-box border border-base-300 bg-base-200 p-4">
+            <div class="fc-chart-wrap rounded-box border border-base-300 bg-base-200 p-4 relative">
                 <div class="flex items-baseline justify-between mb-3">
                     <span class="text-sm font-semibold text-base-content">Verlauf der letzten 14 Tage</span>
                     <span class="text-xs text-base-content/50">${total} gesamt</span>
@@ -154,10 +175,11 @@ export class FcExceptionChart extends BaseElement {
                     <!-- Data points -->
                     ${coords.map(
                         c => svg`
-                        <circle cx="${c.x}" cy="${c.y}" r="3"
-                                class="fill-error stroke-base-200" stroke-width="1.5">
-                            <title>${shortDate(c.date)}: ${c.count} Exceptions</title>
-                        </circle>
+                        <g @mouseenter=${e => this._onPointEnter(e, c)} @mouseleave=${() => this._onPointLeave()} style="cursor:default">
+                            <circle cx="${c.x}" cy="${c.y}" r="8" fill="transparent" stroke="none" />
+                            <circle cx="${c.x}" cy="${c.y}" r="3"
+                                    class="fill-error stroke-base-200" stroke-width="1.5" style="pointer-events:none" />
+                        </g>
                     `
                     )}
 
@@ -169,6 +191,26 @@ export class FcExceptionChart extends BaseElement {
                     `
                     )}
                 </svg>
+
+                ${this._tooltip
+                    ? html`
+                          <div
+                              class="absolute z-50 pointer-events-none"
+                              style="left:${this._tooltip.x}px;top:${this._tooltip.y}px;transform:translate(-50%,calc(-100% - 10px))"
+                          >
+                              <div
+                                  class="bg-base-300 border border-base-content/10 rounded-lg shadow-xl px-3 py-2 text-xs whitespace-nowrap"
+                              >
+                                  <div class="font-semibold text-base-content/80 mb-2">${longDate(this._tooltip.coord.date)}</div>
+                                  <div class="flex items-center gap-2 text-base-content/60">
+                                      <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--er))"></span>
+                                      <span>Exceptions</span>
+                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.count}</span>
+                                  </div>
+                              </div>
+                          </div>
+                      `
+                    : ''}
             </div>
         `
     }
