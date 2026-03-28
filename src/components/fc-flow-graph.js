@@ -315,7 +315,7 @@ export class FcFlowGraph extends BaseElement {
         }
         api.getInfo()
             .then(info => {
-                this._observerRunning = !!info?.observerRunning
+                this._observerRunning = (info?.workers?.length ?? 0) > 0
             })
             .catch(() => {
                 this._observerRunning = false

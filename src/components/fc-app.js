@@ -513,14 +513,14 @@ export class FcApp extends BaseElement {
                                     <span class="text-base font-bold tracking-tight whitespace-nowrap">FlowCrafter UI</span>
                                     ${this._serverDescription || this._serverInfo
                                         ? html` <span
-                                              class="text-xs whitespace-nowrap ${this._serverInfo?.observerRunning
+                                              class="text-xs whitespace-nowrap ${this._serverInfo?.workers?.length > 0
                                                   ? 'text-base-content/40'
                                                   : 'text-error/70 animate-pulse'}"
                                           >
                                               ${[...(this._serverDescription ?? '')].length > 24
                                                   ? [...this._serverDescription].slice(0, 21).join('') + '...'
                                                   : this._serverDescription ||
-                                                    (!this._serverInfo?.observerRunning ? 'Observer stopped' : '')}
+                                                    (!(this._serverInfo?.workers?.length > 0) ? 'Observer stopped' : '')}
                                           </span>`
                                         : ''}
                                 </div>
@@ -554,10 +554,11 @@ export class FcApp extends BaseElement {
                                               </div>
                                               <div class="flex items-center justify-between gap-3">
                                                   <span class="text-xs text-base-content/50 shrink-0">Observer</span>
-                                                  ${this._serverInfo?.observerRunning
+                                                  ${this._serverInfo?.workers?.length > 0
                                                       ? html`<span class="flex items-center gap-1.5 text-xs text-success"
-                                                            ><span class="inline-block w-1.5 h-1.5 rounded-full bg-success"></span
-                                                            >running</span
+                                                            ><span class="inline-block w-1.5 h-1.5 rounded-full bg-success"></span>${this
+                                                                ._serverInfo.workers.length}
+                                                            worker${this._serverInfo.workers.length === 1 ? '' : 's'} running</span
                                                         >`
                                                       : html`<span class="flex items-center gap-1.5 text-xs text-error"
                                                             ><span class="inline-block w-1.5 h-1.5 rounded-full bg-error"></span
