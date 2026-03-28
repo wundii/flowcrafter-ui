@@ -552,14 +552,22 @@ export class FcApp extends BaseElement {
                                                       >${connection.getUrl()}</span
                                                   >
                                               </div>
-                                              <div class="flex items-center justify-between gap-3">
-                                                  <span class="text-xs text-base-content/50 shrink-0">Observer</span>
+                                              <div class="flex items-start justify-between gap-3">
+                                                  <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Observer</span>
                                                   ${this._serverInfo?.workers?.length > 0
-                                                      ? html`<span class="flex items-center gap-1.5 text-xs text-success"
-                                                            ><span class="inline-block w-1.5 h-1.5 rounded-full bg-success"></span>${this
-                                                                ._serverInfo.workers.length}
-                                                            worker${this._serverInfo.workers.length === 1 ? '' : 's'} running</span
-                                                        >`
+                                                      ? html`<div class="flex flex-col items-end gap-1">
+                                                            <span class="flex items-center gap-1.5 text-xs text-success"
+                                                                ><span class="inline-block w-1.5 h-1.5 rounded-full bg-success"></span
+                                                                >${this._serverInfo.workers.length}
+                                                                worker${this._serverInfo.workers.length === 1 ? '' : 's'} running</span
+                                                            >
+                                                            ${this._serverInfo.workers.map(
+                                                                w =>
+                                                                    html`<span class="font-mono text-[10px] text-base-content/40"
+                                                                        >${w.hostname}:${w.pid}</span
+                                                                    >`
+                                                            )}
+                                                        </div>`
                                                       : html`<span class="flex items-center gap-1.5 text-xs text-error"
                                                             ><span class="inline-block w-1.5 h-1.5 rounded-full bg-error"></span
                                                             >stopped</span
