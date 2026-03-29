@@ -546,6 +546,30 @@ export class FcApp extends BaseElement {
                                                         >
                                                     </div>`
                                                   : ''}
+                                              ${this._serverInfo?.version
+                                                  ? html`<div class="flex items-baseline justify-between gap-3">
+                                                        <span class="text-xs text-base-content/50 shrink-0">Version</span>
+                                                        <span class="font-mono text-xs text-right text-base-content/60"
+                                                            >${this._serverInfo.version}</span
+                                                        >
+                                                    </div>`
+                                                  : ''}
+                                              ${this._serverInfo?.php
+                                                  ? html`<div class="flex items-baseline justify-between gap-3">
+                                                        <span class="text-xs text-base-content/50 shrink-0">PHP</span>
+                                                        <span class="font-mono text-xs text-right text-base-content/60"
+                                                            >${this._serverInfo.php}</span
+                                                        >
+                                                    </div>`
+                                                  : ''}
+                                              ${this._serverInfo?.storage
+                                                  ? html`<div class="flex items-baseline justify-between gap-3">
+                                                        <span class="text-xs text-base-content/50 shrink-0">Storage</span>
+                                                        <span class="font-mono text-xs text-right text-base-content/60"
+                                                            >${this._serverInfo.storage}</span
+                                                        >
+                                                    </div>`
+                                                  : ''}
                                               <div class="flex items-baseline justify-between gap-3">
                                                   <span class="text-xs text-base-content/50 shrink-0">Service URL</span>
                                                   <span class="font-mono text-xs text-right break-all text-base-content/60"
