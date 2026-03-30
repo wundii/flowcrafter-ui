@@ -3,6 +3,7 @@ import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 
 const PAGE_SIZE = 20
+const LOAD_MORE_COOLDOWN = 500
 
 function formatTzOffset(date) {
     const off = -date.getTimezoneOffset()
@@ -50,6 +51,7 @@ export class FcExceptionList extends BaseElement {
         this._dateFrom = ''
         this._dateTo = ''
         this._observer = null
+        this._lastLoadMore = 0
     }
 
     connectedCallback() {
@@ -136,6 +138,7 @@ export class FcExceptionList extends BaseElement {
 
     async _loadMore() {
         if (!this._hasMore || this._loadingMore) return
+        if (Date.now() - this._lastLoadMore < LOAD_MORE_COOLDOWN) return
         this._loadingMore = true
         try {
             const opts = { sort: 'desc', top: PAGE_SIZE, skip: this._offset }
@@ -149,6 +152,7 @@ export class FcExceptionList extends BaseElement {
         } catch (err) {
             this.error = err.message
         } finally {
+            this._lastLoadMore = Date.now()
             this._loadingMore = false
         }
     }

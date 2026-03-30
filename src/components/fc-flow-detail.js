@@ -474,9 +474,15 @@ export class FcFlowDetail extends BaseElement {
                         <div class="flex flex-col gap-1">
                             <span class="text-[10px] uppercase tracking-wider text-base-content/40 font-semibold">Status</span>
                             <div class="flex items-center gap-1.5 flex-wrap">
-                                ${hasExceptions
-                                    ? html`<span class="badge badge-error badge-sm">Failed</span>`
-                                    : html`<span class="badge badge-success badge-sm">OK</span>`}
+                                ${f.flowStatus === 'OK'
+                                    ? html`<span class="badge badge-success badge-sm">OK</span>`
+                                    : f.flowStatus === 'IN_PROGRESS'
+                                      ? html`<span class="badge badge-info badge-sm">In Progress</span>`
+                                      : f.flowStatus === 'IN_PROGRESS_EXCEEDED'
+                                        ? html`<span class="badge badge-warning badge-sm">In Progress Exceeded</span>`
+                                        : f.flowStatus !== 'FAILED'
+                                            ? html`<span class="badge badge-error badge-sm">Failed</span>`
+                                            : html`<span class="badge badge-warning badge-sm">Warning</span>`}
                                 ${f.isExecutable === false
                                     ? html`<span class="badge badge-sm border-slate-500/50 bg-slate-600/40 text-slate-300"
                                           >Nicht ausführbar</span
@@ -1192,13 +1198,13 @@ ${JSON.stringify(v, null, 2)}</pre
                                         ${run.label}
                                     </span>
                                     <span
-                                        class="badge badge-xs leading-none ${run.status === 'error'
+                                        class="badge badge-xs leading-none ${run.status === 'failed'
                                             ? 'badge-error'
                                             : run.status === 'incorrect'
                                               ? 'badge-warning'
                                               : 'badge-success'}"
                                     >
-                                        ${run.status === 'error' ? 'Error' : run.status === 'incorrect' ? 'Incorrect' : 'OK'}
+                                        ${run.status === 'failed' ? 'Failed' : run.status === 'incorrect' ? 'Incorrect' : 'OK'}
                                     </span>
                                 </div>
                                 <div class="flex items-center gap-1">

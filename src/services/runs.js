@@ -31,7 +31,7 @@ export function buildRuns(flow) {
             time: run.time,
             duration: durationMs,
             queueId: run.queueId ?? null,
-            status: runExceptions.length > 0 ? 'error' : runResults.some(r => r.result === false) ? 'incorrect' : 'success',
+            status: runExceptions.length > 0 ? 'failed' : runResults.some(r => r.result === false) ? 'incorrect' : 'success',
             messages: runMessages,
             exceptions: runExceptions,
             results: runResults,

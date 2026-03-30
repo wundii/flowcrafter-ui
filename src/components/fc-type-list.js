@@ -179,9 +179,17 @@ export class FcTypeList extends BaseElement {
                             ? 'text-base-content/30'
                             : schema.successRate === 100
                               ? 'text-success'
-                              : schema.successRate >= 80
-                                ? 'text-warning'
-                                : 'text-error'
+                              : schema.successRate >= 95
+                                ? 'text-success/60'
+                                : schema.successRate >= 85
+                                  ? 'text-warning'
+                                  : schema.successRate >= 70
+                                    ? 'text-warning/70'
+                                    : schema.successRate >= 50
+                                      ? 'text-error/60'
+                                      : schema.successRate >= 30
+                                        ? 'text-error/80'
+                                        : 'text-error'
 
                     return html`
                         <div

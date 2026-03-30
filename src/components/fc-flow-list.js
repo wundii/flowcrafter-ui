@@ -3,6 +3,7 @@ import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 
 const PAGE_SIZE = 20
+const LOAD_MORE_COOLDOWN = 500
 
 function formatTzOffset(date) {
     const off = -date.getTimezoneOffset()
@@ -55,6 +56,7 @@ export class FcFlowList extends BaseElement {
         this._statusFilter = 'all'
         this._observer = null
         this._restored = false
+        this._lastLoadMore = 0
     }
 
     connectedCallback() {
@@ -167,6 +169,7 @@ export class FcFlowList extends BaseElement {
 
     async _loadMore() {
         if (!this._hasMore || this._loadingMore) return
+        if (Date.now() - this._lastLoadMore < LOAD_MORE_COOLDOWN) return
         this._loadingMore = true
         try {
             const opts = { type: this.type ?? undefined, top: PAGE_SIZE, skip: this._offset }
@@ -180,6 +183,7 @@ export class FcFlowList extends BaseElement {
         } catch (err) {
             this.error = err.message
         } finally {
+            this._lastLoadMore = Date.now()
             this._loadingMore = false
             this._checkSentinelVisible()
         }
@@ -191,7 +195,7 @@ export class FcFlowList extends BaseElement {
         if (!sentinel) return
         const rect = sentinel.getBoundingClientRect()
         if (rect.top < window.innerHeight + 200) {
-            requestAnimationFrame(() => this._loadMore())
+            setTimeout(() => this._loadMore(), LOAD_MORE_COOLDOWN)
         }
     }
 
