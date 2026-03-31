@@ -434,8 +434,6 @@ export class FcFlowDetail extends BaseElement {
 
     _renderDetail() {
         const f = this.flow
-        const run = this._selectedRun
-        const hasExceptions = run ? run.exceptions.length > 0 : f.flowExceptions?.length > 0
         const graphRun = this.runs.find(r => r.runId === (this._hoveredRunId ?? this.selectedRunId)) ?? null
         const graphRunIdx = graphRun ? this.runs.indexOf(graphRun) : -1
         const priorRuns = graphRunIdx >= 0 ? this.runs.slice(0, graphRunIdx + 1) : null
@@ -480,9 +478,9 @@ export class FcFlowDetail extends BaseElement {
                                       ? html`<span class="badge badge-info badge-sm">In Progress</span>`
                                       : f.flowStatus === 'IN_PROGRESS_EXCEEDED'
                                         ? html`<span class="badge badge-warning badge-sm">In Progress Exceeded</span>`
-                                        : f.flowStatus !== 'FAILED'
-                                            ? html`<span class="badge badge-error badge-sm">Failed</span>`
-                                            : html`<span class="badge badge-warning badge-sm">Warning</span>`}
+                                        : f.flowStatus === 'FAILED'
+                                          ? html`<span class="badge badge-error badge-sm">Failed</span>`
+                                          : html`<span class="badge badge-warning badge-sm">Warning</span>`}
                                 ${f.isExecutable === false
                                     ? html`<span class="badge badge-sm border-slate-500/50 bg-slate-600/40 text-slate-300"
                                           >Nicht ausführbar</span

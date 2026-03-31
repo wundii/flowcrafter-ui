@@ -263,16 +263,22 @@ export class FcFlowList extends BaseElement {
             return html` <div class="alert alert-info"><span>Keine Flows gefunden.</span></div> `
 
         const byLastRun = [...this._items].sort((a, b) => {
-            const ta = a.timeLastRun || a.time || ''
-            const tb = b.timeLastRun || b.time || ''
+            const ta = a.lastTerm || a.flowTime || ''
+            const tb = b.lastTerm || b.flowTime || ''
             return tb.localeCompare(ta)
         })
         const filtered =
             this._statusFilter === 'all'
                 ? byLastRun
                 : this._statusFilter === 'ok'
-                  ? byLastRun.filter(f => f.exceptionCount === 0)
-                  : byLastRun.filter(f => f.exceptionCount > 0)
+                  ? byLastRun.filter(f => f.status === 'OK')
+                  : byLastRun.filter(
+                        f =>
+                            f.status === 'FAILED' ||
+                            f.status === 'WARNING' ||
+                            f.status === 'IN_PROGRESS' ||
+                            f.status === 'IN_PROGRESS_EXCEEDED'
+                    )
         const isEmpty = filtered.length === 0
 
         return html`
@@ -413,7 +419,7 @@ export class FcFlowList extends BaseElement {
                       <!-- Flow cards -->
                       <div class="flex flex-col gap-2">
                           ${filtered.map(flow => {
-                              const hasFailed = flow.exceptionCount > 0
+                              const hasFailed = flow.status === 'FAILED' || flow.status === 'WARNING'
                               return html`
                                   <div
                                       class="rounded-box border bg-base-200 overflow-hidden cursor-pointer
@@ -425,20 +431,29 @@ export class FcFlowList extends BaseElement {
                                           <!-- Row 1: Source + Status + Dates -->
                                           <div class="flex items-start justify-between gap-2">
                                               <div class="flex items-center gap-2 min-w-0">
-                                                  ${hasFailed
-                                                      ? html`<span class="badge badge-error badge-sm leading-none">Failed</span>`
-                                                      : html`<span class="badge badge-success badge-sm leading-none">OK</span>`}
+                                                  ${{
+                                                      FAILED: html`<span class="badge badge-error badge-sm leading-none">Failed</span>`,
+                                                      WARNING: html`<span class="badge badge-warning badge-sm leading-none">Warning</span>`,
+                                                      IN_PROGRESS: html`<span class="badge badge-info badge-sm leading-none"
+                                                          >Running</span
+                                                      >`,
+                                                      IN_PROGRESS_EXCEEDED: html`<span class="badge badge-warning badge-sm leading-none"
+                                                          >Exceeded</span
+                                                      >`,
+                                                      OK: html`<span class="badge badge-success badge-sm leading-none">OK</span>`,
+                                                  }[flow.status] ??
+                                                  html`<span class="badge badge-neutral badge-sm leading-none">${flow.status}</span>`}
                                                   <span class="font-semibold text-sm text-base-content truncate">
                                                       ${shortClass(flow.flowSource)}
                                                   </span>
                                               </div>
                                               <div class="flex flex-col items-end gap-0.5 flex-shrink-0">
-                                                  ${flow.timeLastRun
+                                                  ${flow.lastTerm
                                                       ? html`<span class="text-xs text-base-content/50"
-                                                            >Letzter Lauf: ${formatDate(flow.timeLastRun)}</span
+                                                            >Letzter Lauf: ${formatDate(flow.lastTerm)}</span
                                                         >`
                                                       : ''}
-                                                  <span class="text-xs text-base-content/50">Erstellt: ${formatDate(flow.time)}</span>
+                                                  <span class="text-xs text-base-content/50">Erstellt: ${formatDate(flow.flowTime)}</span>
                                               </div>
                                           </div>
                                           <!-- Row 2: Hash -->

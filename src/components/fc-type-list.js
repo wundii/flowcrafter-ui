@@ -40,16 +40,8 @@ export class FcTypeList extends BaseElement {
             const from = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
             const to = new Date().toISOString()
 
-            const [schemasRes, flowsRes, exceptionsRes] = await Promise.all([
-                api.getSchemas(),
-                api.getFlows({ sort: 'desc', top: 1000, from, to }),
-                api.getExceptions({ top: 1000, from, to }),
-            ])
+            const [schemasRes, flowsRes] = await Promise.all([api.getSchemas(), api.getFlows({ sort: 'desc', top: 1000, from, to })])
             const flows = flowsRes.items ?? []
-            const exceptions = exceptionsRes.items ?? []
-
-            // Hashes of flows that have at least one exception
-            const failedHashes = new Set(exceptions.map(e => e.flowHash))
 
             // Build map from schemas, then enrich with flow data
             const map = new Map()
@@ -75,10 +67,10 @@ export class FcTypeList extends BaseElement {
                 const s = map.get(prefix)
                 s.sources.add(flow.flowSource)
                 s.total++
-                if (failedHashes.has(flow.flowHash)) s.failed++
-                const runTime = flow.timeLastRun || flow.time
+                if (flow.status === 'FAILED' || flow.status === 'WARNING' || flow.status === 'IN_PROGRESS_EXCEEDED') s.failed++
+                const runTime = flow.lastTerm || flow.flowTime
                 if (!s.lastTime || runTime > s.lastTime) s.lastTime = runTime
-                if (!s.lastCreated || flow.time > s.lastCreated) s.lastCreated = flow.time
+                if (!s.lastCreated || flow.flowTime > s.lastCreated) s.lastCreated = flow.flowTime
             }
 
             // Compute successRate
@@ -172,7 +164,7 @@ export class FcTypeList extends BaseElement {
             <!-- Type grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                 ${this._sortedSchemas().map(schema => {
-                    const hasFailed = schema.failed > 0
+                    const hasFailed = schema.successRate !== null && schema.successRate < 95
                     const hasRuns = schema.total > 0
                     const rateColor =
                         schema.successRate === null

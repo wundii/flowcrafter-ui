@@ -640,7 +640,7 @@ export class FcApp extends BaseElement {
                                                               >${item.flowSource?.split('\\').pop()}</span
                                                           >
                                                           <span class="text-xs text-base-content/35 flex-shrink-0"
-                                                              >${new Date(item.time).toLocaleString('de-DE', {
+                                                              >${new Date(item.flowTime).toLocaleString('de-DE', {
                                                                   dateStyle: 'short',
                                                                   timeStyle: 'short',
                                                               })}</span
@@ -653,11 +653,8 @@ export class FcApp extends BaseElement {
                                                           : ''}
                                                       <div class="text-xs font-mono text-base-content/30 mt-0.5">
                                                           ${item.flowHash}
-                                                          ${item.exceptionCount > 0
-                                                              ? html`<span class="text-error/60 ml-2"
-                                                                    >${item.exceptionCount}
-                                                                    Exception${item.exceptionCount > 1 ? 's' : ''}</span
-                                                                >`
+                                                          ${item.status === 'FAILED' || item.status === 'WARNING'
+                                                              ? html`<span class="text-error/60 ml-2">${item.status}</span>`
                                                               : ''}
                                                       </div>
                                                   </button>
