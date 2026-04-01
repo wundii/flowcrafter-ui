@@ -80,6 +80,22 @@ export class FcFlowList extends BaseElement {
         this._observer = null
     }
 
+    get _filteredItems() {
+        const byLastRun = [...this._items].sort((a, b) => {
+            const ta = a.lastTerm || a.flowTime || ''
+            const tb = b.lastTerm || b.flowTime || ''
+            return tb.localeCompare(ta)
+        })
+        return this._statusFilter === 'all'
+            ? byLastRun
+            : this._statusFilter === 'ok'
+              ? byLastRun.filter(f => f.status === 'OK')
+              : byLastRun.filter(
+                    f =>
+                        f.status === 'FAILED' || f.status === 'WARNING' || f.status === 'IN_PROGRESS' || f.status === 'IN_PROGRESS_EXCEEDED'
+                )
+    }
+
     updated(changed) {
         if (changed.has('type')) {
             if (changed.get('type') !== undefined) {
@@ -98,6 +114,9 @@ export class FcFlowList extends BaseElement {
             })
         }
         this._setupObserver()
+        if (!this.loading && !this._loadingMore && this._hasMore && this._statusFilter !== 'all') {
+            setTimeout(() => this._loadMore(), LOAD_MORE_COOLDOWN)
+        }
     }
 
     _setupObserver() {
@@ -262,23 +281,7 @@ export class FcFlowList extends BaseElement {
         if (this._items.length === 0 && !this._dateFrom && !this._dateTo)
             return html` <div class="alert alert-info"><span>Keine Flows gefunden.</span></div> `
 
-        const byLastRun = [...this._items].sort((a, b) => {
-            const ta = a.lastTerm || a.flowTime || ''
-            const tb = b.lastTerm || b.flowTime || ''
-            return tb.localeCompare(ta)
-        })
-        const filtered =
-            this._statusFilter === 'all'
-                ? byLastRun
-                : this._statusFilter === 'ok'
-                  ? byLastRun.filter(f => f.status === 'OK')
-                  : byLastRun.filter(
-                        f =>
-                            f.status === 'FAILED' ||
-                            f.status === 'WARNING' ||
-                            f.status === 'IN_PROGRESS' ||
-                            f.status === 'IN_PROGRESS_EXCEEDED'
-                    )
+        const filtered = this._filteredItems
         const isEmpty = filtered.length === 0
 
         return html`
@@ -414,7 +417,9 @@ export class FcFlowList extends BaseElement {
             </div>
 
             ${isEmpty
-                ? html`<div class="alert alert-info"><span>Keine Flows für den gewählten Zeitraum gefunden.</span></div>`
+                ? this._hasMore
+                    ? html`<div class="flex justify-center py-8"><span class="loading loading-spinner loading-md"></span></div>`
+                    : html`<div class="alert alert-info"><span>Keine Flows für den gewählten Zeitraum gefunden.</span></div>`
                 : html`
                       <!-- Flow cards -->
                       <div class="flex flex-col gap-2">
