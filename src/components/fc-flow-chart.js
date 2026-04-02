@@ -25,20 +25,20 @@ function longDate(iso) {
 
 export class FcFlowChart extends BaseElement {
     static properties = {
-        type: { type: String },
         _data: { state: true },
-        _loading: { state: true },
         _error: { state: true },
+        _loading: { state: true },
         _tooltip: { state: true },
+        type: { type: String },
     }
 
     constructor() {
         super()
-        this.type = null
         this._data = []
-        this._loading = true
         this._error = false
+        this._loading = true
         this._tooltip = null
+        this.type = null
     }
 
     async _load() {

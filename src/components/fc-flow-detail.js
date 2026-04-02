@@ -26,53 +26,55 @@ function formatDuration(ms) {
 
 export class FcFlowDetail extends BaseElement {
     static properties = {
+        _analysis: { state: true },
+        _analysisError: { state: true },
+        _analysisLoading: { state: true },
+        _analysisModal: { state: true },
+        _analysisModel: { state: true },
+        _analysisSteps: { state: true },
+        _dragOverRunId: { state: true },
+        _hoveredRunId: { state: true },
+        _rawModal: { state: true },
+        _readOnlyModal: { state: true },
+        _refreshCountdown: { state: true },
+        _toast: { state: true },
+        aiConfigured: { type: Boolean },
+        compareRunId: { state: true },
+        error: { state: true },
+        flow: { state: true },
         hash: { type: String },
         initialRuntimeHash: { type: String },
-        aiConfigured: { type: Boolean },
-        flow: { state: true },
         loading: { state: true },
-        error: { state: true },
         runs: { state: true },
         selectedRunId: { state: true },
-        _hoveredRunId: { state: true },
-        _toast: { state: true },
-        _refreshCountdown: { state: true },
-        _rawModal: { state: true },
-        _analysisModal: { state: true },
-        _analysis: { state: true },
-        _analysisLoading: { state: true },
-        _analysisError: { state: true },
-        _analysisSteps: { state: true },
-        _analysisModel: { state: true },
-        compareRunId: { state: true },
-        _dragOverRunId: { state: true },
     }
 
     constructor() {
         super()
-        this.hash = ''
-        this.initialRuntimeHash = null
-        this.aiConfigured = false
-        this.flow = null
-        this.loading = true
-        this.error = null
-        this.runs = []
-        this.selectedRunId = null
+        this._analysis = null
+        this._analysisError = null
+        this._analysisLoading = false
+        this._analysisModal = false
+        this._analysisModel = null
+        this._analysisSteps = []
+        this._countdownInterval = null
+        this._dragOverRunId = null
         this._hoveredRunId = null
+        this._rawModal = false
+        this._readOnlyModal = false
+        this._refreshCountdown = null
+        this._refreshTimer = null
         this._toast = null
         this._toastTimer = null
-        this._refreshTimer = null
-        this._refreshCountdown = null
-        this._countdownInterval = null
-        this._rawModal = false
-        this._analysisModal = false
-        this._analysis = null
-        this._analysisLoading = false
-        this._analysisError = null
-        this._analysisSteps = []
-        this._analysisModel = null
+        this.aiConfigured = false
         this.compareRunId = null
-        this._dragOverRunId = null
+        this.error = null
+        this.flow = null
+        this.hash = ''
+        this.initialRuntimeHash = null
+        this.loading = true
+        this.runs = []
+        this.selectedRunId = null
     }
 
     updated(changed) {
@@ -442,10 +444,14 @@ export class FcFlowDetail extends BaseElement {
             <!-- Meta -->
             <div class="card bg-base-200 border border-base-300 mb-4 relative overflow-hidden">
                 ${f.isReadOnly
-                    ? html`<div class="absolute top-0 right-0 z-10 overflow-hidden" style="width:120px;height:120px;pointer-events:none;">
+                    ? html`<div class="absolute top-0 right-0 z-10 overflow-hidden" style="width:120px;height:120px;">
                           <div
-                              class="absolute text-[10px] font-bold uppercase tracking-widest text-center text-warning-content bg-warning shadow-md"
+                              class="absolute text-[10px] font-bold uppercase tracking-widest text-center text-warning-content bg-warning shadow-md cursor-pointer hover:brightness-110 transition-[filter]"
                               style="width:170px;top:26px;right:-36px;transform:rotate(45deg);padding:4px 0;letter-spacing:.12em;"
+                              @click=${() => {
+                                  this._readOnlyModal = true
+                                  this.updateComplete.then(() => this.querySelector('#fc-readonly-modal')?.showModal())
+                              }}
                           >
                               Read-Only
                           </div>
@@ -507,6 +513,9 @@ export class FcFlowDetail extends BaseElement {
 
             <!-- Runs Panel -->
             ${this._renderRunsPanel()}
+
+            <!-- Read-Only Modal -->
+            ${this._renderReadOnlyModal()}
 
             <!-- Run Diff Modal -->
             ${this._renderDiffModal()}
@@ -873,6 +882,74 @@ ${JSON.stringify(v, null, 2)}</pre
                     </tbody>
                 </table>
             </div>
+        `
+    }
+
+    _renderReadOnlyModal() {
+        const f = this.flow
+        return html`
+            <dialog
+                id="fc-readonly-modal"
+                class="modal"
+                @close=${() => {
+                    this._readOnlyModal = false
+                }}
+            >
+                ${this._readOnlyModal && f
+                    ? html`
+                          <div class="modal-box max-w-lg">
+                              <div
+                                  class="bg-gradient-to-br from-warning/10 via-warning/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0 -mx-6 -mt-6 mb-4 rounded-t-lg"
+                              >
+                                  <div class="flex items-center justify-between">
+                                      <div class="flex items-center gap-3">
+                                          <div class="w-10 h-10 rounded-xl bg-warning/20 flex items-center justify-center">
+                                              <svg
+                                                  class="w-5 h-5 text-warning"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                                  />
+                                              </svg>
+                                          </div>
+                                          <div>
+                                              <h3 class="font-bold text-base leading-tight">Read-Only</h3>
+                                              <span class="text-xs text-base-content/50">Gründe für den Read-Only-Status</span>
+                                          </div>
+                                      </div>
+                                      <button
+                                          class="btn btn-ghost btn-sm btn-square btn-circle"
+                                          @click=${() => this.querySelector('#fc-readonly-modal')?.close()}
+                                      >
+                                          ✕
+                                      </button>
+                                  </div>
+                              </div>
+                              ${f.readOnlyReasons?.length
+                                  ? html`<ul class="space-y-2">
+                                        ${f.readOnlyReasons.map(
+                                            r => html`
+                                                <li class="flex items-start gap-2 text-sm">
+                                                    <span class="text-warning mt-0.5 flex-shrink-0">▸</span>
+                                                    <span class="font-mono text-xs text-base-content/80 break-words">${r}</span>
+                                                </li>
+                                            `
+                                        )}
+                                    </ul>`
+                                  : html`<p class="text-sm text-base-content/50">Keine Gründe vorhanden.</p>`}
+                          </div>
+                          <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                              <button>close</button>
+                          </form>
+                      `
+                    : ''}
+            </dialog>
         `
     }
 

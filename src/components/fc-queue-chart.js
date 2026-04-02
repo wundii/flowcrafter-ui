@@ -9,16 +9,16 @@ const H = 40
 
 export class FcQueueChart extends BaseElement {
     static properties = {
-        _points: { state: true },
         _current: { state: true },
         _error: { state: true },
+        _points: { state: true },
     }
 
     constructor() {
         super()
-        this._points = []
         this._current = null
         this._error = false
+        this._points = []
         this._timer = null
     }
 

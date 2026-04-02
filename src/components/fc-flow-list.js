@@ -26,51 +26,52 @@ function formatDate(iso) {
 
 export class FcFlowList extends BaseElement {
     static properties = {
-        type: { type: String },
-        cachedState: { type: Object },
-        _items: { state: true },
-        loading: { state: true },
-        error: { state: true },
-        _offset: { state: true },
-        _loadingMore: { state: true },
-        _hasMore: { state: true },
-        _total: { state: true },
         _dateFrom: { state: true },
         _dateTo: { state: true },
+        _hasMore: { state: true },
+        _items: { state: true },
+        _loadingMore: { state: true },
+        _offset: { state: true },
         _statusFilter: { state: true },
+        _total: { state: true },
+        cachedState: { type: Object },
+        error: { state: true },
+        loading: { state: true },
+        type: { type: String },
     }
 
     constructor() {
         super()
-        this.type = null
-        this.cachedState = null
-        this._items = []
-        this.loading = true
-        this.error = null
-        this._offset = 0
-        this._loadingMore = false
-        this._hasMore = false
-        this._total = null
         this._dateFrom = ''
         this._dateTo = ''
-        this._statusFilter = 'all'
-        this._observer = null
-        this._restored = false
+        this._hasMore = false
+        this._items = []
+        this._filteredCountAtLastStop = 0
         this._lastLoadMore = 0
+        this._loadingMore = false
+        this._observer = null
+        this._offset = 0
+        this._restored = false
+        this._statusFilter = 'all'
+        this._total = null
+        this.cachedState = null
+        this.error = null
+        this.loading = true
+        this.type = null
     }
 
     connectedCallback() {
         super.connectedCallback()
         if (this.cachedState?.items?.length) {
-            this._items = this.cachedState.items
-            this._offset = this.cachedState.offset
-            this._hasMore = this.cachedState.hasMore
-            this._total = this.cachedState.total
             this._dateFrom = this.cachedState.dateFrom ?? ''
             this._dateTo = this.cachedState.dateTo ?? ''
-            this._statusFilter = this.cachedState.statusFilter ?? 'all'
-            this.loading = false
+            this._hasMore = this.cachedState.hasMore
+            this._items = this.cachedState.items
+            this._offset = this.cachedState.offset
             this._restored = true
+            this._statusFilter = this.cachedState.statusFilter ?? 'all'
+            this._total = this.cachedState.total
+            this.loading = false
         }
     }
 
@@ -115,7 +116,10 @@ export class FcFlowList extends BaseElement {
         }
         this._setupObserver()
         if (!this.loading && !this._loadingMore && this._hasMore && this._statusFilter !== 'all') {
-            setTimeout(() => this._loadMore(), LOAD_MORE_COOLDOWN)
+            const newFiltered = this._filteredItems.length - this._filteredCountAtLastStop
+            if (newFiltered < PAGE_SIZE) {
+                setTimeout(() => this._loadMore(), LOAD_MORE_COOLDOWN + 100)
+            }
         }
     }
 
@@ -131,6 +135,9 @@ export class FcFlowList extends BaseElement {
         this._observer = new IntersectionObserver(
             entries => {
                 if (entries[0].isIntersecting && this._hasMore && !this._loadingMore) {
+                    if (this._statusFilter !== 'all') {
+                        this._filteredCountAtLastStop = this._filteredItems.length
+                    }
                     this._loadMore()
                 }
             },
@@ -168,6 +175,7 @@ export class FcFlowList extends BaseElement {
     async _load() {
         this.loading = true
         this.error = null
+        this._filteredCountAtLastStop = 0
         this._items = []
         this._offset = 0
         try {
@@ -214,6 +222,9 @@ export class FcFlowList extends BaseElement {
         if (!sentinel) return
         const rect = sentinel.getBoundingClientRect()
         if (rect.top < window.innerHeight + 200) {
+            if (this._statusFilter !== 'all') {
+                this._filteredCountAtLastStop = this._filteredItems.length
+            }
             setTimeout(() => this._loadMore(), LOAD_MORE_COOLDOWN)
         }
     }
@@ -300,9 +311,9 @@ export class FcFlowList extends BaseElement {
                         ${isEmpty
                             ? ''
                             : html`<span class="text-sm text-base-content/60">
-                                  ${filtered.length}${this._statusFilter !== 'all'
-                                      ? html`<span class="text-base-content/40">/${this._items.length}</span>`
-                                      : ''}
+                                  ${this._statusFilter !== 'all'
+                                      ? html`${filtered.length}<span class="text-base-content/40">/${this._items.length}</span>`
+                                      : this._items.length}
                                   ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                               </span>`}
                         <button
@@ -397,7 +408,9 @@ export class FcFlowList extends BaseElement {
                     ${isEmpty
                         ? ''
                         : html`<span class="text-sm text-base-content/60">
-                              ${this._items.length}
+                              ${this._statusFilter !== 'all'
+                                  ? html`${filtered.length}<span class="text-base-content/40">/${this._items.length}</span>`
+                                  : this._items.length}
                               ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                           </span>`}
                     <button

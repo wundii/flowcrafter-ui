@@ -5,20 +5,20 @@ import { logoIcon } from '../assets/logo.js'
 
 export class FcLogin extends BaseElement {
     static properties = {
-        _mode: { state: true }, // 'login' | 'setup'
+        _confirm: { state: true },
         _error: { state: true },
         _loading: { state: true },
+        _mode: { state: true }, // 'login' | 'setup'
         _password: { state: true },
-        _confirm: { state: true },
     }
 
     constructor() {
         super()
-        this._mode = 'loading'
+        this._confirm = ''
         this._error = null
         this._loading = false
+        this._mode = 'loading'
         this._password = ''
-        this._confirm = ''
     }
 
     async connectedCallback() {

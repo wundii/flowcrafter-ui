@@ -26,32 +26,32 @@ function formatDate(iso) {
 
 export class FcExceptionList extends BaseElement {
     static properties = {
-        _items: { state: true },
-        loading: { state: true },
-        error: { state: true },
-        expanded: { state: true },
-        _offset: { state: true },
-        _loadingMore: { state: true },
-        _hasMore: { state: true },
-        _total: { state: true },
         _dateFrom: { state: true },
         _dateTo: { state: true },
+        _hasMore: { state: true },
+        _items: { state: true },
+        _loadingMore: { state: true },
+        _offset: { state: true },
+        _total: { state: true },
+        error: { state: true },
+        expanded: { state: true },
+        loading: { state: true },
     }
 
     constructor() {
         super()
-        this._items = []
-        this.loading = true
-        this.error = null
-        this.expanded = new Set()
-        this._offset = 0
-        this._loadingMore = false
-        this._hasMore = false
-        this._total = null
         this._dateFrom = ''
         this._dateTo = ''
-        this._observer = null
+        this._hasMore = false
+        this._items = []
         this._lastLoadMore = 0
+        this._loadingMore = false
+        this._observer = null
+        this._offset = 0
+        this._total = null
+        this.error = null
+        this.expanded = new Set()
+        this.loading = true
     }
 
     connectedCallback() {

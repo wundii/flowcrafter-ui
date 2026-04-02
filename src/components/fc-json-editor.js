@@ -1,8 +1,8 @@
 import { BaseElement } from '../base-element.js'
-import { EditorView, basicSetup } from 'codemirror'
 import { EditorState, Prec } from '@codemirror/state'
-import { keymap } from '@codemirror/view'
+import { EditorView, basicSetup } from 'codemirror'
 import { json, jsonParseLinter } from '@codemirror/lang-json'
+import { keymap } from '@codemirror/view'
 import { linter, lintGutter } from '@codemirror/lint'
 import { oneDark } from '@codemirror/theme-one-dark'
 
@@ -130,20 +130,20 @@ const fitTheme = EditorView.theme({
  */
 export class FcJsonEditor extends BaseElement {
     static properties = {
-        value: { type: String },
-        valid: { type: Boolean, reflect: true },
         readonly: { type: Boolean },
         search: { type: Boolean },
+        valid: { type: Boolean, reflect: true },
+        value: { type: String },
     }
 
     constructor() {
         super()
-        this.value = '{}'
-        this.valid = true
+        this._skipUpdate = false
+        this._view = null
         this.readonly = false
         this.search = false
-        this._view = null
-        this._skipUpdate = false
+        this.valid = true
+        this.value = '{}'
     }
 
     // No shadow DOM (inherited from BaseElement), so we render into a plain div

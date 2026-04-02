@@ -1,7 +1,7 @@
 import { html } from 'lit'
-import { unsafeSVG } from 'lit/directives/unsafe-svg.js'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
+import { unsafeSVG } from 'lit/directives/unsafe-svg.js'
 import './fc-json-editor.js'
 import './fc-source-viewer.js'
 
@@ -241,46 +241,46 @@ const fmtJson = (obj, max = 30) => {
 // ─── Component ────────────────────────────────────────────────────────────────
 export class FcFlowGraph extends BaseElement {
     static properties = {
-        flow: { type: Object },
-        readonly: { type: Boolean },
-        runId: { type: String },
-        runMessages: { type: Array }, // overrides flow.flowMessages for a specific run
-        runExceptions: { type: Array }, // overrides flow.flowExceptions for a specific run
-        runResults: { type: Array }, // overrides flow.flowResults for a specific run
-        priorRuns: { type: Array }, // all runs up to and including the selected run (oldest first)
-        selectedStub: { state: true },
         _modalMsg: { state: true }, // { stubSource, messageClass, payload, valid }
-        _sending: { state: true },
-        _sendError: { state: true },
-        _tooltip: { state: true }, // { x, y, label, data } | null
         _observerRunning: { state: true },
+        _sendError: { state: true },
+        _sending: { state: true },
+        _stubSelection: { state: true }, // { stubs: [{source, checked}], queued: bool } | null
         _stubSource: { state: true },
+        _stubSourceCurrent: { state: true },
         _stubSourceError: { state: true },
         _stubSourceName: { state: true },
-        _stubSourceCurrent: { state: true },
-        _stubSelection: { state: true }, // { stubs: [{source, checked}], queued: bool } | null
+        _tooltip: { state: true }, // { x, y, label, data } | null
+        flow: { type: Object },
+        priorRuns: { type: Array }, // all runs up to and including the selected run (oldest first)
+        readonly: { type: Boolean },
+        runExceptions: { type: Array }, // overrides flow.flowExceptions for a specific run
+        runId: { type: String },
+        runMessages: { type: Array }, // overrides flow.flowMessages for a specific run
+        runResults: { type: Array }, // overrides flow.flowResults for a specific run
+        selectedStub: { state: true },
     }
 
     constructor() {
         super()
-        this.flow = null
-        this.readonly = false
-        this.runId = null
-        this.runMessages = null
-        this.runExceptions = null
-        this.runResults = null
-        this.priorRuns = null
-        this.selectedStub = null
         this._modalMsg = null
-        this._sending = false
-        this._sendError = null
-        this._tooltip = null
         this._observerRunning = false
+        this._sendError = null
+        this._sending = false
+        this._stubSelection = null
         this._stubSource = null
+        this._stubSourceCurrent = true
         this._stubSourceError = null
         this._stubSourceName = null
-        this._stubSourceCurrent = true
-        this._stubSelection = null
+        this._tooltip = null
+        this.flow = null
+        this.priorRuns = null
+        this.readonly = false
+        this.runExceptions = null
+        this.runId = null
+        this.runMessages = null
+        this.runResults = null
+        this.selectedStub = null
         injectAnimation()
     }
 

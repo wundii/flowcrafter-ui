@@ -5,18 +5,18 @@ import { logoIcon } from '../assets/logo.js'
 
 export class FcServiceSetup extends BaseElement {
     static properties = {
-        _url: { state: true },
-        _secret: { state: true },
         _error: { state: true },
         _loading: { state: true },
+        _secret: { state: true },
+        _url: { state: true },
     }
 
     constructor() {
         super()
-        this._url = connection.getUrl()
-        this._secret = connection.getSecret()
         this._error = null
         this._loading = false
+        this._secret = connection.getSecret()
+        this._url = connection.getUrl()
     }
 
     async _onSubmit(e) {

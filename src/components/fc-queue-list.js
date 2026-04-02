@@ -8,18 +8,18 @@ function shortClass(fqn) {
 
 export class FcQueueList extends BaseElement {
     static properties = {
-        _queues: { state: true },
-        _loading: { state: true },
         _error: { state: true },
         _expanded: { state: true },
+        _loading: { state: true },
+        _queues: { state: true },
     }
 
     constructor() {
         super()
-        this._queues = []
-        this._loading = true
         this._error = null
         this._expanded = new Set()
+        this._loading = true
+        this._queues = []
     }
 
     connectedCallback() {

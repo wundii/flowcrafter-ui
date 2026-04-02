@@ -1,8 +1,8 @@
 import { BaseElement } from '../base-element.js'
-import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
-import { php } from '@codemirror/lang-php'
+import { EditorView, basicSetup } from 'codemirror'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { php } from '@codemirror/lang-php'
 
 const fitTheme = EditorView.theme({
     '&': {
@@ -109,8 +109,8 @@ export class FcSourceViewer extends BaseElement {
 
     constructor() {
         super()
-        this.value = ''
         this._view = null
+        this.value = ''
     }
 
     connectedCallback() {

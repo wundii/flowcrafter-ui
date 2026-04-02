@@ -14,18 +14,18 @@ function formatDate(iso) {
 
 export class FcTypeList extends BaseElement {
     static properties = {
-        schemas: { state: true },
-        loading: { state: true },
-        error: { state: true },
         _sortAsc: { state: true },
+        error: { state: true },
+        loading: { state: true },
+        schemas: { state: true },
     }
 
     constructor() {
         super()
-        this.schemas = []
-        this.loading = true
-        this.error = null
         this._sortAsc = true
+        this.error = null
+        this.loading = true
+        this.schemas = []
     }
 
     connectedCallback() {

@@ -26,16 +26,16 @@ function longDate(iso) {
 export class FcExceptionChart extends BaseElement {
     static properties = {
         _data: { state: true },
-        _loading: { state: true },
         _error: { state: true },
+        _loading: { state: true },
         _tooltip: { state: true },
     }
 
     constructor() {
         super()
         this._data = []
-        this._loading = true
         this._error = false
+        this._loading = true
         this._tooltip = null
     }
 

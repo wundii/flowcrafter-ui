@@ -1,8 +1,8 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
-import './fc-source-viewer.js'
 import './fc-flow-graph.js'
+import './fc-source-viewer.js'
 
 function shortName(fqcn) {
     return fqcn.split('\\').pop()
@@ -19,35 +19,35 @@ export class FcOverview extends BaseElement {
     static properties = {
         _filter: { state: true },
         _flows: { state: true },
-        _selectedStub: { state: true },
-        _stubVersions: { state: true },
-        _selectedVersionIdx: { state: true },
-        _stubSourceFallback: { state: true },
-        _stubSourceCurrent: { state: true },
-        _stubSourceError: { state: true },
-        _sortAsc: { state: true },
+        _graphFlow: { state: true },
         _hoveredStub: { state: true },
         _popupX: { state: true },
         _popupY: { state: true },
-        _graphFlow: { state: true },
+        _selectedStub: { state: true },
+        _selectedVersionIdx: { state: true },
+        _sortAsc: { state: true },
+        _stubSourceCurrent: { state: true },
+        _stubSourceError: { state: true },
+        _stubSourceFallback: { state: true },
+        _stubVersions: { state: true },
     }
 
     constructor() {
         super()
         this._filter = ''
         this._flows = []
-        this._stubUsageMap = new Map()
-        this._selectedStub = null
-        this._stubVersions = []
-        this._selectedVersionIdx = null
-        this._stubSourceFallback = null
-        this._stubSourceCurrent = true
-        this._stubSourceError = null
-        this._sortAsc = true
+        this._graphFlow = null
         this._hoveredStub = null
         this._popupX = 0
         this._popupY = 0
-        this._graphFlow = null
+        this._selectedStub = null
+        this._selectedVersionIdx = null
+        this._sortAsc = true
+        this._stubSourceCurrent = true
+        this._stubSourceError = null
+        this._stubSourceFallback = null
+        this._stubUsageMap = new Map()
+        this._stubVersions = []
     }
 
     async connectedCallback() {
@@ -101,13 +101,13 @@ export class FcOverview extends BaseElement {
     }
 
     async _openSourceModal(stub) {
-        this._selectedStub = stub
         this._hoveredStub = null
-        this._stubVersions = []
+        this._selectedStub = stub
         this._selectedVersionIdx = null
-        this._stubSourceFallback = null
         this._stubSourceCurrent = true
         this._stubSourceError = null
+        this._stubSourceFallback = null
+        this._stubVersions = []
         try {
             console.log(stub.source)
             const versions = await api.getStubSources(stub.source)
