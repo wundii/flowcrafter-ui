@@ -35,6 +35,8 @@ export class FcApp extends BaseElement {
         _searchResults: { state: true },
         _serverDescription: { state: true },
         _serverInfo: { state: true },
+        _checkingConnection: { state: true },
+        _confirmResetConnection: { state: true },
         _serverOffline: { state: true },
         _serviceReady: { state: true },
         _toolboxOpen: { state: true },
@@ -156,6 +158,7 @@ export class FcApp extends BaseElement {
                 dialog.showModal()
             } else if (!this._serverOffline && dialog.open) {
                 dialog.close()
+                this._confirmResetConnection = false
                 if (changed.get('_serverOffline') === true) {
                     this._reloadCurrentView()
                 }
@@ -208,6 +211,22 @@ export class FcApp extends BaseElement {
 
     _onCancelConnection() {
         this._editingConnection = false
+    }
+
+    async _checkConnection() {
+        this._checkingConnection = true
+        await Promise.all([this._loadInfo(), new Promise(r => setTimeout(r, 1000))])
+        this._checkingConnection = false
+    }
+
+    async _resetConnection() {
+        const dialog = this.querySelector('#server-offline-modal')
+        if (dialog?.open) dialog.close()
+        this._stopInfoPolling()
+        this._serverOffline = false
+        this._confirmResetConnection = false
+        await connection.clear()
+        this._serviceReady = false
     }
 
     _onEditConnection() {
@@ -1112,14 +1131,47 @@ export class FcApp extends BaseElement {
                                 </div>
                             </div>
                         </div>
-                        <div class="px-6 pb-6 pt-4 text-center">
-                            <span class="loading loading-ring loading-lg text-warning"></span>
-                            <p class="text-sm text-base-content/60 mt-3">
-                                Die Verbindung zum FlowCrafter-Server ist unterbrochen. Die Anwendung versucht automatisch, die Verbindung
-                                wiederherzustellen.
-                            </p>
-                            <button class="btn btn-sm btn-outline btn-warning mt-4" @click=${this._loadInfo}>Jetzt prüfen</button>
-                        </div>
+                        ${this._confirmResetConnection
+                            ? html`
+                                  <div class="px-6 pb-6 pt-4 text-center">
+                                      <p class="text-sm text-base-content/70">
+                                          Soll die aktuelle Verbindung wirklich zurückgesetzt werden?
+                                      </p>
+                                      <p class="text-xs text-base-content/40 mt-2 font-mono break-all">${connection.getUrl()}</p>
+                                      <div class="flex gap-2 justify-center mt-4">
+                                          <button class="btn btn-sm btn-outline" @click=${() => (this._confirmResetConnection = false)}>
+                                              Abbrechen
+                                          </button>
+                                          <button class="btn btn-sm btn-error" @click=${this._resetConnection}>
+                                              Verbindung zurücksetzen
+                                          </button>
+                                      </div>
+                                  </div>
+                              `
+                            : html`
+                                  <div class="px-6 pb-6 pt-4 text-center">
+                                      <span class="loading loading-ring loading-lg text-warning"></span>
+                                      <p class="text-sm text-base-content/60 mt-3">
+                                          Die Verbindung zum FlowCrafter-Server ist unterbrochen. Die Anwendung versucht automatisch, die
+                                          Verbindung wiederherzustellen.
+                                      </p>
+                                      <p class="text-xs text-base-content/40 mt-2 font-mono break-all">${connection.getUrl()}</p>
+                                      <div class="flex gap-2 justify-center mt-4">
+                                          <button
+                                              class="btn btn-sm btn-outline btn-warning"
+                                              ?disabled=${this._checkingConnection}
+                                              @click=${this._checkConnection}
+                                          >
+                                              ${this._checkingConnection
+                                                  ? html`<span class="loading loading-spinner loading-xs"></span> Prüfe…`
+                                                  : 'Jetzt prüfen'}
+                                          </button>
+                                          <button class="btn btn-sm btn-outline" @click=${() => (this._confirmResetConnection = true)}>
+                                              Verbindung ändern
+                                          </button>
+                                      </div>
+                                  </div>
+                              `}
                     </div>
                     <div class="modal-backdrop backdrop-blur-sm"></div>
                 </dialog>
