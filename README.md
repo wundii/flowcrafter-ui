@@ -2,6 +2,22 @@
 
 Web-Frontend für [FlowCrafter](https://github.com/wundii/flowcrafter) — visualisiert Flow-Instanzen, Messages, Exceptions und Queue-Status aus dem PHP-Backend in Echtzeit.
 
+<p align="center">
+  <picture>
+    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/screen_01.png" alt="wundii/flowcrafter" style="width: 100%; max-width: 600px; height: auto;">
+  </picture>
+</p>
+<p align="center">
+  <picture>
+    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/screen_02.png" alt="wundii/flowcrafter" style="width: 100%; max-width: 600px; height: auto;">
+  </picture>
+</p>
+<p align="center">
+  <picture>
+    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/screen_03.png" alt="wundii/flowcrafter" style="width: 100%; max-width: 600px; height: auto;">
+  </picture>
+</p>
+
 ## Stack
 
 - [Lit v3](https://lit.dev/) — Web Components
