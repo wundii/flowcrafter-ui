@@ -5,6 +5,22 @@ import { api } from '../services/api.js'
 const PAGE_SIZE = 20
 const LOAD_MORE_COOLDOWN = 500
 
+const STATUS_OPTIONS = [
+    { value: '', label: 'Alle' },
+    { value: 'FAILED', label: 'Failed' },
+    { value: 'WARNING', label: 'Warning' },
+    { value: 'OK', label: 'OK' },
+    { value: 'IN_PROGRESS', label: 'In Progress' },
+]
+
+const STATUS_COLORS = {
+    FAILED: 'badge-error',
+    WARNING: 'badge-warning',
+    OK: 'badge-success',
+    IN_PROGRESS: 'badge-info',
+    IN_PROGRESS_EXCEEDED: 'badge-warning',
+}
+
 function formatTzOffset(date) {
     const off = -date.getTimezoneOffset()
     const sign = off >= 0 ? '+' : '-'
@@ -32,6 +48,7 @@ export class FcExceptionList extends BaseElement {
         _items: { state: true },
         _loadingMore: { state: true },
         _offset: { state: true },
+        _statusFilter: { state: true },
         _total: { state: true },
         error: { state: true },
         expanded: { state: true },
@@ -42,6 +59,7 @@ export class FcExceptionList extends BaseElement {
         super()
         this._dateFrom = ''
         this._dateTo = ''
+        this._statusFilter = 'FAILED'
         this._hasMore = false
         this._items = []
         this._lastLoadMore = 0
@@ -121,7 +139,7 @@ export class FcExceptionList extends BaseElement {
         this._items = []
         this._offset = 0
         try {
-            const opts = { sort: 'desc', top: PAGE_SIZE, skip: 0 }
+            const opts = { sort: 'desc', top: PAGE_SIZE, skip: 0, status: this._statusFilter || undefined }
             this._buildDateOpts(opts)
             const res = await api.getExceptions(opts)
             this._items = res.items ?? []
@@ -141,7 +159,7 @@ export class FcExceptionList extends BaseElement {
         if (Date.now() - this._lastLoadMore < LOAD_MORE_COOLDOWN) return
         this._loadingMore = true
         try {
-            const opts = { sort: 'desc', top: PAGE_SIZE, skip: this._offset }
+            const opts = { sort: 'desc', top: PAGE_SIZE, skip: this._offset, status: this._statusFilter || undefined }
             this._buildDateOpts(opts)
             const res = await api.getExceptions(opts)
             const newItems = res.items ?? []
@@ -199,7 +217,7 @@ export class FcExceptionList extends BaseElement {
                 </div>
             `
 
-        if (this._items.length === 0 && !this._dateFrom && !this._dateTo)
+        if (this._items.length === 0 && !this._dateFrom && !this._dateTo && !this._statusFilter)
             return html` <div class="alert alert-success"><span>Keine Exceptions gefunden.</span></div> `
 
         const isEmpty = this._items.length === 0
@@ -207,8 +225,20 @@ export class FcExceptionList extends BaseElement {
         return html`
             <!-- Toolbar -->
             <div class="flex flex-col lg:flex-row lg:items-center gap-2 mb-4">
-                <!-- Links: Datumsfilter -->
-                <div class="flex items-center flex-nowrap">
+                <!-- Links: Status + Datumsfilter -->
+                <div class="flex items-center flex-nowrap gap-2">
+                    <select
+                        class="select select-sm select-bordered text-xs"
+                        .value=${this._statusFilter}
+                        @change=${e => {
+                            this._statusFilter = e.target.value
+                            this._load()
+                        }}
+                    >
+                        ${STATUS_OPTIONS.map(
+                            o => html`<option value=${o.value} ?selected=${this._statusFilter === o.value}>${o.label}</option>`
+                        )}
+                    </select>
                     <div class="join">
                         <input
                             type="date"
@@ -283,11 +313,18 @@ export class FcExceptionList extends BaseElement {
                               return html`
                                   <div class="rounded-box border border-error/25 bg-base-200 overflow-hidden">
                                       <div class="px-4 py-3 flex flex-col gap-1.5">
-                                          <!-- Row 1: Stub + Time -->
+                                          <!-- Row 1: Stub + Status + Time -->
                                           <div class="flex items-center justify-between gap-2">
-                                              <span class="font-semibold text-sm text-base-content truncate" title="${ex.stubSource}">
-                                                  ${shortClass(ex.stubSource)}
-                                              </span>
+                                              <div class="flex items-center gap-2 min-w-0">
+                                                  <span class="font-semibold text-sm text-base-content truncate" title="${ex.stubSource}">
+                                                      ${shortClass(ex.stubSource)}
+                                                  </span>
+                                                  ${ex.flowStatus
+                                                      ? html`<span class="badge badge-xs ${STATUS_COLORS[ex.flowStatus] ?? 'badge-ghost'}"
+                                                            >${ex.flowStatus}</span
+                                                        >`
+                                                      : ''}
+                                              </div>
                                               <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>
                                           </div>
                                           <!-- Row 2: Error message -->
