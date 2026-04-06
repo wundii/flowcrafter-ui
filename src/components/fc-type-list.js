@@ -2,10 +2,6 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 
-function flowTypePrefix(flowType) {
-    return (flowType ?? '').replace(/\.v\d+$/, '').toLowerCase()
-}
-
 function formatDate(iso) {
     if (!iso) return '–'
     const d = new Date(iso)
@@ -40,45 +36,7 @@ export class FcTypeList extends BaseElement {
             const from = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
             const to = new Date().toISOString()
 
-            const [schemasRes, flowsRes] = await Promise.all([api.getSchemas(), api.getFlows({ sort: 'desc', top: 1000, from, to })])
-            const flows = flowsRes.items ?? []
-
-            // Build map from schemas, then enrich with flow data
-            const map = new Map()
-            for (const schema of schemasRes) {
-                const prefix = flowTypePrefix(schema.type)
-                if (!map.has(prefix)) {
-                    map.set(prefix, {
-                        prefix,
-                        flowType: schema.type,
-                        sources: new Set(),
-                        total: 0,
-                        failed: 0,
-                        lastTime: null,
-                        lastCreated: null,
-                    })
-                }
-            }
-
-            // Enrich with flow statistics
-            for (const flow of flows) {
-                const prefix = flowTypePrefix(flow.flowType)
-                if (!map.has(prefix)) continue
-                const s = map.get(prefix)
-                s.sources.add(flow.flowSource)
-                s.total++
-                if (flow.status === 'FAILED' || flow.status === 'WARNING' || flow.status === 'IN_PROGRESS_EXCEEDED') s.failed++
-                const runTime = flow.lastTerm || flow.flowTime
-                if (!s.lastTime || runTime > s.lastTime) s.lastTime = runTime
-                if (!s.lastCreated || flow.flowTime > s.lastCreated) s.lastCreated = flow.flowTime
-            }
-
-            // Compute successRate
-            for (const s of map.values()) {
-                s.successRate = s.total > 0 ? Math.round(((s.total - s.failed) / s.total) * 100) : null
-            }
-
-            this.schemas = [...map.values()]
+            this.schemas = await api.getFlowTypes({ from, to })
         } catch (err) {
             this.error = err.message
         } finally {

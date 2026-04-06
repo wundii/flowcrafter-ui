@@ -122,6 +122,14 @@ export const api = {
         return fetchJson(`/api/flows/stats?${p}`)
     },
 
+    /** @param {{ from?: string, to?: string }} [opts] */
+    getFlowTypes({ from, to } = {}) {
+        const p = new URLSearchParams()
+        if (from) p.set('from', from)
+        if (to) p.set('to', to)
+        return fetchJson(`/api/flows/types?${p}`)
+    },
+
     /** @returns {Promise<Array>} mock schema data */
     getSchemas() {
         return fetchJson('/api/schemas')
