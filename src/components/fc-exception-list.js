@@ -6,11 +6,8 @@ const PAGE_SIZE = 20
 const LOAD_MORE_COOLDOWN = 500
 
 const STATUS_OPTIONS = [
-    { value: '', label: 'Alle' },
     { value: 'FAILED', label: 'Failed' },
-    { value: 'WARNING', label: 'Warning' },
-    { value: 'OK', label: 'OK' },
-    { value: 'IN_PROGRESS', label: 'In Progress' },
+    { value: 'NOT_FAILED', label: 'Verarbeitet' },
 ]
 
 const STATUS_COLORS = {
@@ -139,13 +136,16 @@ export class FcExceptionList extends BaseElement {
         this._items = []
         this._offset = 0
         try {
-            const opts = { sort: 'desc', top: PAGE_SIZE, skip: 0, status: this._statusFilter || undefined }
+            const isNotFailed = this._statusFilter === 'NOT_FAILED'
+            const opts = { sort: 'desc', top: PAGE_SIZE, skip: 0, status: isNotFailed ? undefined : this._statusFilter || undefined }
             this._buildDateOpts(opts)
             const res = await api.getExceptions(opts)
-            this._items = res.items ?? []
-            this._offset = this._items.length
+            let items = res.items ?? []
+            if (isNotFailed) items = items.filter(i => i.flowStatus !== 'FAILED')
+            this._items = items
+            this._offset = (res.items ?? []).length
             this._hasMore = res.hasMore ?? false
-            this._total = res.total ?? null
+            this._total = isNotFailed ? items.length : (res.total ?? null)
         } catch (err) {
             this.error = err.message
         } finally {
@@ -159,14 +159,21 @@ export class FcExceptionList extends BaseElement {
         if (Date.now() - this._lastLoadMore < LOAD_MORE_COOLDOWN) return
         this._loadingMore = true
         try {
-            const opts = { sort: 'desc', top: PAGE_SIZE, skip: this._offset, status: this._statusFilter || undefined }
+            const isNotFailed = this._statusFilter === 'NOT_FAILED'
+            const opts = {
+                sort: 'desc',
+                top: PAGE_SIZE,
+                skip: this._offset,
+                status: isNotFailed ? undefined : this._statusFilter || undefined,
+            }
             this._buildDateOpts(opts)
             const res = await api.getExceptions(opts)
-            const newItems = res.items ?? []
+            let newItems = res.items ?? []
+            if (isNotFailed) newItems = newItems.filter(i => i.flowStatus !== 'FAILED')
             this._items = [...this._items, ...newItems]
-            this._offset += newItems.length
+            this._offset += (res.items ?? []).length
             this._hasMore = res.hasMore ?? false
-            this._total = res.total ?? null
+            this._total = isNotFailed ? this._items.length : (res.total ?? null)
         } catch (err) {
             this.error = err.message
         } finally {
@@ -217,7 +224,7 @@ export class FcExceptionList extends BaseElement {
                 </div>
             `
 
-        if (this._items.length === 0 && !this._dateFrom && !this._dateTo && !this._statusFilter)
+        if (this._items.length === 0 && !this._dateFrom && !this._dateTo && this._statusFilter === 'FAILED')
             return html` <div class="alert alert-success"><span>Keine Exceptions gefunden.</span></div> `
 
         const isEmpty = this._items.length === 0

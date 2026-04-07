@@ -57,10 +57,9 @@ export const api = {
         return fetchJson(`/api/flows/search?${p}`)
     },
 
-    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, flowHash?: string, from?: string, to?: string, status?: string }} [opts] */
-    getExceptions({ sort = 'desc', top = 1000, skip = 0, flowHash, from, to, status } = {}) {
+    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, from?: string, to?: string, status?: string }} [opts] */
+    getExceptions({ sort = 'desc', top = 1000, skip = 0, from, to, status } = {}) {
         const p = new URLSearchParams({ sort, top, skip })
-        if (flowHash) p.set('flowHash', flowHash)
         if (from) p.set('from', from)
         if (to) p.set('to', to)
         if (status) p.set('status', status)
