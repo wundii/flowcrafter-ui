@@ -14,10 +14,11 @@ import './fc-login.js'
 import './fc-overview.js'
 import './fc-queue-chart.js'
 import './fc-queue-list.js'
+import './fc-schedule-list.js'
 import './fc-service-setup.js'
 import './fc-type-list.js'
 
-const TABS = ['overview', 'flows', 'exceptions', 'queues']
+const TABS = ['overview', 'flows', 'exceptions', 'schedules', 'queues']
 const SEARCH_LIMIT = 5
 
 function workerAgeSecs(heartbeatIso) {
@@ -479,6 +480,7 @@ export class FcApp extends BaseElement {
             }
             return html` <fc-type-list @schema-selected=${this._onSchemaSelected}></fc-type-list> `
         }
+        if (this.activeTab === 'schedules') return html`<fc-schedule-list></fc-schedule-list>`
         if (this.activeTab === 'queues') return html`<fc-queue-list></fc-queue-list>`
         return html`
             <div class="flex flex-col md:flex-row gap-4">
@@ -617,6 +619,30 @@ export class FcApp extends BaseElement {
                                                                         class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
                                                                     ></span>
                                                                     ${w.hostname}:${w.pid}
+                                                                    <span class="text-base-content/40">(${workerAgeLabel(secs)})</span>
+                                                                </span>`
+                                                            })}
+                                                        </div>`
+                                                      : html`<span class="flex items-center gap-1.5 text-xs text-error"
+                                                            ><span class="inline-block w-1.5 h-1.5 rounded-full bg-error"></span
+                                                            >stopped</span
+                                                        >`}
+                                              </div>
+                                              <div class="flex items-start justify-between gap-3">
+                                                  <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Scheduler</span>
+                                                  ${this._serverInfo?.scheduler?.length > 0
+                                                      ? html`<div class="flex flex-col items-end gap-1">
+                                                            ${this._serverInfo.scheduler.map(s => {
+                                                                const secs = workerAgeSecs(s.lastHeartbeat)
+                                                                const color = workerAgeColor(secs)
+                                                                return html`<span
+                                                                    class="flex items-center gap-1.5 font-mono text-[10px] text-${color}"
+                                                                    title="Letzter Heartbeat: ${s.lastHeartbeat}"
+                                                                >
+                                                                    <span
+                                                                        class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
+                                                                    ></span>
+                                                                    ${s.hostname}:${s.pid}
                                                                     <span class="text-base-content/40">(${workerAgeLabel(secs)})</span>
                                                                 </span>`
                                                             })}
@@ -862,6 +888,19 @@ export class FcApp extends BaseElement {
                                                 d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
                                             />
                                         </svg>`,
+                                        schedules: html`<svg
+                                            class="w-3.5 h-3.5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                                            />
+                                        </svg>`,
                                         queues: html`<svg
                                             class="w-3.5 h-3.5"
                                             fill="none"
@@ -876,7 +915,13 @@ export class FcApp extends BaseElement {
                                             />
                                         </svg>`,
                                     }[tab]}
-                                    ${{ overview: 'Overview', flows: 'Flows', exceptions: 'Exceptions', queues: 'Queues' }[tab]}
+                                    ${{
+                                        overview: 'Overview',
+                                        flows: 'Flows',
+                                        exceptions: 'Exceptions',
+                                        schedules: 'Schedules',
+                                        queues: 'Queues',
+                                    }[tab]}
                                 </a>
                             `
                         )}

@@ -130,6 +130,16 @@ export const api = {
         return fetchJson(`/api/flows/types?${p}`)
     },
 
+    getSchedules() {
+        return fetchJson('/api/schedules')
+    },
+
+    /** @param {string} className */
+    getScheduleSource(className) {
+        const p = new URLSearchParams({ className })
+        return fetchJson(`/api/schedule/source?${p}`)
+    },
+
     /** @returns {Promise<Array>} mock schema data */
     getSchemas() {
         return fetchJson('/api/schemas')
