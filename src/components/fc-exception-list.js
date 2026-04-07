@@ -231,11 +231,11 @@ export class FcExceptionList extends BaseElement {
 
         return html`
             <!-- Toolbar -->
-            <div class="flex flex-col lg:flex-row lg:items-center gap-2 mb-4">
+            <div class="flex flex-wrap items-center gap-2 mb-4">
                 <!-- Links: Status + Datumsfilter -->
-                <div class="flex items-center flex-nowrap gap-2">
+                <div class="flex items-center flex-wrap gap-2">
                     <select
-                        class="select select-sm select-bordered text-xs"
+                        class="select select-sm select-bordered text-xs w-auto"
                         .value=${this._statusFilter}
                         @change=${e => {
                             this._statusFilter = e.target.value

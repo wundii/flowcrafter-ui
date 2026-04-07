@@ -396,34 +396,6 @@ export class FcApp extends BaseElement {
         input.addEventListener('animationend', () => input.classList.remove('fc-shake'), { once: true })
     }
 
-    _breadcrumb() {
-        if (this.activeTab !== 'flows') return ''
-
-        const crumbs = [{ label: 'Types', action: this._onBackToSchema }]
-        if (this.selectedPrefix) {
-            crumbs.push({
-                label: this.selectedPrefix,
-                action: this._onBackToList,
-            })
-        }
-        if (this.selectedFlowHash) {
-            crumbs.push({ label: this.selectedFlowHash.slice(0, 10) + '…', action: null })
-        }
-
-        return html`
-            <div class="px-4 pt-2 pb-0 flex items-center gap-1 text-xs text-base-content/40">
-                ${crumbs.map(
-                    (c, i) => html`
-                        ${i > 0 ? html`<span>/</span>` : ''}
-                        ${c.action
-                            ? html`<button class="hover:text-base-content/70 transition-colors" @click=${c.action}>${c.label}</button>`
-                            : html`<span class="text-base-content/70">${c.label}</span>`}
-                    `
-                )}
-            </div>
-        `
-    }
-
     _onRefreshFlowChart() {
         this.querySelector('fc-flow-chart')?._load()
     }
@@ -870,8 +842,6 @@ export class FcApp extends BaseElement {
                         )}
                     </div>
                 </div>
-
-                ${this._breadcrumb()}
 
                 <!-- Change password modal -->
                 <dialog id="pw-change-modal" class="modal">

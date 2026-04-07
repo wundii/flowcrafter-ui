@@ -71,13 +71,13 @@ export class FcQueueList extends BaseElement {
                 </div>
             `
 
-        if (this._queues.length === 0) return html`<div class="alert alert-success"><span>Queue ist leer.</span></div>`
+        const isEmpty = this._queues.length === 0
 
         return html`
             <!-- Toolbar -->
             <div class="flex items-center justify-between mb-4">
                 <span class="text-sm text-base-content/60">
-                    <span class="font-semibold">${this._queues.length}</span> Einträge in der Queue
+                    ${isEmpty ? '' : html`<span class="font-semibold">${this._queues.length}</span> Einträge in der Queue`}
                 </span>
                 <button
                     class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
@@ -94,66 +94,78 @@ export class FcQueueList extends BaseElement {
                 </button>
             </div>
 
-            <!-- Queue cards -->
-            <div class="flex flex-col gap-2">
-                ${this._queues.map((item, idx) => {
-                    const id = item.queueId || idx
-                    const open = this._expanded.has(id)
-                    const hasMessage = item.message && Object.keys(item.message).length > 0
+            ${isEmpty
+                ? html`<div class="alert alert-success"><span>Queue ist leer.</span></div>`
+                : html`
+                      <!-- Queue cards -->
+                      <div class="flex flex-col gap-2">
+                          ${this._queues.map((item, idx) => {
+                              const id = item.queueId || idx
+                              const open = this._expanded.has(id)
+                              const hasMessage = item.message && Object.keys(item.message).length > 0
 
-                    return html`
-                        <div class="rounded-box border border-warning/25 bg-base-200 overflow-hidden">
-                            <div class="grid grid-cols-[1fr_auto] gap-2 px-4 py-3">
-                                <!-- Left -->
-                                <div class="min-w-0">
-                                    <div class="font-semibold text-sm text-base-content leading-tight mb-0.5" title="${item.flowSource}">
-                                        ${shortClass(item.flowSource)}
-                                    </div>
-                                    <div class="text-xs text-base-content/50 mb-1" title="${item.messageSource}">
-                                        ${shortClass(item.messageSource)}
-                                    </div>
-                                    ${item.queueId ? html`<div class="font-mono text-xs text-base-content/30">#${item.queueId}</div>` : ''}
-                                </div>
-
-                                <!-- Right -->
-                                <div class="flex flex-col items-end justify-between gap-2 flex-shrink-0">
-                                    ${item.flowHash
-                                        ? html`
-                                              <button
-                                                  class="btn btn-xs btn-ghost font-mono text-primary/70 hover:text-primary"
-                                                  title="Flow ${item.flowHash} öffnen"
-                                                  @click=${() => this._navigateToFlow(item.flowHash)}
+                              return html`
+                                  <div class="rounded-box border border-warning/25 bg-base-200 overflow-hidden">
+                                      <div class="grid grid-cols-[1fr_auto] gap-2 px-4 py-3">
+                                          <!-- Left -->
+                                          <div class="min-w-0">
+                                              <div
+                                                  class="font-semibold text-sm text-base-content leading-tight mb-0.5"
+                                                  title="${item.flowSource}"
                                               >
-                                                  ⤢ ${item.flowHash.slice(0, 10)}…
-                                              </button>
-                                          `
-                                        : ''}
-                                    ${hasMessage
-                                        ? html`
-                                              <button class="btn btn-xs btn-ghost text-base-content/40" @click=${() => this._toggleRow(id)}>
-                                                  ${open ? '▲ Message' : '▼ Message'}
-                                              </button>
-                                          `
-                                        : ''}
-                                </div>
-                            </div>
+                                                  ${shortClass(item.flowSource)}
+                                              </div>
+                                              <div class="text-xs text-base-content/50 mb-1" title="${item.messageSource}">
+                                                  ${shortClass(item.messageSource)}
+                                              </div>
+                                              ${item.queueId
+                                                  ? html`<div class="font-mono text-xs text-base-content/30">#${item.queueId}</div>`
+                                                  : ''}
+                                          </div>
 
-                            <!-- Message payload (collapsible) -->
-                            ${open && hasMessage
-                                ? html`
-                                      <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
-                                          <pre
-                                              class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
-                                          >
-${JSON.stringify(item.message, null, 2)}</pre
-                                          >
+                                          <!-- Right -->
+                                          <div class="flex flex-col items-end justify-between gap-2 flex-shrink-0">
+                                              ${item.flowHash
+                                                  ? html`
+                                                        <button
+                                                            class="btn btn-xs btn-ghost font-mono text-primary/70 hover:text-primary"
+                                                            title="Flow ${item.flowHash} öffnen"
+                                                            @click=${() => this._navigateToFlow(item.flowHash)}
+                                                        >
+                                                            ⤢ ${item.flowHash.slice(0, 10)}…
+                                                        </button>
+                                                    `
+                                                  : ''}
+                                              ${hasMessage
+                                                  ? html`
+                                                        <button
+                                                            class="btn btn-xs btn-ghost text-base-content/40"
+                                                            @click=${() => this._toggleRow(id)}
+                                                        >
+                                                            ${open ? '▲ Message' : '▼ Message'}
+                                                        </button>
+                                                    `
+                                                  : ''}
+                                          </div>
                                       </div>
-                                  `
-                                : ''}
-                        </div>
-                    `
-                })}
-            </div>
+
+                                      <!-- Message payload (collapsible) -->
+                                      ${open && hasMessage
+                                          ? html`
+                                                <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
+                                                    <pre
+                                                        class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
+                                                    >
+${JSON.stringify(item.message, null, 2)}</pre
+                                                    >
+                                                </div>
+                                            `
+                                          : ''}
+                                  </div>
+                              `
+                          })}
+                      </div>
+                  `}
         `
     }
 }
