@@ -819,6 +819,8 @@ export class FcApp extends BaseElement {
                                         this.activeTab = tab
                                         this.selectedPrefix = null
                                         this.selectedFlowHash = null
+                                        this._flowChartDate = null
+                                        this._excChartDate = null
                                     }}
                                 >
                                     ${{
