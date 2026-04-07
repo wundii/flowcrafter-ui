@@ -20,6 +20,22 @@ import './fc-type-list.js'
 const TABS = ['overview', 'flows', 'exceptions', 'queues']
 const SEARCH_LIMIT = 5
 
+function workerAgeSecs(heartbeatIso) {
+    return Math.floor((Date.now() - new Date(heartbeatIso).getTime()) / 1000)
+}
+
+function workerAgeLabel(secs) {
+    if (secs < 60) return `vor ${secs}s`
+    if (secs < 3600) return `vor ${Math.floor(secs / 60)}min`
+    return `vor ${Math.floor(secs / 3600)}h`
+}
+
+function workerAgeColor(secs) {
+    if (secs < 30) return 'success'
+    if (secs < 300) return 'warning'
+    return 'error'
+}
+
 export class FcApp extends BaseElement {
     static properties = {
         _aiConfigured: { state: true },
@@ -39,6 +55,8 @@ export class FcApp extends BaseElement {
         _confirmResetConnection: { state: true },
         _serverOffline: { state: true },
         _serviceReady: { state: true },
+        _excChartDate: { state: true },
+        _flowChartDate: { state: true },
         _toolboxOpen: { state: true },
         activeTab: { state: true },
         selectedFlowHash: { state: true },
@@ -64,6 +82,8 @@ export class FcApp extends BaseElement {
         this._serverInfo = null
         this._serverOffline = false
         this._serviceReady = false
+        this._excChartDate = null
+        this._flowChartDate = null
         this._toolboxOpen = false
         this.activeTab = 'overview'
         this.selectedFlowHash = null
@@ -433,12 +453,19 @@ export class FcApp extends BaseElement {
                 return html`
                     <div class="flex flex-col md:flex-row gap-4">
                         <div class="w-full md:w-1/3 md:sticky md:top-20 md:self-start">
-                            <fc-flow-chart .type=${this.selectedPrefix}></fc-flow-chart>
+                            <fc-flow-chart
+                                .type=${this.selectedPrefix}
+                                @chart-date-click=${e => {
+                                    this._flowChartDate = e.detail.date
+                                }}
+                            ></fc-flow-chart>
                         </div>
                         <div class="w-full md:w-2/3">
                             <fc-flow-list
                                 .type=${this.selectedPrefix}
                                 .cachedState=${this._flowListCache}
+                                .dateFrom=${this._flowChartDate}
+                                .dateTo=${this._flowChartDate}
                                 @flow-selected=${this._onFlowSelected}
                                 @back=${this._onBackToSchema}
                                 @list-refreshed=${this._onRefreshFlowChart}
@@ -456,10 +483,18 @@ export class FcApp extends BaseElement {
         return html`
             <div class="flex flex-col md:flex-row gap-4">
                 <div class="w-full md:w-1/3 md:sticky md:top-20 md:self-start">
-                    <fc-exception-chart></fc-exception-chart>
+                    <fc-exception-chart
+                        @chart-date-click=${e => {
+                            this._excChartDate = e.detail.date
+                        }}
+                    ></fc-exception-chart>
                 </div>
                 <div class="w-full md:w-2/3">
-                    <fc-exception-list @list-refreshed=${this._onRefreshExceptionChart}></fc-exception-list>
+                    <fc-exception-list
+                        .dateFrom=${this._excChartDate}
+                        .dateTo=${this._excChartDate}
+                        @list-refreshed=${this._onRefreshExceptionChart}
+                    ></fc-exception-list>
                 </div>
             </div>
         `
@@ -571,17 +606,20 @@ export class FcApp extends BaseElement {
                                                   <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Observer</span>
                                                   ${this._serverInfo?.workers?.length > 0
                                                       ? html`<div class="flex flex-col items-end gap-1">
-                                                            <span class="flex items-center gap-1.5 text-xs text-success"
-                                                                ><span class="inline-block w-1.5 h-1.5 rounded-full bg-success"></span
-                                                                >${this._serverInfo.workers.length}
-                                                                worker${this._serverInfo.workers.length === 1 ? '' : 's'} running</span
-                                                            >
-                                                            ${this._serverInfo.workers.map(
-                                                                w =>
-                                                                    html`<span class="font-mono text-[10px] text-base-content/40"
-                                                                        >${w.hostname}:${w.pid}</span
-                                                                    >`
-                                                            )}
+                                                            ${this._serverInfo.workers.map(w => {
+                                                                const secs = workerAgeSecs(w.lastHeartbeat)
+                                                                const color = workerAgeColor(secs)
+                                                                return html`<span
+                                                                    class="flex items-center gap-1.5 font-mono text-[10px] text-${color}"
+                                                                    title="Letzter Heartbeat: ${w.lastHeartbeat}"
+                                                                >
+                                                                    <span
+                                                                        class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
+                                                                    ></span>
+                                                                    ${w.hostname}:${w.pid}
+                                                                    <span class="text-base-content/40">(${workerAgeLabel(secs)})</span>
+                                                                </span>`
+                                                            })}
                                                         </div>`
                                                       : html`<span class="flex items-center gap-1.5 text-xs text-error"
                                                             ><span class="inline-block w-1.5 h-1.5 rounded-full bg-error"></span

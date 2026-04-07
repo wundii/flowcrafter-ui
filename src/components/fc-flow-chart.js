@@ -107,6 +107,10 @@ export class FcFlowChart extends BaseElement {
         this._tooltip = null
     }
 
+    _onPointClick(date) {
+        this.dispatchEvent(new CustomEvent('chart-date-click', { detail: { date }, bubbles: true, composed: true }))
+    }
+
     render() {
         if (this._loading) {
             return html`
@@ -215,7 +219,7 @@ export class FcFlowChart extends BaseElement {
                     <!-- Flow data points -->
                     ${flowCoords.map(
                         c => svg`
-                        <g @mouseenter=${e => this._onPointEnter(e, c)} @mouseleave=${() => this._onPointLeave()} style="cursor:default">
+                        <g @mouseenter=${e => this._onPointEnter(e, c)} @mouseleave=${() => this._onPointLeave()} @click=${() => this._onPointClick(c.date)} style="cursor:pointer">
                             <circle cx="${c.x}" cy="${c.y}" r="8" fill="transparent" stroke="none" />
                             <circle cx="${c.x}" cy="${c.y}" r="3"
                                     class="fill-primary stroke-base-200" stroke-width="1.5" style="pointer-events:none" />
@@ -226,7 +230,7 @@ export class FcFlowChart extends BaseElement {
                     <!-- Run data points -->
                     ${runCoords.map(
                         c => svg`
-                        <g @mouseenter=${e => this._onPointEnter(e, c)} @mouseleave=${() => this._onPointLeave()} style="cursor:default">
+                        <g @mouseenter=${e => this._onPointEnter(e, c)} @mouseleave=${() => this._onPointLeave()} @click=${() => this._onPointClick(c.date)} style="cursor:pointer">
                             <circle cx="${c.x}" cy="${c.y}" r="8" fill="transparent" stroke="none" />
                             <circle cx="${c.x}" cy="${c.y}" r="2.5"
                                     class="fill-secondary stroke-base-200" stroke-width="1" style="pointer-events:none" />

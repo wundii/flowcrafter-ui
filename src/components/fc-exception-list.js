@@ -47,6 +47,8 @@ export class FcExceptionList extends BaseElement {
         _offset: { state: true },
         _statusFilter: { state: true },
         _total: { state: true },
+        dateFrom: { type: String },
+        dateTo: { type: String },
         error: { state: true },
         expanded: { state: true },
         loading: { state: true },
@@ -57,6 +59,8 @@ export class FcExceptionList extends BaseElement {
         this._dateFrom = ''
         this._dateTo = ''
         this._statusFilter = 'FAILED'
+        this.dateFrom = null
+        this.dateTo = null
         this._hasMore = false
         this._items = []
         this._lastLoadMore = 0
@@ -80,7 +84,12 @@ export class FcExceptionList extends BaseElement {
         this._observer = null
     }
 
-    updated() {
+    updated(changed) {
+        if (changed.has('dateFrom') || changed.has('dateTo')) {
+            this._dateFrom = this.dateFrom ?? ''
+            this._dateTo = this.dateTo ?? ''
+            this._load()
+        }
         this._setupObserver()
     }
 

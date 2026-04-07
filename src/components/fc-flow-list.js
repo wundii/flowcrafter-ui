@@ -35,6 +35,8 @@ export class FcFlowList extends BaseElement {
         _statusFilter: { state: true },
         _total: { state: true },
         cachedState: { type: Object },
+        dateFrom: { type: String },
+        dateTo: { type: String },
         error: { state: true },
         loading: { state: true },
         type: { type: String },
@@ -55,6 +57,8 @@ export class FcFlowList extends BaseElement {
         this._statusFilter = 'all'
         this._total = null
         this.cachedState = null
+        this.dateFrom = null
+        this.dateTo = null
         this.error = null
         this.loading = true
         this.type = null
@@ -98,6 +102,11 @@ export class FcFlowList extends BaseElement {
     }
 
     updated(changed) {
+        if (changed.has('dateFrom') || changed.has('dateTo')) {
+            this._dateFrom = this.dateFrom ?? ''
+            this._dateTo = this.dateTo ?? ''
+            this._load()
+        }
         if (changed.has('type')) {
             if (changed.get('type') !== undefined) {
                 this._items = []
