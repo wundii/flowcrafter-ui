@@ -18,6 +18,14 @@ function shortClass(fqn) {
 }
 
 function formatDate(iso) {
+    if (!iso) return ''
+    const diffMs = Date.now() - new Date(iso).getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    if (diffMs < 86400000) {
+        if (diffMins < 1) return 'gerade eben'
+        if (diffMins < 60) return `vor ${diffMins} Min.`
+        return `vor ${Math.floor(diffMins / 60)} Std.`
+    }
     return new Date(iso).toLocaleString('de-DE', {
         dateStyle: 'short',
         timeStyle: 'medium',
@@ -326,7 +334,7 @@ export class FcFlowList extends BaseElement {
                                   ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                               </span>`}
                         <button
-                            class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                            class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
                             title="Neu laden"
                             @click=${this._load}
                         >
@@ -423,7 +431,7 @@ export class FcFlowList extends BaseElement {
                               ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                           </span>`}
                     <button
-                        class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                        class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
                         title="Neu laden"
                         @click=${this._load}
                     >

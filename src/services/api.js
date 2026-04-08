@@ -66,6 +66,14 @@ export const api = {
         return fetchJson(`/api/exceptions?${p}`)
     },
 
+    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, from?: string, to?: string }} [opts] */
+    getScheduleExceptions({ sort = 'desc', top = 10000, skip = 0, from, to } = {}) {
+        const p = new URLSearchParams({ sort, top, skip })
+        if (from) p.set('from', from)
+        if (to) p.set('to', to)
+        return fetchJson(`/api/schedule-exceptions?${p}`)
+    },
+
     /**
      * @param {string} flowHash
      * @param {string} messageSource  fully-qualified class name

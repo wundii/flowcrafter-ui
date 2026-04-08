@@ -308,7 +308,7 @@ export class FcScheduleList extends BaseElement {
                         ${isEmpty ? '' : html`<span class="font-semibold">${this._schedules.length}</span> Schedule(s)`}
                     </span>
                     <button
-                        class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                        class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
                         title="Neu laden"
                         @click=${this._load}
                     >

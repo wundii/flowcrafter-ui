@@ -285,7 +285,7 @@ export class FcFlowDetail extends BaseElement {
                         ${this.flow
                             ? html`
                                   <button
-                                      class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                                      class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
                                       title="${this.aiConfigured ? 'AI-Analyse starten' : 'AI nicht konfiguriert'}"
                                       ?disabled=${!this.aiConfigured || this._analysisLoading}
                                       @click=${this._onAnalyze}
@@ -307,7 +307,7 @@ export class FcFlowDetail extends BaseElement {
                                             </svg>`}
                                   </button>
                                   <button
-                                      class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                                      class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
                                       title="Raw JSON anzeigen"
                                       @click=${() => {
                                           this._rawModal = true
@@ -321,7 +321,7 @@ export class FcFlowDetail extends BaseElement {
                               `
                             : ''}
                         <button
-                            class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                            class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
                             title="Neu laden"
                             @click=${async () => {
                                 await this._load(true)

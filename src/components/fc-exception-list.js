@@ -31,6 +31,14 @@ function shortClass(fqn) {
 }
 
 function formatDate(iso) {
+    if (!iso) return ''
+    const diffMs = Date.now() - new Date(iso).getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    if (diffMs < 86400000) {
+        if (diffMins < 1) return 'gerade eben'
+        if (diffMins < 60) return `vor ${diffMins} Min.`
+        return `vor ${Math.floor(diffMins / 60)} Std.`
+    }
     return new Date(iso).toLocaleString('de-DE', {
         dateStyle: 'short',
         timeStyle: 'medium',
@@ -41,10 +49,12 @@ export class FcExceptionList extends BaseElement {
     static properties = {
         _dateFrom: { state: true },
         _dateTo: { state: true },
+        _flowItems: { state: true },
         _hasMore: { state: true },
         _items: { state: true },
         _loadingMore: { state: true },
         _offset: { state: true },
+        _scheduleItems: { state: true },
         _statusFilter: { state: true },
         _total: { state: true },
         dateFrom: { type: String },
@@ -61,12 +71,14 @@ export class FcExceptionList extends BaseElement {
         this._statusFilter = 'FAILED'
         this.dateFrom = null
         this.dateTo = null
+        this._flowItems = []
         this._hasMore = false
         this._items = []
         this._lastLoadMore = 0
         this._loadingMore = false
         this._observer = null
         this._offset = 0
+        this._scheduleItems = []
         this._total = null
         this.error = null
         this.expanded = new Set()
@@ -139,22 +151,42 @@ export class FcExceptionList extends BaseElement {
         }
     }
 
+    _mergeItems(flowItems, scheduleItems, showSchedule) {
+        const all = showSchedule ? [...flowItems, ...scheduleItems] : [...flowItems]
+        return all.sort((a, b) => new Date(b.time) - new Date(a.time))
+    }
+
     async _load() {
         this.loading = true
         this.error = null
+        this._flowItems = []
+        this._scheduleItems = []
         this._items = []
         this._offset = 0
         try {
             const isNotFailed = this._statusFilter === 'NOT_FAILED'
-            const opts = { sort: 'desc', top: PAGE_SIZE, skip: 0, status: isNotFailed ? undefined : this._statusFilter || undefined }
-            this._buildDateOpts(opts)
-            const res = await api.getExceptions(opts)
-            let items = res.items ?? []
-            if (isNotFailed) items = items.filter(i => i.flowStatus !== 'FAILED')
-            this._items = items
-            this._offset = (res.items ?? []).length
-            this._hasMore = res.hasMore ?? false
-            this._total = isNotFailed ? items.length : (res.total ?? null)
+            const dateOpts = {}
+            this._buildDateOpts(dateOpts)
+            const [flowRes, scheduleRes] = await Promise.all([
+                api.getExceptions({
+                    sort: 'desc',
+                    top: PAGE_SIZE,
+                    skip: 0,
+                    status: isNotFailed ? undefined : this._statusFilter || undefined,
+                    ...dateOpts,
+                }),
+                api.getScheduleExceptions({ sort: 'desc', top: 10000, ...dateOpts }),
+            ])
+            let flowItems = (flowRes.items ?? []).map(i => ({ ...i, _type: 'flow' }))
+            if (isNotFailed) flowItems = flowItems.filter(i => i.flowStatus !== 'FAILED')
+            const scheduleItems = (scheduleRes.items ?? []).map(i => ({ ...i, _type: 'schedule' }))
+            this._flowItems = flowItems
+            this._scheduleItems = scheduleItems
+            this._offset = (flowRes.items ?? []).length
+            this._hasMore = flowRes.hasMore ?? false
+            const flowTotal = flowRes.total ?? null
+            this._total = isNotFailed ? flowItems.length : flowTotal !== null ? flowTotal + scheduleItems.length : null
+            this._items = this._mergeItems(flowItems, scheduleItems, !isNotFailed)
         } catch (err) {
             this.error = err.message
         } finally {
@@ -169,20 +201,24 @@ export class FcExceptionList extends BaseElement {
         this._loadingMore = true
         try {
             const isNotFailed = this._statusFilter === 'NOT_FAILED'
-            const opts = {
+            const dateOpts = {}
+            this._buildDateOpts(dateOpts)
+            const res = await api.getExceptions({
                 sort: 'desc',
                 top: PAGE_SIZE,
                 skip: this._offset,
                 status: isNotFailed ? undefined : this._statusFilter || undefined,
-            }
-            this._buildDateOpts(opts)
-            const res = await api.getExceptions(opts)
-            let newItems = res.items ?? []
+                ...dateOpts,
+            })
+            let newItems = (res.items ?? []).map(i => ({ ...i, _type: 'flow' }))
             if (isNotFailed) newItems = newItems.filter(i => i.flowStatus !== 'FAILED')
-            this._items = [...this._items, ...newItems]
+            const flowItems = [...this._flowItems, ...newItems]
+            this._flowItems = flowItems
             this._offset += (res.items ?? []).length
             this._hasMore = res.hasMore ?? false
-            this._total = isNotFailed ? this._items.length : (res.total ?? null)
+            const flowTotal = res.total ?? null
+            this._total = isNotFailed ? flowItems.length : flowTotal !== null ? flowTotal + this._scheduleItems.length : null
+            this._items = this._mergeItems(flowItems, this._scheduleItems, !isNotFailed)
         } catch (err) {
             this.error = err.message
         } finally {
@@ -215,6 +251,136 @@ export class FcExceptionList extends BaseElement {
         this._dateFrom = ''
         this._dateTo = ''
         this._load()
+    }
+
+    _renderFlowItem(ex, idx) {
+        const id = ex.hash ?? idx
+        const open = this.expanded.has(id)
+        const hasTrace = !!ex.traceString
+        return html`
+            <div class="rounded-box border border-error/25 bg-base-200 overflow-hidden">
+                <div class="px-4 py-3 flex flex-col gap-1.5">
+                    <!-- Row 1: Stub + Status + Time -->
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="font-semibold text-sm text-base-content truncate" title="${ex.stubSource}">
+                                ${shortClass(ex.stubSource)}
+                            </span>
+                            ${ex.flowStatus
+                                ? html`<span class="badge badge-xs ${STATUS_COLORS[ex.flowStatus] ?? 'badge-ghost'}"
+                                      >${ex.flowStatus}</span
+                                  >`
+                                : ''}
+                        </div>
+                        <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>
+                    </div>
+                    <!-- Row 2: Error message -->
+                    <div class="text-sm text-error leading-snug break-words">${ex.message}</div>
+                    <!-- Row 3: File + FlowHash + Trace toggle -->
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-baseline gap-3 min-w-0 text-xs text-base-content/50">
+                            ${ex.file
+                                ? html`
+                                      <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
+                                          ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
+                                      </span>
+                                  `
+                                : ''}
+                            <button
+                                class="font-mono text-primary/70 hover:text-primary flex-shrink-0"
+                                style="font-size:11px;"
+                                title="Flow ${ex.flowHash} öffnen"
+                                @click=${e => {
+                                    e.stopPropagation()
+                                    this._navigateToFlow(ex.flowHash)
+                                }}
+                            >
+                                ⤢ ${ex.flowHash}
+                            </button>
+                        </div>
+                        ${hasTrace
+                            ? html`
+                                  <button
+                                      class="btn btn-xs btn-ghost text-base-content/40 flex-shrink-0"
+                                      @click=${() => this._toggleRow(id)}
+                                  >
+                                      ${open ? '▲ Trace' : '▼ Trace'}
+                                  </button>
+                              `
+                            : ''}
+                    </div>
+                </div>
+                ${open && hasTrace
+                    ? html`
+                          <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
+                              <pre
+                                  class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
+                              >
+${ex.traceString}</pre
+                              >
+                          </div>
+                      `
+                    : ''}
+            </div>
+        `
+    }
+
+    _renderScheduleItem(ex, idx) {
+        const id = ex.hash ?? 's' + idx
+        const open = this.expanded.has(id)
+        const hasTrace = !!ex.traceString
+        return html`
+            <div class="rounded-box border border-warning/25 bg-base-200 overflow-hidden">
+                <div class="px-4 py-3 flex flex-col gap-1.5">
+                    <!-- Row 1: ScheduleName + Badge + Time -->
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="font-semibold text-sm text-base-content truncate" title="${ex.scheduleName}">
+                                ${shortClass(ex.scheduleName)}
+                            </span>
+                            <span class="badge badge-xs badge-warning flex-shrink-0">Schedule</span>
+                        </div>
+                        <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>
+                    </div>
+                    <!-- Row 2: Error message -->
+                    <div class="text-sm text-error leading-snug break-words">${ex.message}</div>
+                    <!-- Row 3: CronExpression + File + Trace toggle -->
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-baseline gap-3 min-w-0 text-xs text-base-content/50">
+                            <span class="font-mono flex-shrink-0" style="font-size:11px;">${ex.scheduleExpression}</span>
+                            ${ex.file
+                                ? html`
+                                      <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
+                                          ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
+                                      </span>
+                                  `
+                                : ''}
+                        </div>
+                        ${hasTrace
+                            ? html`
+                                  <button
+                                      class="btn btn-xs btn-ghost text-base-content/40 flex-shrink-0"
+                                      @click=${() => this._toggleRow(id)}
+                                  >
+                                      ${open ? '▲ Trace' : '▼ Trace'}
+                                  </button>
+                              `
+                            : ''}
+                    </div>
+                </div>
+                ${open && hasTrace
+                    ? html`
+                          <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
+                              <pre
+                                  class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
+                              >
+${ex.traceString}</pre
+                              >
+                          </div>
+                      `
+                    : ''}
+            </div>
+        `
     }
 
     render() {
@@ -301,7 +467,7 @@ export class FcExceptionList extends BaseElement {
                               ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                           </span>`}
                     <button
-                        class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                        class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
                         title="Neu laden"
                         @click=${this._load}
                     >
@@ -321,79 +487,9 @@ export class FcExceptionList extends BaseElement {
                 : html`
                       <!-- Exception cards -->
                       <div class="flex flex-col gap-2">
-                          ${this._items.map((ex, idx) => {
-                              const id = ex.id ?? idx
-                              const open = this.expanded.has(id)
-                              const hasTrace = !!ex.traceString
-
-                              return html`
-                                  <div class="rounded-box border border-error/25 bg-base-200 overflow-hidden">
-                                      <div class="px-4 py-3 flex flex-col gap-1.5">
-                                          <!-- Row 1: Stub + Status + Time -->
-                                          <div class="flex items-center justify-between gap-2">
-                                              <div class="flex items-center gap-2 min-w-0">
-                                                  <span class="font-semibold text-sm text-base-content truncate" title="${ex.stubSource}">
-                                                      ${shortClass(ex.stubSource)}
-                                                  </span>
-                                                  ${ex.flowStatus
-                                                      ? html`<span class="badge badge-xs ${STATUS_COLORS[ex.flowStatus] ?? 'badge-ghost'}"
-                                                            >${ex.flowStatus}</span
-                                                        >`
-                                                      : ''}
-                                              </div>
-                                              <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>
-                                          </div>
-                                          <!-- Row 2: Error message -->
-                                          <div class="text-sm text-error leading-snug break-words">${ex.message}</div>
-                                          <!-- Row 3: File + FlowHash + Trace toggle -->
-                                          <div class="flex items-center justify-between gap-2">
-                                              <div class="flex items-baseline gap-3 min-w-0 text-xs text-base-content/50">
-                                                  ${ex.file
-                                                      ? html`
-                                                            <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
-                                                                ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
-                                                            </span>
-                                                        `
-                                                      : ''}
-                                                  <button
-                                                      class="font-mono text-primary/70 hover:text-primary flex-shrink-0"
-                                                      style="font-size:11px;"
-                                                      title="Flow ${ex.flowHash} öffnen"
-                                                      @click=${e => {
-                                                          e.stopPropagation()
-                                                          this._navigateToFlow(ex.flowHash)
-                                                      }}
-                                                  >
-                                                      ⤢ ${ex.flowHash}
-                                                  </button>
-                                              </div>
-                                              ${hasTrace
-                                                  ? html`
-                                                        <button
-                                                            class="btn btn-xs btn-ghost text-base-content/40 flex-shrink-0"
-                                                            @click=${() => this._toggleRow(id)}
-                                                        >
-                                                            ${open ? '▲ Trace' : '▼ Trace'}
-                                                        </button>
-                                                    `
-                                                  : ''}
-                                          </div>
-                                      </div>
-
-                                      ${open && hasTrace
-                                          ? html`
-                                                <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
-                                                    <pre
-                                                        class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
-                                                    >
-${ex.traceString}</pre
-                                                    >
-                                                </div>
-                                            `
-                                          : ''}
-                                  </div>
-                              `
-                          })}
+                          ${this._items.map((ex, idx) =>
+                              ex._type === 'schedule' ? this._renderScheduleItem(ex, idx) : this._renderFlowItem(ex, idx)
+                          )}
                       </div>
 
                       ${this._loadingMore

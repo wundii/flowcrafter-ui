@@ -11,10 +11,11 @@ import './fc-flow-chart.js'
 import './fc-flow-detail.js'
 import './fc-flow-list.js'
 import './fc-login.js'
-import './fc-schema-list.js'
+import './fc-overview.js'
 import './fc-queue-chart.js'
 import './fc-queue-list.js'
 import './fc-schedule-list.js'
+import './fc-schema-list.js'
 import './fc-service-setup.js'
 import './fc-type-list.js'
 
@@ -50,7 +51,11 @@ export class FcApp extends BaseElement {
         _aiModel: { state: true },
         _aiModels: { state: true },
         _authed: { state: true },
+        _checkingConnection: { state: true },
+        _confirmResetConnection: { state: true },
         _editingConnection: { state: true },
+        _excChartDate: { state: true },
+        _flowChartDate: { state: true },
         _flowListCache: { state: true },
         _isDark: { state: true },
         _pwModal: { state: true },
@@ -58,12 +63,8 @@ export class FcApp extends BaseElement {
         _searchResults: { state: true },
         _serverDescription: { state: true },
         _serverInfo: { state: true },
-        _checkingConnection: { state: true },
-        _confirmResetConnection: { state: true },
         _serverOffline: { state: true },
         _serviceReady: { state: true },
-        _excChartDate: { state: true },
-        _flowChartDate: { state: true },
         _toolboxOpen: { state: true },
         activeTab: { state: true },
         selectedFlowHash: { state: true },
@@ -79,6 +80,8 @@ export class FcApp extends BaseElement {
         this._aiModels = []
         this._authed = false
         this._editingConnection = false
+        this._excChartDate = null
+        this._flowChartDate = null
         this._flowListCache = null
         this._infoTimer = null
         this._isDark = theme.get() === 'dark'
@@ -89,8 +92,6 @@ export class FcApp extends BaseElement {
         this._serverInfo = null
         this._serverOffline = false
         this._serviceReady = false
-        this._excChartDate = null
-        this._flowChartDate = null
         this._toolboxOpen = false
         this.activeTab = 'overview'
         this.selectedFlowHash = null
@@ -443,7 +444,22 @@ export class FcApp extends BaseElement {
 
     _renderContent() {
         if (this.activeTab === 'overview') {
-            return html`<div class="flex justify-center py-16 text-base-content/30 text-sm">Kein Inhalt.</div>`
+            return html`<fc-overview
+                .serverInfo=${this._serverInfo}
+                @tab-navigate=${e => {
+                    this.activeTab = e.detail.tab
+                }}
+                @chart-flow-date=${e => {
+                    this.activeTab = 'flows'
+                    this._flowChartDate = e.detail.date
+                    this.selectedPrefix = null
+                    this.selectedFlowHash = null
+                }}
+                @chart-exc-date=${e => {
+                    this.activeTab = 'exceptions'
+                    this._excChartDate = e.detail.date
+                }}
+            ></fc-overview>`
         }
         if (this.activeTab === 'schemas') {
             return html`<fc-schema-list></fc-schema-list>`
@@ -765,7 +781,7 @@ export class FcApp extends BaseElement {
 
                         <!-- Theme toggle -->
                         <label
-                            class="swap swap-rotate btn btn-ghost btn-sm btn-square"
+                            class="swap swap-rotate btn btn-ghost btn-sm btn-circle"
                             title="${this._isDark ? 'Light Mode' : 'Dark Mode'}"
                         >
                             <input type="checkbox" .checked=${!this._isDark} @change=${this._onToggleTheme} />
@@ -785,7 +801,7 @@ export class FcApp extends BaseElement {
 
                         <!-- AI config -->
                         <button
-                            class="hidden sm:flex btn btn-ghost btn-sm btn-square"
+                            class="hidden sm:flex btn btn-ghost btn-sm btn-circle"
                             title="AI-Analyse konfigurieren"
                             @click=${this._openAiModal}
                         >
@@ -806,7 +822,7 @@ export class FcApp extends BaseElement {
 
                         <!-- Edit connection -->
                         <button
-                            class="hidden sm:flex btn btn-ghost btn-sm btn-square"
+                            class="hidden sm:flex btn btn-ghost btn-sm btn-circle"
                             title="Verbindung bearbeiten"
                             @click=${this._onEditConnection}
                         >
@@ -820,7 +836,7 @@ export class FcApp extends BaseElement {
                         </button>
 
                         <!-- Change password -->
-                        <button class="hidden sm:flex btn btn-ghost btn-sm btn-square" title="Passwort ändern" @click=${this._openPwModal}>
+                        <button class="hidden sm:flex btn btn-ghost btn-sm btn-circle" title="Passwort ändern" @click=${this._openPwModal}>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path
                                     stroke-linecap="round"
@@ -831,7 +847,7 @@ export class FcApp extends BaseElement {
                         </button>
 
                         <!-- Logout -->
-                        <button class="btn btn-ghost btn-sm btn-square" title="Abmelden" @click=${this._onLogout}>
+                        <button class="btn btn-ghost btn-sm btn-circle" title="Abmelden" @click=${this._onLogout}>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path
                                     stroke-linecap="round"

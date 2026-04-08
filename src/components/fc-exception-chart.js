@@ -48,15 +48,14 @@ export class FcExceptionChart extends BaseElement {
             from.setDate(from.getDate() - (DAYS - 1))
             from.setHours(0, 0, 0, 0)
 
-            const res = await api.getExceptions({
-                sort: 'desc',
-                top: 10000,
-                skip: 0,
-                from: from.toISOString().replace('Z', '+00:00'),
-                to: now.toISOString().replace('Z', '+00:00'),
-            })
-            const items = res.items ?? []
-            this._data = this._aggregate(items)
+            const fromStr = from.toISOString().replace('Z', '+00:00')
+            const toStr = now.toISOString().replace('Z', '+00:00')
+
+            const [flowRes, scheduleRes] = await Promise.all([
+                api.getExceptions({ sort: 'desc', top: 10000, skip: 0, from: fromStr, to: toStr }),
+                api.getScheduleExceptions({ sort: 'desc', top: 10000, from: fromStr, to: toStr }),
+            ])
+            this._data = this._aggregate(flowRes.items ?? [], scheduleRes.items ?? [])
         } catch {
             this._error = true
             this._data = this._emptyDays()
@@ -71,17 +70,21 @@ export class FcExceptionChart extends BaseElement {
         for (let i = DAYS - 1; i >= 0; i--) {
             const d = new Date(now)
             d.setDate(d.getDate() - i)
-            days.push({ date: dateKey(d), count: 0 })
+            days.push({ date: dateKey(d), count: 0, scheduleCount: 0 })
         }
         return days
     }
 
-    _aggregate(items) {
+    _aggregate(flowItems, scheduleItems) {
         const days = this._emptyDays()
         const map = Object.fromEntries(days.map(d => [d.date, d]))
-        for (const ex of items) {
+        for (const ex of flowItems) {
             const key = dateKey(new Date(ex.time))
             if (map[key]) map[key].count++
+        }
+        for (const ex of scheduleItems) {
+            const key = dateKey(new Date(ex.time))
+            if (map[key]) map[key].scheduleCount++
         }
         return days
     }
@@ -118,30 +121,55 @@ export class FcExceptionChart extends BaseElement {
         }
 
         const data = this._data
-        const max = Math.max(...data.map(d => d.count), 1)
-        const total = data.reduce((s, d) => s + d.count, 0)
+        const max = Math.max(...data.map(d => Math.max(d.count, d.scheduleCount)), 1)
+        const totalFlow = data.reduce((s, d) => s + d.count, 0)
+        const totalSchedule = data.reduce((s, d) => s + d.scheduleCount, 0)
 
         const chartW = W - PAD_X - 8
         const chartH = H - PAD_TOP - PAD_BOT
         const step = chartW / (DAYS - 1)
 
-        const coords = data.map((d, i) => {
-            const x = PAD_X + i * step
-            const y = PAD_TOP + chartH - (d.count / max) * chartH
-            return { x, y, ...d }
-        })
+        const flowCoords = data.map((d, i) => ({
+            x: PAD_X + i * step,
+            y: PAD_TOP + chartH - (d.count / max) * chartH,
+            ...d,
+        }))
+        const scheduleCoords = data.map((d, i) => ({
+            x: PAD_X + i * step,
+            y: PAD_TOP + chartH - (d.scheduleCount / max) * chartH,
+            ...d,
+        }))
 
-        const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
-        const areaPath = `${linePath} L${coords.at(-1).x.toFixed(1)},${PAD_TOP + chartH} L${PAD_X},${PAD_TOP + chartH} Z`
+        const flowLine = flowCoords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
+        const flowArea = `${flowLine} L${flowCoords.at(-1).x.toFixed(1)},${PAD_TOP + chartH} L${PAD_X},${PAD_TOP + chartH} Z`
+        const scheduleLine = scheduleCoords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
+        const scheduleArea = `${scheduleLine} L${scheduleCoords.at(-1).x.toFixed(1)},${PAD_TOP + chartH} L${PAD_X},${PAD_TOP + chartH} Z`
 
         const yTicks = [0, Math.round(max / 2), max]
-        const xLabels = coords.filter((_, i) => i % 2 === 0 || i === DAYS - 1)
+        const xLabels = flowCoords.filter((_, i) => i % 2 === 0 || i === DAYS - 1)
+
+        const hasSchedule = totalSchedule > 0
 
         return html`
             <div class="fc-chart-wrap rounded-box border border-base-300 bg-base-200 p-4 relative">
-                <div class="flex items-baseline justify-between mb-3">
+                <div class="flex items-center justify-between mb-3">
                     <span class="text-sm font-semibold text-base-content">Verlauf der letzten 14 Tage</span>
-                    <span class="text-xs text-base-content/50">${total} gesamt</span>
+                    <div class="flex items-center gap-4">
+                        <span class="flex items-center gap-1.5 text-xs text-base-content/50">
+                            <span
+                                class="inline-block w-6 h-0 border-t-2 border-solid flex-shrink-0"
+                                style="border-color:oklch(var(--er))"
+                            ></span>
+                            Flow (${totalFlow})
+                        </span>
+                        <span class="flex items-center gap-1.5 text-xs text-base-content/50">
+                            <span
+                                class="inline-block w-6 h-0 border-t-2 border-dashed flex-shrink-0"
+                                style="border-color:oklch(var(--wa))"
+                            ></span>
+                            Schedule (${totalSchedule})
+                        </span>
+                    </div>
                 </div>
 
                 <svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" preserveAspectRatio="xMidYMid meet">
@@ -149,6 +177,10 @@ export class FcExceptionChart extends BaseElement {
                         <linearGradient id="exception-area-grad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" class="[stop-color:oklch(var(--er))]" stop-opacity="0.3" />
                             <stop offset="100%" class="[stop-color:oklch(var(--er))]" stop-opacity="0" />
+                        </linearGradient>
+                        <linearGradient id="schedule-exception-area-grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" class="[stop-color:oklch(var(--wa))]" stop-opacity="0.2" />
+                            <stop offset="100%" class="[stop-color:oklch(var(--wa))]" stop-opacity="0" />
                         </linearGradient>
                     </defs>
 
@@ -163,12 +195,22 @@ export class FcExceptionChart extends BaseElement {
                         `
                     })}
 
-                    <!-- Area fill with vertical gradient -->
-                    <path d="${areaPath}" fill="url(#exception-area-grad)" />
-
-                    <!-- Line -->
+                    <!-- Schedule area + line (behind flow, dashed) -->
+                    <path d="${scheduleArea}" fill="url(#schedule-exception-area-grad)" />
                     <path
-                        d="${linePath}"
+                        d="${scheduleLine}"
+                        fill="none"
+                        class="stroke-warning"
+                        stroke-width="1.5"
+                        stroke-linejoin="round"
+                        stroke-linecap="round"
+                        stroke-dasharray="4 3"
+                    />
+
+                    <!-- Flow area + line -->
+                    <path d="${flowArea}" fill="url(#exception-area-grad)" />
+                    <path
+                        d="${flowLine}"
                         fill="none"
                         class="stroke-error"
                         stroke-width="2"
@@ -176,8 +218,8 @@ export class FcExceptionChart extends BaseElement {
                         stroke-linecap="round"
                     />
 
-                    <!-- Data points -->
-                    ${coords.map(
+                    <!-- Flow data points -->
+                    ${flowCoords.map(
                         c => svg`
                         <g @mouseenter=${e => this._onPointEnter(e, c)} @mouseleave=${() => this._onPointLeave()} @click=${() => this._onPointClick(c.date)} style="cursor:pointer">
                             <circle cx="${c.x}" cy="${c.y}" r="8" fill="transparent" stroke="none" />
@@ -186,6 +228,21 @@ export class FcExceptionChart extends BaseElement {
                         </g>
                     `
                     )}
+
+                    <!-- Schedule data points -->
+                    ${hasSchedule
+                        ? scheduleCoords
+                              .filter(c => c.scheduleCount > 0)
+                              .map(
+                                  c => svg`
+                            <g @mouseenter=${e => this._onPointEnter(e, c)} @mouseleave=${() => this._onPointLeave()} @click=${() => this._onPointClick(c.date)} style="cursor:pointer">
+                                <circle cx="${c.x}" cy="${c.y}" r="8" fill="transparent" stroke="none" />
+                                <circle cx="${c.x}" cy="${c.y}" r="2.5"
+                                        class="fill-warning stroke-base-200" stroke-width="1" style="pointer-events:none" />
+                            </g>
+                        `
+                              )
+                        : ''}
 
                     <!-- X-axis labels -->
                     ${xLabels.map(
@@ -208,8 +265,13 @@ export class FcExceptionChart extends BaseElement {
                                   <div class="font-semibold text-base-content/80 mb-2">${longDate(this._tooltip.coord.date)}</div>
                                   <div class="flex items-center gap-2 text-base-content/60">
                                       <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--er))"></span>
-                                      <span>Exceptions</span>
+                                      <span>Flow</span>
                                       <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.count}</span>
+                                  </div>
+                                  <div class="flex items-center gap-2 text-base-content/60 mt-1">
+                                      <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--wa))"></span>
+                                      <span>Schedule</span>
+                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.scheduleCount}</span>
                                   </div>
                               </div>
                           </div>

@@ -258,7 +258,7 @@ export class FcSchemaList extends BaseElement {
                     ${this._filter ? html` <button class="btn btn-sm btn-ghost" @click=${() => (this._filter = '')}>clear</button> ` : ''}
                     <div class="ml-auto flex items-center gap-1">
                         <button
-                            class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                            class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
                             title=${this._sortAsc ? 'A → Z' : 'Z → A'}
                             @click=${() => {
                                 this._sortAsc = !this._sortAsc
@@ -275,7 +275,7 @@ export class FcSchemaList extends BaseElement {
                             </svg>
                         </button>
                         <button
-                            class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                            class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
                             title="Neu laden"
                             @click=${this._load}
                         >
