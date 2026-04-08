@@ -15,7 +15,7 @@ function formatDate(iso) {
 
 const ENUM_BADGE = { init: 'badge-info', stub: 'badge-success' }
 
-export class FcOverview extends BaseElement {
+export class FcSchemaList extends BaseElement {
     static properties = {
         _filter: { state: true },
         _flows: { state: true },
@@ -489,4 +489,4 @@ export class FcOverview extends BaseElement {
     }
 }
 
-customElements.define('fc-overview', FcOverview)
+customElements.define('fc-schema-list', FcSchemaList)

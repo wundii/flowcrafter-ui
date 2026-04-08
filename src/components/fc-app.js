@@ -11,14 +11,14 @@ import './fc-flow-chart.js'
 import './fc-flow-detail.js'
 import './fc-flow-list.js'
 import './fc-login.js'
-import './fc-overview.js'
+import './fc-schema-list.js'
 import './fc-queue-chart.js'
 import './fc-queue-list.js'
 import './fc-schedule-list.js'
 import './fc-service-setup.js'
 import './fc-type-list.js'
 
-const TABS = ['overview', 'flows', 'exceptions', 'schedules', 'queues']
+const TABS = ['overview', 'schemas', 'flows', 'exceptions', 'schedules', 'queues']
 const SEARCH_LIMIT = 5
 
 function workerAgeSecs(heartbeatIso) {
@@ -34,6 +34,12 @@ function workerAgeLabel(secs) {
 function workerAgeColor(secs) {
     if (secs < 30) return 'success'
     if (secs < 300) return 'warning'
+    return 'error'
+}
+
+function schedulerAgeColor(secs) {
+    if (secs < 90) return 'success'
+    if (secs < 120) return 'warning'
     return 'error'
 }
 
@@ -437,7 +443,10 @@ export class FcApp extends BaseElement {
 
     _renderContent() {
         if (this.activeTab === 'overview') {
-            return html`<fc-overview @flow-type-selected=${this._onFlowTypeSelected}></fc-overview>`
+            return html`<div class="flex justify-center py-16 text-base-content/30 text-sm">Kein Inhalt.</div>`
+        }
+        if (this.activeTab === 'schemas') {
+            return html`<fc-schema-list></fc-schema-list>`
         }
         if (this.activeTab === 'flows') {
             if (this.selectedFlowHash) {
@@ -478,7 +487,7 @@ export class FcApp extends BaseElement {
                     </div>
                 `
             }
-            return html` <fc-type-list @schema-selected=${this._onSchemaSelected}></fc-type-list> `
+            return html`<fc-type-list @schema-selected=${this._onSchemaSelected}></fc-type-list>`
         }
         if (this.activeTab === 'schedules') return html`<fc-schedule-list></fc-schedule-list>`
         if (this.activeTab === 'queues') return html`<fc-queue-list></fc-queue-list>`
@@ -634,7 +643,7 @@ export class FcApp extends BaseElement {
                                                       ? html`<div class="flex flex-col items-end gap-1">
                                                             ${this._serverInfo.scheduler.map(s => {
                                                                 const secs = workerAgeSecs(s.lastHeartbeat)
-                                                                const color = workerAgeColor(secs)
+                                                                const color = schedulerAgeColor(secs)
                                                                 return html`<span
                                                                     class="flex items-center gap-1.5 font-mono text-[10px] text-${color}"
                                                                     title="Letzter Heartbeat: ${s.lastHeartbeat}"
@@ -857,6 +866,19 @@ export class FcApp extends BaseElement {
                                             stroke-width="2"
                                             viewBox="0 0 24 24"
                                         >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                                            />
+                                        </svg>`,
+                                        schemas: html`<svg
+                                            class="w-3.5 h-3.5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            viewBox="0 0 24 24"
+                                        >
                                             <rect x="3" y="3" width="7" height="7" rx="1"></rect>
                                             <rect x="14" y="3" width="7" height="7" rx="1"></rect>
                                             <rect x="3" y="14" width="7" height="7" rx="1"></rect>
@@ -917,6 +939,7 @@ export class FcApp extends BaseElement {
                                     }[tab]}
                                     ${{
                                         overview: 'Overview',
+                                        schemas: 'Schemas',
                                         flows: 'Flows',
                                         exceptions: 'Exceptions',
                                         schedules: 'Schedules',
