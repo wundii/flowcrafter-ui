@@ -383,9 +383,6 @@ ${ex.traceString}</pre
                 </div>
             `
 
-        if (this._items.length === 0 && !this._dateFrom && !this._dateTo && this._statusFilter === 'FAILED')
-            return html` <div class="alert alert-success"><span>Keine Exceptions gefunden.</span></div> `
-
         const isEmpty = this._items.length === 0
 
         return html`
@@ -467,7 +464,13 @@ ${ex.traceString}</pre
             </div>
 
             ${isEmpty
-                ? html`<div class="alert alert-success"><span>Keine Exceptions für den gewählten Zeitraum gefunden.</span></div>`
+                ? html`<div class="alert alert-success">
+                      <span
+                          >${this._dateFrom || this._dateTo
+                              ? 'Keine Exceptions für den gewählten Zeitraum gefunden.'
+                              : 'Keine Exceptions gefunden.'}</span
+                      >
+                  </div>`
                 : html`
                       <!-- Exception cards -->
                       <div class="flex flex-col gap-2">
