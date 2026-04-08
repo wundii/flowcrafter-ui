@@ -57,6 +57,14 @@ export const api = {
         return fetchJson(`/api/flows/search?${p}`)
     },
 
+    /** @param {{ from?: string, to?: string }} [opts] */
+    getExceptionStats({ from, to } = {}) {
+        const p = new URLSearchParams()
+        if (from) p.set('from', from)
+        if (to) p.set('to', to)
+        return fetchJson(`/api/exceptions/stats?${p}`)
+    },
+
     /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, from?: string, to?: string, status?: string }} [opts] */
     getExceptions({ sort = 'desc', top = 1000, skip = 0, from, to, status } = {}) {
         const p = new URLSearchParams({ sort, top, skip })
@@ -64,14 +72,6 @@ export const api = {
         if (to) p.set('to', to)
         if (status) p.set('status', status)
         return fetchJson(`/api/exceptions?${p}`)
-    },
-
-    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, from?: string, to?: string }} [opts] */
-    getScheduleExceptions({ sort = 'desc', top = 10000, skip = 0, from, to } = {}) {
-        const p = new URLSearchParams({ sort, top, skip })
-        if (from) p.set('from', from)
-        if (to) p.set('to', to)
-        return fetchJson(`/api/schedule-exceptions?${p}`)
     },
 
     /**

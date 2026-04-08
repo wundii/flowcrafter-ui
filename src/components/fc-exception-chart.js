@@ -51,11 +51,8 @@ export class FcExceptionChart extends BaseElement {
             const fromStr = from.toISOString().replace('Z', '+00:00')
             const toStr = now.toISOString().replace('Z', '+00:00')
 
-            const [flowRes, scheduleRes] = await Promise.all([
-                api.getExceptions({ sort: 'desc', top: 10000, skip: 0, from: fromStr, to: toStr }),
-                api.getScheduleExceptions({ sort: 'desc', top: 10000, from: fromStr, to: toStr }),
-            ])
-            this._data = this._aggregate(flowRes.items ?? [], scheduleRes.items ?? [])
+            const stats = await api.getExceptionStats({ from: fromStr, to: toStr })
+            this._data = this._mergeWithEmptyDays(stats ?? [])
         } catch {
             this._error = true
             this._data = this._emptyDays()
@@ -70,21 +67,19 @@ export class FcExceptionChart extends BaseElement {
         for (let i = DAYS - 1; i >= 0; i--) {
             const d = new Date(now)
             d.setDate(d.getDate() - i)
-            days.push({ date: dateKey(d), count: 0, scheduleCount: 0 })
+            days.push({ date: dateKey(d), flow: 0, schedule: 0 })
         }
         return days
     }
 
-    _aggregate(flowItems, scheduleItems) {
+    _mergeWithEmptyDays(stats) {
         const days = this._emptyDays()
         const map = Object.fromEntries(days.map(d => [d.date, d]))
-        for (const ex of flowItems) {
-            const key = dateKey(new Date(ex.time))
-            if (map[key]) map[key].count++
-        }
-        for (const ex of scheduleItems) {
-            const key = dateKey(new Date(ex.time))
-            if (map[key]) map[key].scheduleCount++
+        for (const s of stats) {
+            if (map[s.date]) {
+                map[s.date].flow = s.flow ?? 0
+                map[s.date].schedule = s.schedule ?? 0
+            }
         }
         return days
     }
@@ -121,9 +116,9 @@ export class FcExceptionChart extends BaseElement {
         }
 
         const data = this._data
-        const max = Math.max(...data.map(d => Math.max(d.count, d.scheduleCount)), 1)
-        const totalFlow = data.reduce((s, d) => s + d.count, 0)
-        const totalSchedule = data.reduce((s, d) => s + d.scheduleCount, 0)
+        const max = Math.max(...data.map(d => Math.max(d.flow, d.schedule)), 1)
+        const totalFlow = data.reduce((s, d) => s + d.flow, 0)
+        const totalSchedule = data.reduce((s, d) => s + d.schedule, 0)
 
         const chartW = W - PAD_X - 8
         const chartH = H - PAD_TOP - PAD_BOT
@@ -131,12 +126,12 @@ export class FcExceptionChart extends BaseElement {
 
         const flowCoords = data.map((d, i) => ({
             x: PAD_X + i * step,
-            y: PAD_TOP + chartH - (d.count / max) * chartH,
+            y: PAD_TOP + chartH - (d.flow / max) * chartH,
             ...d,
         }))
         const scheduleCoords = data.map((d, i) => ({
             x: PAD_X + i * step,
-            y: PAD_TOP + chartH - (d.scheduleCount / max) * chartH,
+            y: PAD_TOP + chartH - (d.schedule / max) * chartH,
             ...d,
         }))
 
@@ -232,7 +227,7 @@ export class FcExceptionChart extends BaseElement {
                     <!-- Schedule data points -->
                     ${hasSchedule
                         ? scheduleCoords
-                              .filter(c => c.scheduleCount > 0)
+                              .filter(c => c.schedule > 0)
                               .map(
                                   c => svg`
                             <g @mouseenter=${e => this._onPointEnter(e, c)} @mouseleave=${() => this._onPointLeave()} @click=${() => this._onPointClick(c.date)} style="cursor:pointer">
@@ -266,12 +261,12 @@ export class FcExceptionChart extends BaseElement {
                                   <div class="flex items-center gap-2 text-base-content/60">
                                       <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--er))"></span>
                                       <span>Flow</span>
-                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.count}</span>
+                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.flow}</span>
                                   </div>
                                   <div class="flex items-center gap-2 text-base-content/60 mt-1">
                                       <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--wa))"></span>
                                       <span>Schedule</span>
-                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.scheduleCount}</span>
+                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.schedule}</span>
                                   </div>
                               </div>
                           </div>

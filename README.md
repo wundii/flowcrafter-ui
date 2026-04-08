@@ -104,47 +104,6 @@ docker build -t flowcrafter-ui .
 
 ---
 
-## Projektstruktur
-
-```
-flowcrafter-ui/
-├── src/
-│   ├── components/
-│   │   ├── fc-app.js            # Root-Komponente: Navigation, Tabs, Routing, Toolbar, AI-Config
-│   │   ├── fc-login.js          # Login / Ersteinrichtung (Passwort)
-│   │   ├── fc-service-setup.js  # FlowCrafter-Service-URL konfigurieren
-│   │   ├── fc-overview.js       # Schema/Stub-Browser: alle Schemas mit Stubs, Source-Viewer, Graph
-│   │   ├── fc-type-list.js      # Übersichtskacheln pro Flow-Typ (Anzahl, Erfolgsrate)
-│   │   ├── fc-flow-list.js      # Paginierte Tabelle aller Flow-Instanzen mit Datumsfilter
-│   │   ├── fc-flow-detail.js    # Detail-Ansicht: Runs, Messages, Exceptions, AI-Analyse, Raw-JSON
-│   │   ├── fc-flow-chart.js     # SVG-Liniendiagramm: Flows & Runs pro Tag (14 Tage, via /api/flows/stats)
-│   │   ├── fc-flow-graph.js     # SVG-Graph der Flow-Struktur mit Stub-Knoten und Kopier-Buttons
-│   │   ├── fc-exception-list.js # Paginierte Exception-Tabelle mit Datumsfilter und Stacktrace
-│   │   ├── fc-exception-chart.js # SVG-Liniendiagramm: Exceptions pro Tag (14 Tage)
-│   │   ├── fc-queue-list.js     # Queue-Tabelle mit JSON-Payload-Vorschau
-│   │   ├── fc-queue-chart.js    # Live-Sparkline der Queue-Größe (Poll alle 3s)
-│   │   ├── fc-source-viewer.js  # Readonly CodeMirror-Editor für PHP-Sourcecode
-│   │   └── fc-json-editor.js    # CodeMirror JSON-Editor mit Live-Linting
-│   ├── services/
-│   │   ├── api.js               # HTTP-Client für die FlowCrafter-API (inkl. Flow-Stats & AI-Analyse mit NDJSON-Streaming)
-│   │   ├── auth.js              # Login / Logout / Passwort-Verwaltung
-│   │   ├── connection.js        # FlowCrafter-Service-URL speichern & prüfen
-│   │   ├── runs.js              # Hilfsfunktion: Flows nach Runtime-Hash gruppieren
-│   │   ├── run-diff.js          # Diff-Logik zum Vergleich zweier Runs (Stub-Status, Messages, Results)
-│   │   └── theme.js             # Dark/Light-Theme (localStorage)
-│   ├── assets/
-│   │   └── logo.js              # SVG-Logo als Lit-Template
-│   ├── base-element.js          # Lit BaseElement (Shadow DOM deaktiviert)
-│   ├── main.js                  # Einstiegspunkt
-│   └── main.css                 # Tailwind + DaisyUI
-├── server.js                    # Node-Server: Auth, Connection, AI-Config, Analyse-Proxy, Prometheus-Metriken
-├── index.html
-├── vite.config.js               # Tailwind-Plugin + Proxy-Config → :3000
-└── package.json
-```
-
----
-
 ## API-Endpunkte
 
 ### Node.js-Server (Auth, Verbindung & KI)
@@ -192,31 +151,6 @@ Die optionale KI-Analyse nutzt die Anthropic API, um Flows automatisch zu bewert
 - **Unterstützte Modelle:** Claude Sonnet 4, Claude Opus 4, Claude Haiku 4.5
 - **Analyse-Ablauf:** Flow-Daten werden an Claude gesendet; Claude kann per Tool-Use PHP-Stub-Sourcecode nachladen und liefert strukturierte Findings (Fehler, Warnungen, Performance, Info) mit Schweregrad zurück
 - **Ergebnisse** werden im Flow-Detail als kategorisierte Karten mit betroffenen Stubs angezeigt
-
----
-
-## Docker Compose
-
-Drei vorkonfigurierte Compose-Files starten den kompletten Stack (Storage + FlowCrafter API/Observer + UI) mit einem Befehl:
-
-```bash
-# Redis
-docker compose -f docker-compose.redis.yml up
-
-# MySQL
-docker compose -f docker-compose.mysql.yml up
-
-# EventSourcingDB
-docker compose -f docker-compose.esdb.yml up
-```
-
-| File                       | Storage         | Ports                                  |
-| -------------------------- | --------------- | -------------------------------------- |
-| `docker-compose.redis.yml` | Redis Stack     | Redis `:6379`, API `:8000`, UI `:3000` |
-| `docker-compose.mysql.yml` | MySQL 8.0       | MySQL `:3306`, API `:8000`, UI `:3000` |
-| `docker-compose.esdb.yml`  | EventSourcingDB | ESDB `:3001`, API `:8000`, UI `:3000`  |
-
-> **Hinweis:** Bei EventSourcingDB muss vor dem ersten Start `vendor/bin/flowcrafter init` ausgeführt werden.
 
 ---
 

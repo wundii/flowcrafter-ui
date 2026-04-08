@@ -133,24 +133,20 @@ export class FcOverview extends BaseElement {
             const todayIso = isoWithOffset(todayStart)
             const weekAgoIso = isoWithOffset(weekAgo)
 
-            const [statsRes, queueRes, flowExcRes, schedExcRes, schedulesRes, recentFlowExc, recentSchedExc] = await Promise.all([
+            const [statsRes, queueRes, excWeekRes, schedulesRes, recentExcRes] = await Promise.all([
                 api.getFlowStats({ from: todayIso, to: nowIso }),
                 api.getQueueCount(),
                 api.getExceptions({ top: 1, skip: 0, from: weekAgoIso, to: nowIso }),
-                api.getScheduleExceptions({ top: 1, skip: 0, from: weekAgoIso, to: nowIso }),
                 api.getSchedules(),
                 api.getExceptions({ top: 5, sort: 'desc' }),
-                api.getScheduleExceptions({ top: 5, sort: 'desc' }),
             ])
 
             const flowsToday = (statsRes ?? []).reduce((s, d) => s + (d.runs ?? 0), 0)
             const queueCount = queueRes?.count ?? 0
-            const exceptionsWeek = (flowExcRes?.total ?? 0) + (schedExcRes?.total ?? 0)
+            const exceptionsWeek = excWeekRes?.total ?? 0
             const scheduleCount = (schedulesRes ?? []).length
 
-            const flowExcs = (recentFlowExc?.items ?? []).map(i => ({ ...i, _type: 'flow' }))
-            const schedExcs = (recentSchedExc?.items ?? []).map(i => ({ ...i, _type: 'schedule' }))
-            const recentExceptions = [...flowExcs, ...schedExcs].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 5)
+            const recentExceptions = recentExcRes?.items ?? []
 
             this._kpi = { flowsToday, queueCount, exceptionsWeek, scheduleCount }
             this._recentExceptions = recentExceptions
@@ -331,7 +327,7 @@ export class FcOverview extends BaseElement {
                     : html`
                           <div class="flex flex-col gap-1">
                               ${items.map(ex => {
-                                  const isSchedule = ex._type === 'schedule'
+                                  const isSchedule = ex.type === 'schedule'
                                   const borderColor = isSchedule ? 'warning' : 'error'
                                   const badgeClass = isSchedule ? 'badge-warning' : 'badge-error'
                                   const name = isSchedule ? shortClass(ex.scheduleName) : shortClass(ex.stubSource)

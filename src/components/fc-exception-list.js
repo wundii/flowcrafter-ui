@@ -49,12 +49,10 @@ export class FcExceptionList extends BaseElement {
     static properties = {
         _dateFrom: { state: true },
         _dateTo: { state: true },
-        _flowItems: { state: true },
         _hasMore: { state: true },
         _items: { state: true },
         _loadingMore: { state: true },
         _offset: { state: true },
-        _scheduleItems: { state: true },
         _statusFilter: { state: true },
         _total: { state: true },
         dateFrom: { type: String },
@@ -71,14 +69,12 @@ export class FcExceptionList extends BaseElement {
         this._statusFilter = 'FAILED'
         this.dateFrom = null
         this.dateTo = null
-        this._flowItems = []
         this._hasMore = false
         this._items = []
         this._lastLoadMore = 0
         this._loadingMore = false
         this._observer = null
         this._offset = 0
-        this._scheduleItems = []
         this._total = null
         this.error = null
         this.expanded = new Set()
@@ -151,42 +147,31 @@ export class FcExceptionList extends BaseElement {
         }
     }
 
-    _mergeItems(flowItems, scheduleItems, showSchedule) {
-        const all = showSchedule ? [...flowItems, ...scheduleItems] : [...flowItems]
-        return all.sort((a, b) => new Date(b.time) - new Date(a.time))
-    }
-
     async _load() {
         this.loading = true
         this.error = null
-        this._flowItems = []
-        this._scheduleItems = []
         this._items = []
         this._offset = 0
         try {
             const isNotFailed = this._statusFilter === 'NOT_FAILED'
             const dateOpts = {}
             this._buildDateOpts(dateOpts)
-            const [flowRes, scheduleRes] = await Promise.all([
-                api.getExceptions({
-                    sort: 'desc',
-                    top: PAGE_SIZE,
-                    skip: 0,
-                    status: isNotFailed ? undefined : this._statusFilter || undefined,
-                    ...dateOpts,
-                }),
-                api.getScheduleExceptions({ sort: 'desc', top: 10000, ...dateOpts }),
-            ])
-            let flowItems = (flowRes.items ?? []).map(i => ({ ...i, _type: 'flow' }))
-            if (isNotFailed) flowItems = flowItems.filter(i => i.flowStatus !== 'FAILED')
-            const scheduleItems = (scheduleRes.items ?? []).map(i => ({ ...i, _type: 'schedule' }))
-            this._flowItems = flowItems
-            this._scheduleItems = scheduleItems
-            this._offset = (flowRes.items ?? []).length
-            this._hasMore = flowRes.hasMore ?? false
-            const flowTotal = flowRes.total ?? null
-            this._total = isNotFailed ? flowItems.length : flowTotal !== null ? flowTotal + scheduleItems.length : null
-            this._items = this._mergeItems(flowItems, scheduleItems, !isNotFailed)
+            const res = await api.getExceptions({
+                sort: 'desc',
+                top: PAGE_SIZE,
+                skip: 0,
+                status: isNotFailed ? undefined : this._statusFilter || undefined,
+                ...dateOpts,
+            })
+            let items = res.items ?? []
+            if (isNotFailed) {
+                items = items.filter(i => !(i.type === 'flow' && i.flowStatus === 'FAILED'))
+                items = items.filter(i => i.type !== 'schedule')
+            }
+            this._offset = (res.items ?? []).length
+            this._hasMore = res.hasMore ?? false
+            this._total = isNotFailed ? items.length : (res.total ?? null)
+            this._items = items
         } catch (err) {
             this.error = err.message
         } finally {
@@ -210,15 +195,15 @@ export class FcExceptionList extends BaseElement {
                 status: isNotFailed ? undefined : this._statusFilter || undefined,
                 ...dateOpts,
             })
-            let newItems = (res.items ?? []).map(i => ({ ...i, _type: 'flow' }))
-            if (isNotFailed) newItems = newItems.filter(i => i.flowStatus !== 'FAILED')
-            const flowItems = [...this._flowItems, ...newItems]
-            this._flowItems = flowItems
+            let newItems = res.items ?? []
+            if (isNotFailed) {
+                newItems = newItems.filter(i => !(i.type === 'flow' && i.flowStatus === 'FAILED'))
+                newItems = newItems.filter(i => i.type !== 'schedule')
+            }
             this._offset += (res.items ?? []).length
             this._hasMore = res.hasMore ?? false
-            const flowTotal = res.total ?? null
-            this._total = isNotFailed ? flowItems.length : flowTotal !== null ? flowTotal + this._scheduleItems.length : null
-            this._items = this._mergeItems(flowItems, this._scheduleItems, !isNotFailed)
+            this._total = isNotFailed ? this._items.length + newItems.length : (res.total ?? null)
+            this._items = [...this._items, ...newItems]
         } catch (err) {
             this.error = err.message
         } finally {
@@ -488,7 +473,7 @@ ${ex.traceString}</pre
                       <!-- Exception cards -->
                       <div class="flex flex-col gap-2">
                           ${this._items.map((ex, idx) =>
-                              ex._type === 'schedule' ? this._renderScheduleItem(ex, idx) : this._renderFlowItem(ex, idx)
+                              ex.type === 'schedule' ? this._renderScheduleItem(ex, idx) : this._renderFlowItem(ex, idx)
                           )}
                       </div>
 
