@@ -38,10 +38,15 @@ export class FcScheduleList extends BaseElement {
         _error: { state: true },
         _filter: { state: true },
         _loading: { state: true },
+        _runClassName: { state: true },
+        _runError: { state: true },
+        _runName: { state: true },
+        _runSuccess: { state: true },
+        _running: { state: true },
         _schedules: { state: true },
         _selectedSource: { state: true },
-        _sourceLoading: { state: true },
         _sourceError: { state: true },
+        _sourceLoading: { state: true },
     }
 
     constructor() {
@@ -49,10 +54,15 @@ export class FcScheduleList extends BaseElement {
         this._error = null
         this._filter = ''
         this._loading = true
+        this._runClassName = null
+        this._runError = null
+        this._runName = null
+        this._runSuccess = false
+        this._running = false
         this._schedules = []
         this._selectedSource = null
-        this._sourceLoading = false
         this._sourceError = null
+        this._sourceLoading = false
     }
 
     connectedCallback() {
@@ -79,9 +89,9 @@ export class FcScheduleList extends BaseElement {
     }
 
     async _showSource(className) {
-        this._sourceLoading = true
-        this._sourceError = null
         this._selectedSource = null
+        this._sourceError = null
+        this._sourceLoading = true
         this.updateComplete.then(() => this.querySelector('#fc-schedule-source-modal')?.showModal())
         try {
             this._selectedSource = await api.getScheduleSource(className)
@@ -89,6 +99,36 @@ export class FcScheduleList extends BaseElement {
             this._sourceError = err.message
         } finally {
             this._sourceLoading = false
+        }
+    }
+
+    _askRun(className, name) {
+        this._runClassName = className
+        this._runError = null
+        this._runName = name ?? shortClass(className)
+        this._runSuccess = false
+        this._running = false
+        this.updateComplete.then(() => this.querySelector('#fc-schedule-run-modal')?.showModal())
+    }
+
+    _closeRun() {
+        this.querySelector('#fc-schedule-run-modal')?.close()
+        this._runClassName = null
+        this._runError = null
+        this._runName = null
+        this._runSuccess = false
+    }
+
+    async _confirmRun() {
+        this._runError = null
+        this._running = true
+        try {
+            await api.runSchedule(this._runClassName)
+            this._runSuccess = true
+        } catch (err) {
+            this._runError = err.message
+        } finally {
+            this._running = false
         }
     }
 
@@ -214,7 +254,27 @@ export class FcScheduleList extends BaseElement {
                                       </div>
 
                                       <!-- Footer -->
-                                      <div class="px-4 py-2 border-t border-base-300/50 flex justify-end">
+                                      <div class="px-4 py-2 border-t border-base-300/50 flex justify-end gap-1">
+                                          <button
+                                              class="btn btn-xs btn-ghost text-base-content/40 hover:text-success gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
+                                              title="Schedule manuell starten"
+                                              @click=${() => this._askRun(item.className, item.name)}
+                                          >
+                                              <svg
+                                                  class="w-3.5 h-3.5"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+                                                  />
+                                              </svg>
+                                              Start
+                                          </button>
                                           <button
                                               class="btn btn-xs btn-ghost text-base-content/40 hover:text-primary gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
                                               @click=${() => this._showSource(item.className)}
@@ -285,7 +345,86 @@ export class FcScheduleList extends BaseElement {
                                 : ''}
                     </div>
                 </div>
-                <form method="dialog" class="modal-backdrop"><button>close</button></form>
+                <form method="dialog" class="modal-backdrop backdrop-blur-sm"><button>close</button></form>
+            </dialog>
+
+            <!-- Run Confirm Modal -->
+            <dialog
+                id="fc-schedule-run-modal"
+                class="modal"
+                @close=${() => {
+                    this._runClassName = null
+                    this._runError = null
+                    this._runSuccess = false
+                }}
+            >
+                <div class="modal-box max-w-sm p-0 overflow-hidden">
+                    <!-- Header -->
+                    <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-6 pt-5 pb-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                    <svg
+                                        class="w-5 h-5 text-primary"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+                                        />
+                                    </svg>
+                                </div>
+                                <h3 class="font-bold text-base">Schedule starten</h3>
+                            </div>
+                            <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${this._closeRun}>✕</button>
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="px-6 pb-6 pt-4">
+                        ${this._runSuccess
+                            ? html`
+                                  <div class="alert alert-success py-2 px-3 text-xs">
+                                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                          <path
+                                              stroke-linecap="round"
+                                              stroke-linejoin="round"
+                                              d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                                          />
+                                      </svg>
+                                      <span><strong>${this._runName}</strong> wurde gestartet.</span>
+                                  </div>
+                                  <div class="modal-action mt-3">
+                                      <button class="btn btn-sm" @click=${this._closeRun}>Schließen</button>
+                                  </div>
+                              `
+                            : html`
+                                  <p class="text-sm text-base-content/70">
+                                      Möchtest du <strong>${this._runName}</strong> wirklich manuell starten?
+                                  </p>
+                                  ${this._runError
+                                      ? html`<div class="alert alert-error py-2 px-3 text-xs mt-4">
+                                            <span>${this._runError}</span>
+                                        </div>`
+                                      : ''}
+                                  <div class="modal-action mt-3">
+                                      <button class="btn btn-ghost btn-sm" @click=${this._closeRun} ?disabled=${this._running}>
+                                          Abbrechen
+                                      </button>
+                                      <button class="btn btn-primary btn-sm" @click=${this._confirmRun} ?disabled=${this._running}>
+                                          ${this._running ? html`<span class="loading loading-spinner loading-xs"></span>` : 'Starten'}
+                                      </button>
+                                  </div>
+                              `}
+                    </div>
+                </div>
+                <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                    <button @click=${this._closeRun}>close</button>
+                </form>
             </dialog>
         `
     }

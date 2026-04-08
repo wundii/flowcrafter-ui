@@ -140,6 +140,11 @@ export const api = {
         return fetchJson(`/api/schedule/source?${p}`)
     },
 
+    /** @param {string} className */
+    runSchedule(className) {
+        return postJson('/api/schedule/run', { className })
+    },
+
     /** @returns {Promise<Array>} mock schema data */
     getSchemas() {
         return fetchJson('/api/schemas')
