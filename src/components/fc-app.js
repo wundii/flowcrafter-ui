@@ -424,14 +424,6 @@ export class FcApp extends BaseElement {
         input.addEventListener('animationend', () => input.classList.remove('fc-shake'), { once: true })
     }
 
-    _onRefreshFlowChart() {
-        this.querySelector('fc-flow-chart')?._load()
-    }
-
-    _onRefreshExceptionChart() {
-        this.querySelector('fc-exception-chart')?._load()
-    }
-
     _reloadCurrentView() {
         this.querySelectorAll('*').forEach(el => el._load?.())
     }
@@ -494,7 +486,6 @@ export class FcApp extends BaseElement {
                                 .dateTo=${this._flowChartDate}
                                 @flow-selected=${this._onFlowSelected}
                                 @back=${this._onBackToSchema}
-                                @list-refreshed=${this._onRefreshFlowChart}
                                 @list-state-changed=${e => {
                                     this._flowListCache = e.detail
                                 }}
@@ -517,11 +508,7 @@ export class FcApp extends BaseElement {
                     ></fc-exception-chart>
                 </div>
                 <div class="w-full md:w-2/3">
-                    <fc-exception-list
-                        .dateFrom=${this._excChartDate}
-                        .dateTo=${this._excChartDate}
-                        @list-refreshed=${this._onRefreshExceptionChart}
-                    ></fc-exception-list>
+                    <fc-exception-list .dateFrom=${this._excChartDate} .dateTo=${this._excChartDate}></fc-exception-list>
                 </div>
             </div>
         `

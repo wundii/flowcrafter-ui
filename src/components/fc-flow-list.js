@@ -110,10 +110,11 @@ export class FcFlowList extends BaseElement {
     }
 
     updated(changed) {
+        let shouldLoad = false
         if (changed.has('dateFrom') || changed.has('dateTo')) {
             this._dateFrom = this.dateFrom ?? ''
             this._dateTo = this.dateTo ?? ''
-            this._load()
+            shouldLoad = true
         }
         if (changed.has('type')) {
             if (changed.get('type') !== undefined) {
@@ -121,9 +122,10 @@ export class FcFlowList extends BaseElement {
                 this._offset = 0
             }
             if (!this._restored) {
-                this._load()
+                shouldLoad = true
             }
         }
+        if (shouldLoad) this._load()
         if (this._restored) {
             this._restored = false
             this.dispatchEvent(new CustomEvent('list-refreshed', { bubbles: true, composed: true }))

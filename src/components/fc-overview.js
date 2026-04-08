@@ -119,7 +119,8 @@ export class FcOverview extends BaseElement {
 
     async _load() {
         this._countdown = 30
-        if (this._kpi === null) this._loading = true
+        const isInitialLoad = this._kpi === null
+        if (isInitialLoad) this._loading = true
         this._error = false
         try {
             const now = new Date()
@@ -155,9 +156,10 @@ export class FcOverview extends BaseElement {
             this._error = true
         }
         this._loading = false
-        await this.updateComplete
-        this.querySelector('fc-flow-chart')?._load()
-        this.querySelector('fc-exception-chart')?._load()
+        if (!isInitialLoad) {
+            this.querySelector('fc-flow-chart')?._load()
+            this.querySelector('fc-exception-chart')?._load()
+        }
     }
 
     _renderKpi() {

@@ -41,6 +41,11 @@ export class FcFlowChart extends BaseElement {
         this.type = null
     }
 
+    connectedCallback() {
+        super.connectedCallback()
+        this._load()
+    }
+
     async _load() {
         this._loading = true
         this._error = false

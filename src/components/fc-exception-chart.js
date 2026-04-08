@@ -39,6 +39,11 @@ export class FcExceptionChart extends BaseElement {
         this._tooltip = null
     }
 
+    connectedCallback() {
+        super.connectedCallback()
+        this._load()
+    }
+
     async _load() {
         this._loading = true
         this._error = false

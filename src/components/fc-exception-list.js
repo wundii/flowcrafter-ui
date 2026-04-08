@@ -83,7 +83,6 @@ export class FcExceptionList extends BaseElement {
 
     connectedCallback() {
         super.connectedCallback()
-        this._load()
     }
 
     disconnectedCallback() {
