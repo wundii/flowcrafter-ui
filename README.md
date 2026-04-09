@@ -34,7 +34,7 @@ Web-Frontend für [FlowCrafter](https://github.com/wundii/flowcrafter) — visua
 Das UI kommuniziert mit **zwei Backends**:
 
 | Backend         | Port           | Zweck                                                                                                                                   |
-| --------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------- |----------------| --------------------------------------------------------------------------------------------------------------------------------------- |
 | Node.js-Server  | `3000`         | Auth, Verbindungskonfiguration, KI-Analyse — im Dev via Vite-Proxy auf `/api/auth`, `/api/connection`, `/api/ai-config`, `/api/analyze` |
 | FlowCrafter-API | konfigurierbar | Flow-Daten, Exceptions, Queues, Schemas, Stub-Sourcen — URL wird im Node-Backend gespeichert                                            |
 
@@ -70,17 +70,17 @@ npm install
 npm run dev
 ```
 
-Frontend erreichbar unter: **http://localhost:8001**
+Frontend erreichbar unter: **http://localhost:5173**
 
 ### Alternative: Docker
 
 Das fertige Docker-Image [`wundii/flowcrafter-ui`](https://hub.docker.com/r/wundii/flowcrafter-ui) kann direkt verwendet werden:
 
 ```bash
-docker run -p 3000:3000 -v ./data:/flowcrafter/data wundii/flowcrafter-ui:latest
+docker run -p 5173:5173 -v ./data:/flowcrafter/data wundii/flowcrafter-ui:latest
 ```
 
-Die UI ist dann unter **http://localhost:3000** erreichbar. Das Volume `/flowcrafter/data` enthält Auth-, Verbindungs- und KI-Konfigurationsdaten.
+Die UI ist dann unter **http://localhost:5173** erreichbar. Das Volume `/flowcrafter/data` enthält Auth-, Verbindungs- und KI-Konfigurationsdaten.
 
 Zum manuellen Bauen:
 
@@ -93,8 +93,8 @@ docker build -t flowcrafter-ui .
 ## Verfügbare Scripts
 
 | Befehl                 | Beschreibung                                                |
-| ---------------------- | ----------------------------------------------------------- |
-| `npm run dev`          | Dev-Server mit Hot-Reload starten (Vite :8001 + Node :3000) |
+| ---------------------- |-------------------------------------------------------------|
+| `npm run dev`          | Dev-Server mit Hot-Reload starten (Vite :5173 + Node :3000) |
 | `npm run build`        | Produktions-Build nach `dist/`                              |
 | `npm run start`        | Produktions-Server (Node serviert `dist/`)                  |
 | `npm run lint`         | ESLint prüfen                                               |
