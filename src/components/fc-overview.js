@@ -4,28 +4,6 @@ import { api } from '../services/api.js'
 import './fc-exception-chart.js'
 import './fc-flow-chart.js'
 
-function workerAgeSecs(heartbeatIso) {
-    return Math.floor((Date.now() - new Date(heartbeatIso).getTime()) / 1000)
-}
-
-function workerAgeLabel(secs) {
-    if (secs < 60) return `vor ${secs}s`
-    if (secs < 3600) return `vor ${Math.floor(secs / 60)}min`
-    return `vor ${Math.floor(secs / 3600)}h`
-}
-
-function workerAgeColor(secs) {
-    if (secs < 30) return 'success'
-    if (secs < 300) return 'warning'
-    return 'error'
-}
-
-function schedulerAgeColor(secs) {
-    if (secs < 90) return 'success'
-    if (secs < 120) return 'warning'
-    return 'error'
-}
-
 function formatDateTime(iso) {
     if (!iso) return ''
     const d = new Date(iso)
@@ -84,6 +62,7 @@ export class FcOverview extends BaseElement {
         _lastLoaded: { state: true },
         _loading: { state: true },
         _recentExceptions: { state: true },
+        _problematicFlows: { state: true },
         serverInfo: { type: Object },
     }
 
@@ -95,6 +74,7 @@ export class FcOverview extends BaseElement {
         this._lastLoaded = null
         this._loading = true
         this._recentExceptions = []
+        this._problematicFlows = []
         this.serverInfo = null
     }
 
@@ -134,23 +114,23 @@ export class FcOverview extends BaseElement {
             const todayIso = isoWithOffset(todayStart)
             const weekAgoIso = isoWithOffset(weekAgo)
 
-            const [statsRes, queueRes, excWeekRes, schedulesRes, recentExcRes] = await Promise.all([
+            const [statsRes, queueRes, excWeekRes, schedulesRes, recentExcRes, problematicRes] = await Promise.all([
                 api.getFlowStats({ from: todayIso, to: nowIso }),
                 api.getQueueCount(),
                 api.getExceptions({ top: 1, skip: 0, from: weekAgoIso, to: nowIso }),
                 api.getSchedules(),
                 api.getExceptions({ top: 5, sort: 'desc' }),
+                api.getFlows({ top: 5, sort: 'desc', status: 'IN_PROGRESS_EXCEEDED,WARNING' }),
             ])
 
-            const flowsToday = (statsRes ?? []).reduce((s, d) => s + (d.runs ?? 0), 0)
+            const flowsToday = (statsRes ?? []).reduce((s, d) => s + (d.instances ?? 0), 0)
             const queueCount = queueRes?.count ?? 0
             const exceptionsWeek = excWeekRes?.total ?? 0
             const scheduleCount = (schedulesRes ?? []).length
 
-            const recentExceptions = recentExcRes?.items ?? []
-
             this._kpi = { flowsToday, queueCount, exceptionsWeek, scheduleCount }
-            this._recentExceptions = recentExceptions
+            this._recentExceptions = recentExcRes?.items ?? []
+            this._problematicFlows = problematicRes?.items ?? []
             this._lastLoaded = new Date()
         } catch {
             this._error = true
@@ -228,84 +208,55 @@ export class FcOverview extends BaseElement {
         `
     }
 
-    _renderSystemStatus() {
-        const info = this.serverInfo
-        if (!info) {
-            return html`
-                <div class="rounded-box border border-base-300 bg-base-200 p-3 flex flex-col gap-2">
-                    <div class="text-xs font-semibold text-base-content/50 uppercase tracking-wide">System-Status</div>
-                    <div class="flex justify-center py-3"><span class="loading loading-spinner loading-sm"></span></div>
-                </div>
-            `
-        }
-
-        const statusRow = (label, workers, colorFn) => {
-            if (workers?.length > 0) {
-                const secs = workerAgeSecs(workers[0].lastHeartbeat)
-                const color = colorFn(secs)
-                const pulse = color === 'success'
-                const hostname = workers[0].hostname
-                return html`
-                    <div class="flex items-center justify-between gap-2 py-1">
-                        <div class="flex flex-col min-w-0">
-                            <span class="text-xs text-base-content/50">${label}</span>
-                            ${hostname ? html`<span class="text-[10px] text-base-content/30 font-mono truncate">${hostname}</span>` : ''}
-                        </div>
-                        <span class="flex items-center gap-1.5 text-[11px] font-medium text-${color} flex-shrink-0">
-                            <span class="relative flex h-2 w-2 flex-shrink-0">
-                                ${pulse
-                                    ? html`<span
-                                          class="animate-ping absolute inline-flex h-full w-full rounded-full bg-${color} opacity-60"
-                                      ></span>`
-                                    : ''}
-                                <span class="relative inline-flex rounded-full h-2 w-2 bg-${color}"></span>
-                            </span>
-                            ${workers.length > 1 ? `${workers.length}× ` : ''}${workerAgeLabel(secs)}
-                        </span>
-                    </div>
-                `
-            }
-            return html`
-                <div class="flex items-center justify-between gap-2 py-1">
-                    <span class="text-xs text-base-content/50">${label}</span>
-                    <span class="flex items-center gap-1.5 text-[11px] font-medium text-error flex-shrink-0">
-                        <span class="relative flex h-2 w-2 flex-shrink-0">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-60"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-error"></span>
-                        </span>
-                        stopped
-                    </span>
-                </div>
-            `
-        }
+    _renderProblematicFlows() {
+        const items = this._problematicFlows
 
         return html`
-            <div class="rounded-box border border-base-300 bg-base-200 p-3 flex flex-col gap-1">
-                <div class="text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-1">System-Status</div>
-                ${info.description ? html`<div class="text-[11px] text-base-content/55 -mt-1 mb-1 truncate">${info.description}</div>` : ''}
-                <div class="flex flex-col gap-1">
-                    ${info.storage
-                        ? html`<div class="flex items-baseline justify-between gap-2">
-                              <span class="text-xs text-base-content/40">Storage</span>
-                              <span class="font-mono text-[11px] text-base-content/55">${info.storage}</span>
-                          </div>`
-                        : ''}
-                    ${info.version
-                        ? html`<div class="flex items-baseline justify-between gap-2">
-                              <span class="text-xs text-base-content/40">Version</span>
-                              <span class="font-mono text-[11px] text-base-content/55">${info.version}</span>
-                          </div>`
-                        : ''}
-                    ${info.php
-                        ? html`<div class="flex items-baseline justify-between gap-2">
-                              <span class="text-xs text-base-content/40">PHP</span>
-                              <span class="font-mono text-[11px] text-base-content/55">${info.php}</span>
-                          </div>`
-                        : ''}
+            <div class="rounded-box border border-base-300 bg-base-200 p-3 flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-base-content/50 uppercase tracking-wide">Fehlgeschlagene Flows</span>
                 </div>
-                <div class="border-t border-base-300 mt-1 pt-1">
-                    ${statusRow('Observer', info.workers, workerAgeColor)} ${statusRow('Scheduler', info.scheduler, schedulerAgeColor)}
-                </div>
+
+                ${items.length === 0
+                    ? html`<div class="flex items-center gap-2 text-xs text-success py-1">
+                          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Keine auffälligen Flows
+                      </div>`
+                    : html`
+                          <div class="flex flex-col gap-1">
+                              ${items.map(flow => {
+                                  const isExceeded = flow.status === 'IN_PROGRESS_EXCEEDED'
+                                  const badgeText = isExceeded ? 'Exceeded' : 'Warning'
+                                  const name = shortClass(flow.flowSource)
+                                  return html`
+                                      <button
+                                          class="flex items-start gap-2 text-left hover:bg-base-300/50 rounded-lg py-1.5 pl-2 pr-1 transition-colors w-full border-l-2 border-warning/40 cursor-pointer"
+                                          @click=${() =>
+                                              this.dispatchEvent(
+                                                  new CustomEvent('flow-selected', {
+                                                      detail: { hash: flow.flowHash },
+                                                      bubbles: true,
+                                                      composed: true,
+                                                  })
+                                              )}
+                                      >
+                                          <div class="min-w-0 flex-1">
+                                              <div class="flex items-center gap-1.5 min-w-0">
+                                                  <span class="text-[11px] font-semibold text-base-content truncate">${name}</span>
+                                                  <span class="badge badge-xs badge-warning flex-shrink-0 opacity-70">${badgeText}</span>
+                                                  <span class="text-[10px] text-base-content/40 flex-shrink-0 ml-auto"
+                                                      >${formatRelativeOrDate(flow.lastTerm)}</span
+                                                  >
+                                              </div>
+                                              <div class="text-[10px] text-base-content/40 truncate mt-0.5">${flow.flowType}</div>
+                                          </div>
+                                      </button>
+                                  `
+                              })}
+                          </div>
+                      `}
             </div>
         `
     }
@@ -335,8 +286,17 @@ export class FcOverview extends BaseElement {
                                   const name = isSchedule ? shortClass(ex.scheduleName) : shortClass(ex.stubSource)
                                   return html`
                                       <button
-                                          class="flex items-start gap-2 text-left hover:bg-base-300/50 rounded-lg py-1.5 pl-2 pr-1 transition-colors w-full border-l-2 border-${borderColor}/40"
-                                          @click=${() => this._navigate('exceptions')}
+                                          class="flex items-start gap-2 text-left hover:bg-base-300/50 rounded-lg py-1.5 pl-2 pr-1 transition-colors w-full border-l-2 border-${borderColor}/40 cursor-pointer"
+                                          @click=${() =>
+                                              isSchedule || !ex.flowHash
+                                                  ? this._navigate('exceptions')
+                                                  : this.dispatchEvent(
+                                                        new CustomEvent('flow-selected', {
+                                                            detail: { hash: ex.flowHash },
+                                                            bubbles: true,
+                                                            composed: true,
+                                                        })
+                                                    )}
                                       >
                                           <div class="min-w-0 flex-1">
                                               <div class="flex items-center gap-1.5 min-w-0">
@@ -429,7 +389,7 @@ export class FcOverview extends BaseElement {
                         @chart-date-click=${e =>
                             this.dispatchEvent(new CustomEvent('chart-exc-date', { detail: e.detail, bubbles: true, composed: true }))}
                     ></fc-exception-chart>
-                    ${this._renderSystemStatus()} ${this._renderRecentExceptions()}
+                    ${this._renderProblematicFlows()} ${this._renderRecentExceptions()}
                 </div>
             </div>
         `

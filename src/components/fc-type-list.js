@@ -96,21 +96,19 @@ export class FcTypeList extends BaseElement {
                             ? 'text-error/80'
                             : 'text-error'
 
-        const accentColor = hasFailed ? 'error' : 'primary'
+        const borderClass = hasFailed ? 'border-error/25 hover:border-error/30' : 'border-base-300 hover:border-primary/30'
+        const gradientClass = hasFailed ? 'from-error/5' : 'from-primary/5'
+        const iconClass = hasFailed ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'
 
         return html`
             <div
-                class="rounded-box border bg-base-200 cursor-pointer
-                 hover:border-${accentColor}/30 hover:shadow-md transition-all duration-200 flex flex-col group
-                 ${hasFailed ? 'border-error/25' : 'border-base-300'}"
+                class="rounded-box border bg-base-200 cursor-pointer hover:shadow-md transition-all duration-200 flex flex-col group ${borderClass}"
                 @click=${() => this._onSelect(schema)}
             >
                 <!-- Card header with gradient -->
-                <div class="px-4 pt-4 pb-3 bg-gradient-to-br from-${accentColor}/5 via-transparent to-transparent">
+                <div class="px-4 pt-4 pb-3 bg-gradient-to-br ${gradientClass} via-transparent to-transparent">
                     <div class="flex items-start gap-2.5">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-${accentColor}/10 text-${accentColor} flex items-center justify-center shrink-0 mt-0.5"
-                        >
+                        <div class="w-8 h-8 rounded-lg ${iconClass} flex items-center justify-center shrink-0 mt-0.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path
                                     stroke-linecap="round"

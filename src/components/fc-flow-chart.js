@@ -155,8 +155,11 @@ export class FcFlowChart extends BaseElement {
 
         return html`
             <div class="fc-chart-wrap rounded-box border border-base-300 bg-base-200 p-4 relative">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-sm font-semibold text-base-content">Verlauf der letzten 14 Tage</span>
+                <div class="flex items-start justify-between mb-3">
+                    <div>
+                        <div class="text-xs font-semibold text-base-content/50 uppercase tracking-wide">Flows</div>
+                        <div class="text-[10px] text-base-content/35 mt-0.5">letzte 14 Tage</div>
+                    </div>
                     <div class="flex items-center gap-4">
                         <span class="flex items-center gap-1.5 text-xs text-base-content/50">
                             <span

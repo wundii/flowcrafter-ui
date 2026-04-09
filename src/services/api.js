@@ -32,12 +32,13 @@ function postJson(path, body) {
 }
 
 export const api = {
-    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, type?: string, from?: string, to?: string }} [opts] */
-    getFlows({ sort = 'desc', top = 1000, skip = 0, type, from, to } = {}) {
+    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, type?: string, from?: string, to?: string, status?: string }} [opts] */
+    getFlows({ sort = 'desc', top = 1000, skip = 0, type, from, to, status } = {}) {
         const p = new URLSearchParams({ sort, top, skip })
         if (type) p.set('type', type)
         if (from) p.set('from', from)
         if (to) p.set('to', to)
+        if (status) p.set('status', status)
         return fetchJson(`/api/flows?${p}`)
     },
 
