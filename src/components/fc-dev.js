@@ -429,9 +429,13 @@ export class FcDev extends BaseElement {
                                             Das Schema wurde geändert, der Flow-Typ
                                             <code class="font-mono bg-base-300/50 px-1 rounded">${d.schema?.type}</code>
                                             ist bereits in der Datenbank gespeichert. Bitte den Versionsbezeichner erhöhen (z.B.
-                                            <code class="font-mono bg-base-300/50 px-1 rounded">${nextVersion(d.schema?.type)?.current ?? 'v1'}</code>
+                                            <code class="font-mono bg-base-300/50 px-1 rounded"
+                                                >${nextVersion(d.schema?.type)?.current ?? 'v1'}</code
+                                            >
                                             →
-                                            <code class="font-mono bg-base-300/50 px-1 rounded">${nextVersion(d.schema?.type)?.next ?? 'v2'}</code>).
+                                            <code class="font-mono bg-base-300/50 px-1 rounded"
+                                                >${nextVersion(d.schema?.type)?.next ?? 'v2'}</code
+                                            >).
                                         </div>
                                     </div>
                                 </div>
@@ -484,9 +488,13 @@ export class FcDev extends BaseElement {
                                           Folgende Messages haben einen geänderten Konstruktor — alle verarbeiteten Flows werden nur noch
                                           als
                                           <strong>Readonly</strong> interpretiert. Empfehlung: Versionsbezeichner erhöhen (z.B.
-                                          <code class="font-mono bg-base-300/50 px-1 rounded">${nextVersion(d.schema?.type)?.current ?? 'v1'}</code>
+                                          <code class="font-mono bg-base-300/50 px-1 rounded"
+                                              >${nextVersion(d.schema?.type)?.current ?? 'v1'}</code
+                                          >
                                           →
-                                          <code class="font-mono bg-base-300/50 px-1 rounded">${nextVersion(d.schema?.type)?.next ?? 'v2'}</code>).
+                                          <code class="font-mono bg-base-300/50 px-1 rounded"
+                                              >${nextVersion(d.schema?.type)?.next ?? 'v2'}</code
+                                          >).
                                       </div>
                                       <ul class="mt-2 flex flex-col gap-0.5">
                                           ${d.changedMessages.map(
