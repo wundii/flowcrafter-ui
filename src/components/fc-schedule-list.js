@@ -158,35 +158,76 @@ export class FcScheduleList extends BaseElement {
     _renderScheduleCard(item) {
         const human = cronToHuman(item.expression)
         const isRaw = human === item.expression
+        const inactive = item.active === false
         return html`
             <div
-                class="rounded-box border border-base-300 bg-base-200 hover:border-primary/30 hover:shadow-md transition-all duration-200 flex flex-col group"
+                class="rounded-box border ${inactive
+                    ? 'border-base-content/20'
+                    : 'border-base-300 hover:border-primary/30 hover:shadow-md'} bg-base-200 transition-all duration-200 flex flex-col group"
             >
                 <!-- Card header with gradient -->
-                <div class="px-4 pt-4 pb-3 bg-gradient-to-br from-primary/5 via-transparent to-transparent">
+                <div
+                    class="px-4 pt-4 pb-3 ${inactive
+                        ? 'bg-gradient-to-br from-base-content/3 via-transparent to-transparent'
+                        : 'bg-gradient-to-br from-primary/5 via-transparent to-transparent'}"
+                >
                     <div class="flex items-start gap-2.5">
-                        <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                        <div
+                            class="w-8 h-8 rounded-lg ${inactive
+                                ? 'bg-base-content/8 text-base-content/30'
+                                : 'bg-primary/10 text-primary'} flex items-center justify-center shrink-0 mt-0.5"
+                        >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                             </svg>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <div class="font-bold text-sm leading-tight truncate" title="${item.name ?? shortClass(item.className)}">
+                            <div
+                                class="font-bold text-sm leading-tight truncate ${inactive ? 'text-base-content/45' : ''}"
+                                title="${item.name ?? shortClass(item.className)}"
+                            >
                                 ${item.name ?? shortClass(item.className)}
                             </div>
                             <div class="text-xs text-base-content/35 mt-1 truncate font-mono" title="${item.className}">
                                 ${shortClass(item.className)}
                             </div>
+                            ${inactive
+                                ? html`<div class="flex items-center gap-1 mt-1.5">
+                                      <svg
+                                          class="w-3 h-3 text-base-content/35"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          stroke-width="2"
+                                          viewBox="0 0 24 24"
+                                      >
+                                          <path
+                                              stroke-linecap="round"
+                                              stroke-linejoin="round"
+                                              d="M14.25 9v6m-4.5 0V9M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                                          />
+                                      </svg>
+                                      <span class="text-[10px] text-base-content/35 font-medium tracking-wider uppercase">Inaktiv</span>
+                                  </div>`
+                                : ''}
                         </div>
                     </div>
                 </div>
 
                 <!-- Cron info -->
-                <div class="px-4 py-3 flex-1 flex flex-col justify-center border-t border-base-300/50">
+                <div
+                    class="px-4 py-3 flex-1 flex flex-col justify-center border-t ${inactive
+                        ? 'border-base-content/10'
+                        : 'border-base-300/50'}"
+                >
                     <div class="text-center">
-                        <div class="text-lg font-semibold text-base-content/80 leading-tight">${isRaw ? '' : human}</div>
+                        <div class="text-lg font-semibold ${inactive ? 'text-base-content/30' : 'text-base-content/80'} leading-tight">
+                            ${isRaw ? '' : human}
+                        </div>
                         <div class="mt-1.5">
-                            <span class="badge badge-sm badge-ghost font-mono text-[10px] tracking-wider text-base-content/40"
+                            <span
+                                class="badge badge-sm badge-ghost font-mono text-[10px] tracking-wider ${inactive
+                                    ? 'text-base-content/25'
+                                    : 'text-base-content/40'}"
                                 >${item.expression}</span
                             >
                         </div>
@@ -194,10 +235,13 @@ export class FcScheduleList extends BaseElement {
                 </div>
 
                 <!-- Footer -->
-                <div class="px-4 py-2 border-t border-base-300/50 flex justify-end gap-1">
+                <div class="px-4 py-2 border-t ${inactive ? 'border-base-content/10' : 'border-base-300/50'} flex justify-end gap-1">
                     <button
-                        class="btn btn-xs btn-ghost text-base-content/40 hover:text-success gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
-                        title="Schedule manuell starten"
+                        class="btn btn-xs btn-ghost ${inactive
+                            ? 'text-base-content/20'
+                            : 'text-base-content/40 hover:text-success'} gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
+                        title=${inactive ? 'Schedule ist inaktiv' : 'Schedule manuell starten'}
+                        ?disabled=${inactive}
                         @click=${() => this._askRun(item.className, item.name)}
                     >
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -210,7 +254,9 @@ export class FcScheduleList extends BaseElement {
                         Start
                     </button>
                     <button
-                        class="btn btn-xs btn-ghost text-base-content/40 hover:text-primary gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
+                        class="btn btn-xs btn-ghost ${inactive
+                            ? 'text-base-content/20 hover:text-primary/40'
+                            : 'text-base-content/40 hover:text-primary'} gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
                         @click=${() => this._showSource(item.className)}
                     >
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
