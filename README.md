@@ -34,7 +34,7 @@ Web-Frontend für [FlowCrafter](https://github.com/wundii/flowcrafter) — visua
 Das UI kommuniziert mit **zwei Backends**:
 
 | Backend         | Port           | Zweck                                                                                                                                   |
-| --------------- |----------------| --------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Node.js-Server  | `3000`         | Auth, Verbindungskonfiguration, KI-Analyse — im Dev via Vite-Proxy auf `/api/auth`, `/api/connection`, `/api/ai-config`, `/api/analyze` |
 | FlowCrafter-API | konfigurierbar | Flow-Daten, Exceptions, Queues, Schemas, Stub-Sourcen — URL wird im Node-Backend gespeichert                                            |
 
@@ -51,8 +51,8 @@ Das UI kommuniziert mit **zwei Backends**:
 
 | Anforderung | Version |
 | ----------- | ------- |
-| Node.js     | >= 20   |
-| npm         | >= 10   |
+| Node.js     | >= 24   |
+| npm         | >= 11   |
 
 ---
 
@@ -93,7 +93,7 @@ docker build -t flowcrafter-ui .
 ## Verfügbare Scripts
 
 | Befehl                 | Beschreibung                                                |
-| ---------------------- |-------------------------------------------------------------|
+| ---------------------- | ----------------------------------------------------------- |
 | `npm run dev`          | Dev-Server mit Hot-Reload starten (Vite :5173 + Node :3000) |
 | `npm run build`        | Produktions-Build nach `dist/`                              |
 | `npm run start`        | Produktions-Server (Node serviert `dist/`)                  |

@@ -627,7 +627,7 @@ const server = createServer(async (req, res) => {
     createReadStream(filePath).pipe(res)
 })
 
-server.listen(PORT, () => console.log(`FlowCrafter UI → http://localhost:${PORT}`))
+server.listen(PORT, () => console.log(`FlowCrafter UI node service → http://localhost:${PORT}`))
 
 process.on('SIGTERM', () => {
     console.log('Received SIGTERM, shutting down…')

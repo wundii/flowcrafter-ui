@@ -1,7 +1,7 @@
 # docker build -t flowcrafter-ui .
 # docker run -p 5173:5173 -v ./data:/flowcrafter/data flowcrafter-ui
 # ── Stage 1: Build ────────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /flowcrafter
 
@@ -12,7 +12,7 @@ COPY . .
 RUN npm run build
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /flowcrafter
 
