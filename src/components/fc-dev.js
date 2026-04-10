@@ -36,6 +36,12 @@ function computeStubDiff(liveStubs, storedStubs) {
     return diff
 }
 
+function nextVersion(type) {
+    const m = type?.match(/v(\d+)$/)
+    if (!m) return null
+    return { current: `v${m[1]}`, next: `v${parseInt(m[1]) + 1}` }
+}
+
 function removedStubs(liveStubs, storedStubs) {
     const liveSources = new Set(liveStubs.map(s => s.source))
     return storedStubs.filter(s => !liveSources.has(s.source))
@@ -71,7 +77,7 @@ export class FcDev extends BaseElement {
         this._flows = []
         this._loading = true
         this._selected = null
-        this._sidebarWidth = 256
+        this._sidebarWidth = 300
         this._srcContent = null
         this._srcError = null
         this._srcLoading = false
@@ -83,8 +89,8 @@ export class FcDev extends BaseElement {
         e.preventDefault()
         const startX = e.clientX
         const startWidth = this._sidebarWidth
-        const minWidth = 256
-        const maxWidth = Math.round(256 * 2)
+        const minWidth = 300
+        const maxWidth = Math.round(300 * 1.8)
 
         const onMove = mv => {
             this._sidebarWidth = Math.min(maxWidth, Math.max(minWidth, startWidth + mv.clientX - startX))
@@ -423,9 +429,9 @@ export class FcDev extends BaseElement {
                                             Das Schema wurde geändert, der Flow-Typ
                                             <code class="font-mono bg-base-300/50 px-1 rounded">${d.schema?.type}</code>
                                             ist bereits in der Datenbank gespeichert. Bitte den Versionsbezeichner erhöhen (z.B.
-                                            <code class="font-mono bg-base-300/50 px-1 rounded">v1</code>
+                                            <code class="font-mono bg-base-300/50 px-1 rounded">${nextVersion(d.schema?.type)?.current ?? 'v1'}</code>
                                             →
-                                            <code class="font-mono bg-base-300/50 px-1 rounded">v2</code>).
+                                            <code class="font-mono bg-base-300/50 px-1 rounded">${nextVersion(d.schema?.type)?.next ?? 'v2'}</code>).
                                         </div>
                                     </div>
                                 </div>
@@ -478,9 +484,9 @@ export class FcDev extends BaseElement {
                                           Folgende Messages haben einen geänderten Konstruktor — alle verarbeiteten Flows werden nur noch
                                           als
                                           <strong>Readonly</strong> interpretiert. Empfehlung: Versionsbezeichner erhöhen (z.B.
-                                          <code class="font-mono bg-base-300/50 px-1 rounded">v1</code>
+                                          <code class="font-mono bg-base-300/50 px-1 rounded">${nextVersion(d.schema?.type)?.current ?? 'v1'}</code>
                                           →
-                                          <code class="font-mono bg-base-300/50 px-1 rounded">v2</code>).
+                                          <code class="font-mono bg-base-300/50 px-1 rounded">${nextVersion(d.schema?.type)?.next ?? 'v2'}</code>).
                                       </div>
                                       <ul class="mt-2 flex flex-col gap-0.5">
                                           ${d.changedMessages.map(
