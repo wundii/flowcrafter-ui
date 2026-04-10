@@ -52,6 +52,7 @@ export class FcDev extends BaseElement {
         _flows: { state: true },
         _loading: { state: true },
         _selected: { state: true },
+        _sidebarWidth: { state: true },
         _srcContent: { state: true },
         _srcError: { state: true },
         _srcLoading: { state: true },
@@ -70,11 +71,30 @@ export class FcDev extends BaseElement {
         this._flows = []
         this._loading = true
         this._selected = null
+        this._sidebarWidth = 256
         this._srcContent = null
         this._srcError = null
         this._srcLoading = false
         this._srcSource = null
         this._validationCache = {}
+    }
+
+    _startResize(e) {
+        e.preventDefault()
+        const startX = e.clientX
+        const startWidth = this._sidebarWidth
+        const minWidth = 256
+        const maxWidth = Math.round(256 * 2)
+
+        const onMove = mv => {
+            this._sidebarWidth = Math.min(maxWidth, Math.max(minWidth, startWidth + mv.clientX - startX))
+        }
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove)
+            document.removeEventListener('mouseup', onUp)
+        }
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
     }
 
     connectedCallback() {
@@ -575,7 +595,7 @@ export class FcDev extends BaseElement {
         return html`
             <div class="flex gap-0 h-[calc(100vh-10rem)] rounded-box border border-base-300 overflow-hidden">
                 <!-- Sidebar -->
-                <div class="w-64 shrink-0 border-r border-base-300 bg-base-200/50 flex flex-col">
+                <div style="width: ${this._sidebarWidth}px" class="shrink-0 border-r border-base-300 bg-base-200/50 flex flex-col">
                     <!-- Sidebar header -->
                     <div class="px-3 pt-3 pb-2 border-b border-base-300/50 shrink-0 flex items-center justify-between">
                         <span class="text-xs font-semibold text-base-content/50 uppercase tracking-wider">
@@ -601,6 +621,12 @@ export class FcDev extends BaseElement {
                     <!-- Sidebar content -->
                     <div class="flex-1 overflow-hidden p-2">${this._renderSidebar()}</div>
                 </div>
+
+                <!-- Resize handle -->
+                <div
+                    class="w-1 shrink-0 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors -ml-px z-10"
+                    @mousedown=${this._startResize}
+                ></div>
 
                 <!-- Detail panel -->
                 <div class="flex-1 overflow-hidden bg-base-100">${this._renderDetail()}</div>
