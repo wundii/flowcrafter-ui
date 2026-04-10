@@ -139,6 +139,16 @@ export const api = {
         return fetchJson(`/api/flows/types?${p}`)
     },
 
+    getDevFlows() {
+        return fetchJson('/api/dev/flows')
+    },
+
+    /** @param {string} className */
+    getDevFlow(className) {
+        const p = new URLSearchParams({ className })
+        return fetchJson(`/api/dev/flow?${p}`)
+    },
+
     getSchedules() {
         return fetchJson('/api/schedules')
     },

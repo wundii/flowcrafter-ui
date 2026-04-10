@@ -14,6 +14,7 @@ import './fc-login.js'
 import './fc-overview.js'
 import './fc-queue-chart.js'
 import './fc-queue-list.js'
+import './fc-dev.js'
 import './fc-schedule-list.js'
 import './fc-schema-list.js'
 import './fc-service-setup.js'
@@ -498,6 +499,7 @@ export class FcApp extends BaseElement {
         }
         if (this.activeTab === 'schedules') return html`<fc-schedule-list></fc-schedule-list>`
         if (this.activeTab === 'queues') return html`<fc-queue-list></fc-queue-list>`
+        if (this.activeTab === 'dev') return html`<fc-dev></fc-dev>`
         return html`
             <div class="flex flex-col md:flex-row gap-4">
                 <div class="w-full md:w-1/3 md:sticky md:top-20 md:self-start">
@@ -848,7 +850,7 @@ export class FcApp extends BaseElement {
 
                 <div class="px-4 pt-4">
                     <div role="tablist" class="tabs tabs-border">
-                        ${TABS.map(
+                        ${[...TABS, ...(this._serverInfo?.dev ? ['dev'] : [])].map(
                             tab => html`
                                 <a
                                     role="tab"
@@ -939,6 +941,19 @@ export class FcApp extends BaseElement {
                                                 d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859M12 3v8.25m0 0l-3-3m3 3l3-3"
                                             />
                                         </svg>`,
+                                        dev: html`<svg
+                                            class="w-3.5 h-3.5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
+                                            />
+                                        </svg>`,
                                     }[tab]}
                                     ${{
                                         overview: 'Overview',
@@ -947,6 +962,7 @@ export class FcApp extends BaseElement {
                                         exceptions: 'Exceptions',
                                         schedules: 'Schedules',
                                         queues: 'Queues',
+                                        dev: 'DevTool',
                                     }[tab]}
                                 </a>
                             `

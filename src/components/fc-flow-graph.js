@@ -59,6 +59,13 @@ const STATUS = {
     idle: { color: '#4b5563', label: '○', bg: 'rgba(75,85,99,0.08)' },
 }
 
+const DIFF_STATUS = {
+    added: { color: '#22c55e', label: '+', bg: 'rgba(34,197,94,0.12)' },
+    changed: { color: '#f97316', label: '~', bg: 'rgba(249,115,22,0.12)' },
+    messageDrift: { color: '#eab308', label: '!', bg: 'rgba(234,179,8,0.12)' },
+    unchanged: { color: '#4b5563', label: '○', bg: 'rgba(75,85,99,0.08)' },
+}
+
 const MSG_COLOR = { finish: '#22c55e', process: '#3b82f6', wait: '#eab308' }
 
 // ─── Graph layout ─────────────────────────────────────────────────────────────
@@ -251,7 +258,9 @@ export class FcFlowGraph extends BaseElement {
         _stubSourceError: { state: true },
         _stubSourceName: { state: true },
         _tooltip: { state: true }, // { x, y, label, data } | null
+        _diffTooltip: { state: true }, // { x, y, source, diff } | null
         flow: { type: Object },
+        stubDiff: { type: Object }, // { [source]: { status: 'added'|'changed'|'unchanged', changes: {messages:{added,removed},returnTypes:{added,removed}} } }
         priorRuns: { type: Array }, // all runs up to and including the selected run (oldest first)
         readonly: { type: Boolean },
         runExceptions: { type: Array }, // overrides flow.flowExceptions for a specific run
@@ -273,7 +282,10 @@ export class FcFlowGraph extends BaseElement {
         this._stubSourceError = null
         this._stubSourceName = null
         this._tooltip = null
+        this._diffTooltip = null
+        this._diffTooltipTimer = null
         this.flow = null
+        this.stubDiff = null
         this.priorRuns = null
         this.readonly = false
         this.runExceptions = null
@@ -450,7 +462,10 @@ export class FcFlowGraph extends BaseElement {
         const { edges, positions, svgW, svgH, stubMap, colOf, topOffset } = buildLayout(stubs)
 
         const statusOf = src => getNodeStatus(src, flowMessages, flowExceptions, flowResults)
-        const styleOf = src => STATUS[statusOf(src)]
+        const styleOf = src => {
+            if (this.stubDiff?.[src]) return DIFF_STATUS[this.stubDiff[src].status] ?? STATUS[statusOf(src)]
+            return STATUS[statusOf(src)]
+        }
         const msgsOf = src => flowMessages.filter(m => m.stubSource === src)
         const excsOf = src => flowExceptions.filter(e => e.stubSource === src)
         const ressOf = src => flowResults.filter(r => r.stubSource === src)
@@ -525,6 +540,20 @@ export class FcFlowGraph extends BaseElement {
                                     <div
                                         style="height:${HEADER_H}px; display:flex; align-items:center; gap:8px;
                             padding:0 10px; border-bottom:1px solid ${st.color}33;"
+                                        @mouseenter=${e => {
+                                            if (!this.stubDiff?.[stub.source]) return
+                                            clearTimeout(this._diffTooltipTimer)
+                                            const elRect = e.currentTarget.getBoundingClientRect()
+                                            this._diffTooltip = {
+                                                x: elRect.left,
+                                                y: elRect.bottom + 6,
+                                                source: stub.source,
+                                                diff: this.stubDiff[stub.source],
+                                            }
+                                        }}
+                                        @mouseleave=${() => {
+                                            this._diffTooltipTimer = setTimeout(() => (this._diffTooltip = null), 150)
+                                        }}
                                     >
                                         <span style="font-size:12px; color:${accIndicatorOf(stub.source).color}; flex-shrink:0;"
                                             >${accIndicatorOf(stub.source).label}</span
@@ -689,6 +718,142 @@ export class FcFlowGraph extends BaseElement {
                         </svg>
                     </div>
                 </div>
+
+                <!-- ── Diff tooltip ── -->
+                ${this._diffTooltip
+                    ? html`
+                          <div
+                              style="position:fixed; left:${this._diffTooltip.x}px; top:${this._diffTooltip.y}px; z-index:9999;"
+                              class="w-72 rounded-box border border-base-300 bg-base-100 shadow-lg p-4"
+                              @mouseenter=${() => clearTimeout(this._diffTooltipTimer)}
+                              @mouseleave=${() => {
+                                  this._diffTooltipTimer = setTimeout(() => (this._diffTooltip = null), 150)
+                              }}
+                          >
+                              <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box flex items-center justify-between mb-3">
+                                  <span
+                                      class="text-xs font-semibold uppercase tracking-wider"
+                                      style="color:${DIFF_STATUS[this._diffTooltip.diff.status]?.color}"
+                                  >
+                                      ${this._diffTooltip.diff.status === 'added'
+                                          ? 'Neu hinzugefügt'
+                                          : this._diffTooltip.diff.status === 'messageDrift'
+                                            ? 'Nachrichtenstruktur geändert'
+                                            : 'Schema geändert'}
+                                  </span>
+                              </div>
+                              <div class="font-mono text-[10px] text-base-content/50 mb-3 truncate">${this._diffTooltip.source}</div>
+                              ${this._diffTooltip.diff.status === 'messageDrift' && this._diffTooltip.diff.changes?.properties?.length
+                                  ? html`
+                                        ${this._diffTooltip.diff.changes.properties.map(
+                                            p => html`
+                                                <div class="mb-2">
+                                                    <div class="text-[10px] text-base-content/40 uppercase tracking-wider mb-1">
+                                                        ${p.class.split('\\').pop()}
+                                                    </div>
+                                                    <table class="w-full text-[10px] font-mono border-collapse">
+                                                        <thead>
+                                                            <tr>
+                                                                <th
+                                                                    class="text-left text-base-content/40 font-semibold pb-0.5 pr-3 w-1/2"
+                                                                    style="border-bottom:1px solid rgba(75,85,99,0.2)"
+                                                                >
+                                                                    Alt
+                                                                </th>
+                                                                <th
+                                                                    class="text-left text-base-content/40 font-semibold pb-0.5 w-1/2"
+                                                                    style="border-bottom:1px solid rgba(75,85,99,0.2)"
+                                                                >
+                                                                    Neu
+                                                                </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            ${(() => {
+                                                                const liveSet = new Set(p.live)
+                                                                const storedSet = new Set(p.stored)
+                                                                return Array.from({
+                                                                    length: Math.max(p.stored.length, p.live.length),
+                                                                }).map((_, i) => {
+                                                                    const storedProp = p.stored[i]
+                                                                    const liveProp = p.live[i]
+                                                                    const removed = storedProp && !liveSet.has(storedProp)
+                                                                    const added = liveProp && !storedSet.has(liveProp)
+                                                                    return html`
+                                                                        <tr>
+                                                                            <td
+                                                                                class="py-0.5 pr-3 truncate"
+                                                                                style="color:${removed ? '#f97316' : 'inherit'}"
+                                                                            >
+                                                                                ${storedProp ?? '—'}
+                                                                            </td>
+                                                                            <td
+                                                                                class="py-0.5 truncate"
+                                                                                style="color:${added ? '#22c55e' : 'inherit'}"
+                                                                            >
+                                                                                ${liveProp ?? '—'}
+                                                                            </td>
+                                                                        </tr>
+                                                                    `
+                                                                })
+                                                            })()}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            `
+                                        )}
+                                    `
+                                  : this._diffTooltip.diff.changes
+                                    ? html`
+                                          ${this._diffTooltip.diff.changes.messages.added.length
+                                              ? html`<div class="mb-1">
+                                                    <span class="text-[10px] text-base-content/40 uppercase tracking-wider">Input +</span>
+                                                    ${this._diffTooltip.diff.changes.messages.added.map(
+                                                        m =>
+                                                            html`<div class="text-xs font-mono text-success truncate ml-1">
+                                                                + ${m.split('\\').pop()}
+                                                            </div>`
+                                                    )}
+                                                </div>`
+                                              : ''}
+                                          ${this._diffTooltip.diff.changes.messages.removed.length
+                                              ? html`<div class="mb-1">
+                                                    <span class="text-[10px] text-base-content/40 uppercase tracking-wider">Input −</span>
+                                                    ${this._diffTooltip.diff.changes.messages.removed.map(
+                                                        m =>
+                                                            html`<div class="text-xs font-mono text-error truncate ml-1">
+                                                                − ${m.split('\\').pop()}
+                                                            </div>`
+                                                    )}
+                                                </div>`
+                                              : ''}
+                                          ${this._diffTooltip.diff.changes.returnTypes.added.length
+                                              ? html`<div class="mb-1">
+                                                    <span class="text-[10px] text-base-content/40 uppercase tracking-wider">Output +</span>
+                                                    ${this._diffTooltip.diff.changes.returnTypes.added.map(
+                                                        m =>
+                                                            html`<div class="text-xs font-mono text-success truncate ml-1">
+                                                                + ${m.split('\\').pop()}
+                                                            </div>`
+                                                    )}
+                                                </div>`
+                                              : ''}
+                                          ${this._diffTooltip.diff.changes.returnTypes.removed.length
+                                              ? html`<div>
+                                                    <span class="text-[10px] text-base-content/40 uppercase tracking-wider">Output −</span>
+                                                    ${this._diffTooltip.diff.changes.returnTypes.removed.map(
+                                                        m =>
+                                                            html`<div class="text-xs font-mono text-error truncate ml-1">
+                                                                − ${m.split('\\').pop()}
+                                                            </div>`
+                                                    )}
+                                                </div>`
+                                              : ''}
+                                      `
+                                    : ''}
+                          </div>
+                      `
+                    : ''}
 
                 <!-- ── Message tooltip ── -->
                 ${this._tooltip

@@ -235,13 +235,10 @@ export class FcScheduleList extends BaseElement {
                 </div>
 
                 <!-- Footer -->
-                <div class="px-4 py-2 border-t ${inactive ? 'border-base-content/10' : 'border-base-300/50'} flex justify-end gap-1">
+                <div class="px-4 py-2 border-t border-base-300/50 flex justify-end gap-1">
                     <button
-                        class="btn btn-xs btn-ghost ${inactive
-                            ? 'text-base-content/20'
-                            : 'text-base-content/40 hover:text-success'} gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
+                        class="btn btn-xs btn-ghost text-base-content/40 hover:text-success gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
                         title=${inactive ? 'Schedule ist inaktiv' : 'Schedule manuell starten'}
-                        ?disabled=${inactive}
                         @click=${() => this._askRun(item.className, item.name)}
                     >
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
