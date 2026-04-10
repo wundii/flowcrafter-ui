@@ -7,7 +7,12 @@ function fetchJson(path) {
     return fetch(`/api/fc${path}`, { headers }).then(async res => {
         if (!res.ok) {
             const body = await res.json().catch(() => ({}))
-            throw new Error(body.error ?? `HTTP ${res.status}`)
+            const err = new Error(body.error ?? `HTTP ${res.status}`)
+            err.file = body.file ?? null
+            err.line = body.line ?? null
+            err.trace = body.trace ?? null
+            err.fileContext = body.fileContext ?? null
+            throw err
         }
         return res.json()
     })
