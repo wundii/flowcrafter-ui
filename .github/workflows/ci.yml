@@ -5,6 +5,8 @@ on:
     branches: ['main']
   pull_request:
     branches: ['main']
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -32,23 +34,11 @@ jobs:
       - name: 'Check Prettier formatting'
         run: npm run format:check
 
-  increment-version:
-    if: github.event_name == 'push'
-    outputs:
-      VERSION: ${{ steps.increment-version.outputs.VERSION }}
-    runs-on: ubuntu-latest
-    name: 'CI Pipeline - Create version number'
-    steps:
-      - name: 'Increment version number'
-        id: increment-version
-        run: |
-          echo VERSION=${{ github.run_number }} >> $GITHUB_OUTPUT
-
-  build-and-push:
-    needs: [lint, increment-version]
+  build-preview:
+    needs: [lint]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    name: 'CI Pipeline - Build and push'
+    name: 'CI Pipeline - Build and push (preview)'
     steps:
       - name: 'Uses git-checkout'
         uses: actions/checkout@v4
@@ -68,4 +58,32 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: wundii/flowcrafter-ui:latest
+          tags: wundii/flowcrafter-ui:preview
+
+  build-release:
+    needs: [lint]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    name: 'CI Pipeline - Build and push (release)'
+    steps:
+      - name: 'Uses git-checkout'
+        uses: actions/checkout@v4
+
+      - name: 'Uses docker-login'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 'Uses setup docker build'
+        uses: docker/setup-buildx-action@v3
+
+      - name: 'Uses Build and push'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            wundii/flowcrafter-ui:${{ github.ref_name }}
+            wundii/flowcrafter-ui:latest
