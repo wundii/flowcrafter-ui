@@ -303,8 +303,12 @@ export class FcFlowGraph extends BaseElement {
         clearTimeout(this._tooltipTimer)
         const hostRect = this.getBoundingClientRect()
         const elRect = e.currentTarget.getBoundingClientRect()
+        const tooltipWidth = 360
+        const xLeft = elRect.left - hostRect.left
+        const alignRight = xLeft + tooltipWidth > hostRect.width
         this._tooltip = {
-            x: elRect.left - hostRect.left,
+            x: alignRight ? hostRect.width - (elRect.right - hostRect.left) : xLeft,
+            alignRight,
             y: elRect.bottom - hostRect.top + 6,
             label,
             messageSource,
@@ -887,14 +891,16 @@ export class FcFlowGraph extends BaseElement {
                 ${this._tooltip
                     ? html`
                           <div
-                              style="position:absolute; left:${this._tooltip.x}px; top:${this._tooltip.y}px;
+                              style="position:absolute; ${this._tooltip.alignRight
+                                  ? `right:${this._tooltip.x}px`
+                                  : `left:${this._tooltip.x}px`}; top:${this._tooltip.y}px;
                            z-index:50; max-width:360px;"
                               class="rounded-box border border-base-300 bg-base-100 shadow-xl p-3"
                               @mouseenter=${() => this._onTooltipEnter()}
                               @mouseleave=${() => this._hideTooltip()}
                           >
-                              <div class="font-semibold text-sm text-base-content mb-0.5">${this._tooltip.label}</div>
-                              <div class="text-xs font-mono text-base-content/40 mb-2">${this._tooltip.messageSource}</div>
+                              <div class="font-semibold text-sm text-base-content mb-0.5 break-all">${this._tooltip.label}</div>
+                              <div class="text-xs font-mono text-base-content/40 mb-2 break-all">${this._tooltip.messageSource}</div>
                               <pre class="text-xs font-mono text-base-content/90 whitespace-pre-wrap overflow-auto max-h-48">
 ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                               >
