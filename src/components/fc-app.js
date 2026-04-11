@@ -21,6 +21,7 @@ import './fc-service-setup.js'
 import './fc-type-list.js'
 
 const TABS = ['overview', 'schemas', 'flows', 'exceptions', 'schedules', 'queues']
+const VERSION_MISMATCH_ACK = 'fc_version_mismatch_ack'
 const SEARCH_LIMIT = 5
 
 function workerAgeSecs(heartbeatIso) {
@@ -65,6 +66,8 @@ export class FcApp extends BaseElement {
         _serverDescription: { state: true },
         _serverInfo: { state: true },
         _serverOffline: { state: true },
+        _uiVersion: { state: true },
+        _versionMismatch: { state: true },
         _serviceReady: { state: true },
         _toolboxOpen: { state: true },
         activeTab: { state: true },
@@ -92,6 +95,8 @@ export class FcApp extends BaseElement {
         this._serverDescription = null
         this._serverInfo = null
         this._serverOffline = false
+        this._uiVersion = null
+        this._versionMismatch = false
         this._serviceReady = false
         this._toolboxOpen = false
         this.activeTab = 'overview'
@@ -119,6 +124,7 @@ export class FcApp extends BaseElement {
                     this._startInfoPolling()
                 }
                 this._loadAiConfig()
+                this._loadUiVersion()
             }
         }
     }
@@ -196,6 +202,7 @@ export class FcApp extends BaseElement {
     }
 
     async _onAuthenticated() {
+        sessionStorage.removeItem(VERSION_MISMATCH_ACK)
         this._authed = true
         await connection.load()
         this._serviceReady = connection.isConfigured()
@@ -204,7 +211,18 @@ export class FcApp extends BaseElement {
             this._startInfoPolling()
             this._loadAiConfig()
         }
+        this._loadUiVersion()
         this._applyRoute()
+    }
+
+    async _loadUiVersion() {
+        try {
+            const { version } = await api.getUiVersion()
+            this._uiVersion = version ?? null
+            this._checkVersionMismatch()
+        } catch {
+            // ignore
+        }
     }
 
     async _loadInfo() {
@@ -213,9 +231,24 @@ export class FcApp extends BaseElement {
             this._serverInfo = info
             this._serverDescription = info.description ?? null
             this._serverOffline = false
+            this._checkVersionMismatch()
         } catch {
             this._serverOffline = true
         }
+    }
+
+    _checkVersionMismatch() {
+        if (!this._uiVersion || !this._serverInfo?.version) return
+        if (this._uiVersion === 'preview') return
+        this._versionMismatch = this._uiVersion !== this._serverInfo.version
+        if (this._versionMismatch && !sessionStorage.getItem(VERSION_MISMATCH_ACK)) {
+            this.updateComplete.then(() => this.querySelector('#version-mismatch-modal')?.showModal())
+        }
+    }
+
+    _closeVersionMismatchModal() {
+        sessionStorage.setItem(VERSION_MISMATCH_ACK, '1')
+        this.querySelector('#version-mismatch-modal')?.close()
     }
 
     _startInfoPolling() {
@@ -552,7 +585,12 @@ export class FcApp extends BaseElement {
                             >
                                 ${logoIcon(24)}
                                 <div class="flex flex-col leading-tight text-left">
-                                    <span class="text-base font-bold tracking-tight whitespace-nowrap">FlowCrafter UI</span>
+                                    <span
+                                        class="text-base font-bold tracking-tight whitespace-nowrap ${this._versionMismatch
+                                            ? 'text-warning'
+                                            : ''}"
+                                        >FlowCrafter UI</span
+                                    >
                                     ${this._serverDescription || this._serverInfo
                                         ? html` <span
                                               class="text-xs whitespace-nowrap ${this._serverInfo?.workers?.length > 0
@@ -588,13 +626,47 @@ export class FcApp extends BaseElement {
                                                         >
                                                     </div>`
                                                   : ''}
-                                              ${this._serverInfo?.version
-                                                  ? html`<div class="flex items-baseline justify-between gap-3">
-                                                        <span class="text-xs text-base-content/50 shrink-0">Version</span>
-                                                        <span class="font-mono text-xs text-right text-base-content/60"
-                                                            >${this._serverInfo.version}</span
+                                              ${this._uiVersion && this._serverInfo?.version
+                                                  ? this._uiVersion === 'preview'
+                                                      ? html`<div
+                                                            class="rounded-md bg-info/10 border border-info/30 px-3 py-2 flex flex-col gap-1.5"
                                                         >
-                                                    </div>`
+                                                            <span class="text-xs text-info/80 font-medium"
+                                                                >Es ist eine Preview UI-Version aktiv</span
+                                                            >
+                                                            <div class="flex items-baseline justify-between gap-3">
+                                                                <span class="text-xs text-base-content/50 shrink-0">Server</span>
+                                                                <span class="font-mono text-xs text-right text-base-content/60"
+                                                                    >${this._serverInfo.version}</span
+                                                                >
+                                                            </div>
+                                                        </div>`
+                                                      : this._versionMismatch
+                                                        ? html`<div
+                                                              class="rounded-md bg-warning/10 border border-warning/30 px-3 py-2 flex flex-col gap-1.5"
+                                                          >
+                                                              <span class="text-xs text-warning/80 font-medium"
+                                                                  >Achtung: Versionsunterschied</span
+                                                              >
+                                                              <div class="flex items-baseline justify-between gap-3">
+                                                                  <span class="text-xs text-base-content/50 shrink-0">UI</span>
+                                                                  <span class="font-mono text-xs text-right text-warning"
+                                                                      >${this._uiVersion}</span
+                                                                  >
+                                                              </div>
+                                                              <div class="flex items-baseline justify-between gap-3">
+                                                                  <span class="text-xs text-base-content/50 shrink-0">Server</span>
+                                                                  <span class="font-mono text-xs text-right text-warning"
+                                                                      >${this._serverInfo.version}</span
+                                                                  >
+                                                              </div>
+                                                          </div>`
+                                                        : html`<div class="flex items-baseline justify-between gap-3">
+                                                              <span class="text-xs text-base-content/50 shrink-0">Server + UI</span>
+                                                              <span class="font-mono text-xs text-right text-base-content/60"
+                                                                  >${this._uiVersion}</span
+                                                              >
+                                                          </div>`
                                                   : ''}
                                               ${this._serverInfo?.php
                                                   ? html`<div class="flex items-baseline justify-between gap-3">
@@ -1269,6 +1341,74 @@ export class FcApp extends BaseElement {
                                       </div>
                                   </div>
                               `}
+                    </div>
+                    <div class="modal-backdrop backdrop-blur-sm"></div>
+                </dialog>
+
+                <dialog
+                    id="version-mismatch-modal"
+                    class="modal"
+                    @click=${e => e.target === e.currentTarget && this._closeVersionMismatchModal()}
+                >
+                    <div class="modal-box max-w-md p-0 overflow-hidden">
+                        <div class="bg-gradient-to-br from-warning/10 via-warning/5 to-transparent px-6 pt-5 pb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
+                                    <svg
+                                        class="w-5 h-5 text-warning"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                        />
+                                    </svg>
+                                </div>
+                                <h3 class="font-bold text-base">Versionskonflikt erkannt</h3>
+                            </div>
+                        </div>
+                        <div class="px-6 pt-4 pb-2">
+                            <p class="text-sm text-base-content/80">
+                                Die Version der <strong>UI</strong> und des <strong>FlowCrafter-Servers</strong> stimmen nicht überein. Es
+                                kann nicht garantiert werden, dass alle Funktionen korrekt arbeiten — API-Antworten könnten vom UI falsch
+                                interpretiert werden oder einzelne Funktionen fehlen.
+                            </p>
+                            <div class="mt-4 flex flex-col gap-1.5 bg-base-200 rounded-lg px-4 py-3">
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="text-xs text-base-content/50 shrink-0">UI</span>
+                                    <span class="font-mono text-xs text-warning">${this._uiVersion}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="text-xs text-base-content/50 shrink-0">Server</span>
+                                    <span class="font-mono text-xs text-warning">${this._serverInfo?.version}</span>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <p class="text-xs font-semibold text-base-content/60 uppercase tracking-wider mb-2">
+                                    So behebst du das Problem
+                                </p>
+                                <p class="text-sm text-base-content/70">
+                                    Beide Komponenten sollten auf die gleiche Version gebracht werden. Aktualisiere entweder das
+                                    Docker-Image der UI auf den passenden Tag:
+                                </p>
+                                <pre
+                                    class="mt-2 bg-base-200 rounded px-3 py-2 text-xs font-mono text-base-content/70 whitespace-pre-wrap break-all"
+                                >
+docker pull wundii/flowcrafter-ui:${this._serverInfo?.version}</pre
+                                >
+                                <p class="text-sm text-base-content/70 mt-3">
+                                    — oder aktualisiere den FlowCrafter-Server auf die Version der UI (
+                                    <span class="font-mono text-xs">${this._uiVersion}</span>).
+                                </p>
+                            </div>
+                        </div>
+                        <div class="px-6 pb-5 pt-3 flex justify-end">
+                            <button class="btn btn-sm btn-warning" @click=${this._closeVersionMismatchModal}>Verstanden</button>
+                        </div>
                     </div>
                     <div class="modal-backdrop backdrop-blur-sm"></div>
                 </dialog>

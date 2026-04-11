@@ -113,6 +113,11 @@ export const api = {
         return fetchJson('/api/info')
     },
 
+    getUiVersion() {
+        const headers = uiToken() ? { Authorization: `Bearer ${uiToken()}` } : {}
+        return fetch('/api/version', { headers }).then(res => res.json())
+    },
+
     /** @param {string} className */
     getStubSource(className) {
         const p = new URLSearchParams({ className })

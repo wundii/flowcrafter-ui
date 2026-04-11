@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import Anthropic from '@anthropic-ai/sdk'
 
 const PORT = Number(process.env.PORT ?? 3000)
+const APP_VERSION = existsSync('./VERSION') ? readFileSync('./VERSION', 'utf8').trim() : 'dev'
 const AUTH_FILE = './data/auth.json'
 const CONNECTION_FILE = './data/connection.json'
 const AI_FILE = './data/ai.json'
@@ -318,6 +319,7 @@ function normalizeMetricsPath(p) {
     if (p.startsWith('/api/fc/')) return '/api/fc/*'
     if (p === '/api/connection') return '/api/connection'
     if (p === '/api/ai-config') return '/api/ai-config'
+    if (p === '/api/version') return '/api/version'
     if (p === '/api/fc-ping') return '/api/fc-ping'
     if (p === '/api/analyze') return '/api/analyze'
     if (p === '/metrics') return '/metrics'
@@ -388,6 +390,11 @@ const server = createServer(async (req, res) => {
         const body = renderMetrics()
         res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4; charset=utf-8' })
         return res.end(body)
+    }
+
+    // ── Version endpoint ─────────────────────────────────────────────────────
+    if (method === 'GET' && path === '/api/version') {
+        return json(res, { version: APP_VERSION })
     }
 
     // ── Auth API ─────────────────────────────────────────────────────────────

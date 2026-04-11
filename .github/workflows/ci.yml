@@ -59,6 +59,7 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: wundii/flowcrafter-ui:preview
+          build-args: APP_VERSION=preview
 
   build-release:
     needs: [lint]
@@ -87,3 +88,4 @@ jobs:
           tags: |
             wundii/flowcrafter-ui:${{ github.ref_name }}
             wundii/flowcrafter-ui:latest
+          build-args: APP_VERSION=${{ github.ref_name }}

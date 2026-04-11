@@ -118,6 +118,7 @@ docker build -t flowcrafter-ui .
 | GET     | `/api/connection`           | Gespeicherte Service-URL abrufen      |
 | POST    | `/api/connection`           | Service-URL & Secret speichern        |
 | DELETE  | `/api/connection`           | Verbindung zurücksetzen               |
+| GET     | `/api/version`              | UI-Version (Image-Tag) abrufen        |
 | GET     | `/api/ai-config`            | KI-Konfiguration abrufen              |
 | POST    | `/api/ai-config`            | API-Key & Modell speichern            |
 | DELETE  | `/api/ai-config`            | KI-Konfiguration löschen              |
