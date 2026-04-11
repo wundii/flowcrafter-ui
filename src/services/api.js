@@ -164,6 +164,15 @@ export const api = {
         return fetchJson(`/api/dev/flow?${p}`)
     },
 
+    /**
+     * @param {string} className
+     * @param {string} messageSource
+     * @param {object} message
+     */
+    runDevFlow(className, messageSource, message) {
+        return postJson('/api/dev/run', { className, messageSource, message })
+    },
+
     getSchedules() {
         return fetchJson('/api/schedules')
     },

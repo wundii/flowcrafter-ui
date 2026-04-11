@@ -1,8 +1,10 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
+import { buildRuns } from '../services/runs.js'
 import { renderApiError } from '../utils/error.js'
 import './fc-flow-graph.js'
+import './fc-json-editor.js'
 import './fc-source-viewer.js'
 
 function shortClass(fqn) {
@@ -60,6 +62,13 @@ export class FcDev extends BaseElement {
         _loading: { state: true },
         _selected: { state: true },
         _sidebarWidth: { state: true },
+        _runError: { state: true },
+        _runMessage: { state: true },
+        _runMessageValid: { state: true },
+        _runModalLoading: { state: true },
+        _runResult: { state: true },
+        _runSending: { state: true },
+        _lastRunFlow: { state: true },
         _srcContent: { state: true },
         _srcError: { state: true },
         _srcLoading: { state: true },
@@ -79,6 +88,13 @@ export class FcDev extends BaseElement {
         this._loading = true
         this._selected = null
         this._sidebarWidth = 300
+        this._runError = null
+        this._runMessage = {}
+        this._runMessageValid = true
+        this._runModalLoading = false
+        this._runResult = null
+        this._runSending = false
+        this._lastRunFlow = null
         this._srcContent = null
         this._srcError = null
         this._srcLoading = false
@@ -132,6 +148,7 @@ export class FcDev extends BaseElement {
         this._detailError = null
         this._detailLoading = true
         this._selected = className
+        this._lastRunFlow = null
         try {
             const data = await api.getDevFlow(className)
             this._detail = data
@@ -203,6 +220,62 @@ export class FcDev extends BaseElement {
         this._srcContent = null
         this._srcError = null
         this._srcSource = null
+    }
+
+    _initMessageClass(schema) {
+        const initStub = schema?.stubs?.find(s => s.messageEnum === 'init')
+        return initStub?.messages?.[0] ?? null
+    }
+
+    async _loadRunModalData() {
+        this._runModalLoading = true
+        try {
+            const data = await api.getDevFlow(this._selected)
+            this._detail = data
+            this._validationCache = { ...this._validationCache, [this._selected]: data.valid && !data.hashDrift }
+            this._runMessage = this._detail?.initMessageSchema ?? {}
+            this._runMessageValid = true
+        } catch {
+            // bei Fehler vorhandene Daten behalten
+        } finally {
+            this._runModalLoading = false
+        }
+    }
+
+    async _openRunModal() {
+        await this._loadRunModalData()
+        this._runResult = null
+        this._runError = null
+        await this.updateComplete
+        this.querySelector('#fc-dev-run-modal')?.showModal()
+    }
+
+    _closeRunModal() {
+        this.querySelector('#fc-dev-run-modal')?.close()
+        this._runResult = null
+        this._runError = null
+    }
+
+    async _runFlow() {
+        if (!this._selected || !this._detail?.schema) return
+        const messageSource = this._initMessageClass(this._detail.schema)
+        if (!messageSource) return
+        this._runSending = true
+        this._runResult = null
+        this._runError = null
+        try {
+            const message = typeof this._runMessage === 'string' ? JSON.parse(this._runMessage) : this._runMessage
+            const result = await api.runDevFlow(this._selected, messageSource, message)
+            this._runResult = result
+            if (result.success && result.flow) {
+                this._lastRunFlow = result.flow
+                this.querySelector('#fc-dev-run-modal')?.close()
+            }
+        } catch (err) {
+            this._runError = err
+        } finally {
+            this._runSending = false
+        }
     }
 
     _renderValidationIcon(className) {
@@ -457,6 +530,28 @@ export class FcDev extends BaseElement {
                                             korrekt${d.storedHash !== null ? ' und entspricht der gespeicherten Version.' : '.'}
                                         </div>
                                     </div>
+                                    <button
+                                        class="btn btn-sm btn-success btn-outline shrink-0 m-2"
+                                        ?disabled=${this._runModalLoading}
+                                        @click=${() => this._openRunModal()}
+                                    >
+                                        ${this._runModalLoading
+                                            ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                            : html`<svg
+                                                  class="w-3.5 h-3.5"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
+                                                  />
+                                              </svg>`}
+                                        ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
+                                    </button>
                                 </div>
                             </div>
                         `}
@@ -513,37 +608,67 @@ export class FcDev extends BaseElement {
                 <!-- Graph -->
                 ${d.valid && d.schema
                     ? html`
+                          ${this._lastRunFlow
+                              ? html`
+                                    <div
+                                        class="flex items-center justify-between px-3 py-1.5 bg-success/10 border-b border-success/20 text-xs shrink-0"
+                                    >
+                                        <span class="text-success font-semibold">Run-Ergebnis</span>
+                                        <button
+                                            class="btn btn-ghost btn-xs"
+                                            @click=${() => {
+                                                this._lastRunFlow = null
+                                            }}
+                                        >
+                                            × Schema-Ansicht
+                                        </button>
+                                    </div>
+                                `
+                              : ''}
                           <div class="flex-1 overflow-hidden m-3">
-                              <fc-flow-graph
-                                  .flow=${this._syntheticFlow(d.schema)}
-                                  .readonly=${true}
-                                  .stubDiff=${(() => {
-                                      const messageDriftMap = Object.fromEntries((d.changedMessages ?? []).map(m => [m.class, m]))
-                                      const messageDriftClasses = new Set(Object.keys(messageDriftMap))
-                                      const base =
-                                          d.hashDrift && d.storedSchema ? computeStubDiff(d.schema.stubs, d.storedSchema.stubs) : {}
-                                      const diff = { ...base }
-                                      for (const stub of d.schema.stubs ?? []) {
-                                          const affectedMessages = [...stub.messages, ...stub.returnTypes].filter(m =>
-                                              messageDriftClasses.has(m)
-                                          )
-                                          if (affectedMessages.length > 0 && diff[stub.source]?.status !== 'added') {
-                                              diff[stub.source] = {
-                                                  status: 'messageDrift',
-                                                  changes: {
-                                                      properties: affectedMessages.map(m => ({
-                                                          class: m,
-                                                          live: messageDriftMap[m]?.liveProperties ?? [],
-                                                          stored: messageDriftMap[m]?.storedProperties ?? [],
-                                                      })),
-                                                  },
-                                              }
-                                          }
-                                      }
-                                      return Object.keys(diff).length > 0 ? diff : null
-                                  })()}
-                                  @source-requested=${e => this._handleSourceRequested(e)}
-                              ></fc-flow-graph>
+                              ${(() => {
+                                  const graphRun = this._lastRunFlow ? (buildRuns(this._lastRunFlow).at(-1) ?? null) : null
+                                  const graphFlow = this._lastRunFlow ?? this._syntheticFlow(d.schema)
+                                  const stubDiff = this._lastRunFlow
+                                      ? null
+                                      : (() => {
+                                            const messageDriftMap = Object.fromEntries((d.changedMessages ?? []).map(m => [m.class, m]))
+                                            const messageDriftClasses = new Set(Object.keys(messageDriftMap))
+                                            const base =
+                                                d.hashDrift && d.storedSchema ? computeStubDiff(d.schema.stubs, d.storedSchema.stubs) : {}
+                                            const diff = { ...base }
+                                            for (const stub of d.schema.stubs ?? []) {
+                                                const affectedMessages = [...stub.messages, ...stub.returnTypes].filter(m =>
+                                                    messageDriftClasses.has(m)
+                                                )
+                                                if (affectedMessages.length > 0 && diff[stub.source]?.status !== 'added') {
+                                                    diff[stub.source] = {
+                                                        status: 'messageDrift',
+                                                        changes: {
+                                                            properties: affectedMessages.map(m => ({
+                                                                class: m,
+                                                                live: messageDriftMap[m]?.liveProperties ?? [],
+                                                                stored: messageDriftMap[m]?.storedProperties ?? [],
+                                                            })),
+                                                        },
+                                                    }
+                                                }
+                                            }
+                                            return Object.keys(diff).length > 0 ? diff : null
+                                        })()
+                                  return html`
+                                      <fc-flow-graph
+                                          .flow=${graphFlow}
+                                          .runId=${graphRun?.runId ?? null}
+                                          .runMessages=${graphRun?.messages ?? null}
+                                          .runExceptions=${graphRun?.exceptions ?? null}
+                                          .runResults=${graphRun?.results ?? null}
+                                          .readonly=${true}
+                                          .stubDiff=${stubDiff}
+                                          @source-requested=${e => this._handleSourceRequested(e)}
+                                      ></fc-flow-graph>
+                                  `
+                              })()}
                           </div>
                       `
                     : html`
@@ -643,6 +768,212 @@ export class FcDev extends BaseElement {
                 <!-- Detail panel -->
                 <div class="flex-1 overflow-hidden bg-base-100">${this._renderDetail()}</div>
             </div>
+
+            <!-- Dev Run Modal -->
+            <dialog id="fc-dev-run-modal" class="modal">
+                <div class="modal-box w-[960px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden">
+                    <!-- Header -->
+                    <div
+                        class="bg-gradient-to-r from-success/10 via-success/5 to-transparent px-5 pt-4 pb-3 border-b border-base-300/50 shrink-0"
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-success/15 border border-success/20 flex items-center justify-center shrink-0"
+                                >
+                                    <svg
+                                        class="w-4 h-4 text-success"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 3l14 9-14 9V3z" />
+                                    </svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <h3 class="font-bold text-sm leading-tight">Flow starten</h3>
+                                    <p class="text-[11px] font-mono text-base-content/40 mt-0.5 truncate">${this._selected}</p>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-ghost btn-circle shrink-0" @click=${() => this._closeRunModal()}>✕</button>
+                        </div>
+                    </div>
+                    <div class="flex min-h-0" style="height: 420px">
+                        <!-- Left: Init-Message properties -->
+                        <div class="w-64 shrink-0 border-r border-base-300 bg-base-200/40 flex flex-col">
+                            <!-- Init-Message header -->
+                            <div class="px-4 py-3 border-b border-base-300/50 shrink-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <div class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest mb-1">
+                                            Init-Message
+                                        </div>
+                                        <div
+                                            class="text-xs font-mono font-semibold text-base-content/70 truncate"
+                                            title="${this._initMessageClass(this._detail?.schema)}"
+                                        >
+                                            ${shortClass(this._initMessageClass(this._detail?.schema))}
+                                        </div>
+                                    </div>
+                                    <button
+                                        class="btn btn-xs btn-ghost btn-circle shrink-0"
+                                        title="Init-Message neu laden"
+                                        ?disabled=${this._runModalLoading}
+                                        @click=${() => this._loadRunModalData()}
+                                    >
+                                        ${this._runModalLoading
+                                            ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                            : html`<svg
+                                                  class="w-3.5 h-3.5"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                                  />
+                                              </svg>`}
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Property list -->
+                            <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5">
+                                ${this._detail?.initMessageTypes && Object.keys(this._detail.initMessageTypes).length > 0
+                                    ? Object.entries(this._detail.initMessageTypes).map(([name, type]) => {
+                                          const nullable = type.startsWith('?')
+                                          const base = nullable ? type.slice(1) : type
+                                          const typeColor =
+                                              base === 'string'
+                                                  ? 'text-sky-400'
+                                                  : base === 'int' || base === 'float'
+                                                    ? 'text-amber-400'
+                                                    : base === 'bool'
+                                                      ? 'text-violet-400'
+                                                      : base === 'array'
+                                                        ? 'text-orange-400'
+                                                        : 'text-base-content/50'
+                                          return html`
+                                              <div class="rounded-lg bg-base-100 border border-base-300/60 px-3 py-2 flex flex-col gap-0.5">
+                                                  <span class="text-xs font-mono font-semibold text-base-content/90">${name}</span>
+                                                  <span class="text-[10px] font-mono ${typeColor}"
+                                                      >${nullable ? html`<span class="text-base-content/30">?</span>` : ''}${base}</span
+                                                  >
+                                              </div>
+                                          `
+                                      })
+                                    : html`
+                                          <div class="flex flex-col items-center justify-center h-full gap-2 text-center py-6">
+                                              <svg
+                                                  class="w-8 h-8 text-base-content/15"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="1.5"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                                                  />
+                                              </svg>
+                                              <span class="text-xs text-base-content/30">Keine Properties</span>
+                                          </div>
+                                      `}
+                            </div>
+                        </div>
+                        <!-- Right: JSON editor + result -->
+                        <div class="flex-1 min-w-0 flex flex-col p-4 gap-3 overflow-hidden">
+                            ${this._detail?.schema
+                                ? html`
+                                      <div class="flex flex-col gap-1.5 flex-1 min-h-0">
+                                          <div class="flex items-center gap-2">
+                                              <span class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest"
+                                                  >Payload</span
+                                              >
+                                              <span class="text-[10px] font-mono text-base-content/25"
+                                                  >${shortClass(this._initMessageClass(this._detail?.schema))}</span
+                                              >
+                                          </div>
+                                          <fc-json-editor
+                                              class="flex-1 min-h-0"
+                                              .value=${JSON.stringify(this._detail.initMessageSchema ?? {}, null, 2)}
+                                              @change=${e => {
+                                                  this._runMessage = e.detail.valid ? e.detail.value : this._runMessage
+                                                  this._runMessageValid = e.detail.valid
+                                              }}
+                                          ></fc-json-editor>
+                                      </div>
+                                  `
+                                : ''}
+                            ${this._runResult && !this._runResult.success
+                                ? html`
+                                      <div class="rounded-lg bg-error/8 border border-error/25 px-4 py-3 flex items-start gap-3">
+                                          <svg
+                                              class="w-4 h-4 text-error shrink-0 mt-0.5"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              stroke-width="2"
+                                              viewBox="0 0 24 24"
+                                          >
+                                              <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                                              />
+                                          </svg>
+                                          <span class="text-xs text-error">${this._runResult.error}</span>
+                                      </div>
+                                  `
+                                : ''}
+                            ${this._runError
+                                ? html`
+                                      <div class="rounded-lg bg-error/8 border border-error/25 px-4 py-3 flex items-start gap-3">
+                                          <svg
+                                              class="w-4 h-4 text-error shrink-0 mt-0.5"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              stroke-width="2"
+                                              viewBox="0 0 24 24"
+                                          >
+                                              <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                                              />
+                                          </svg>
+                                          <span class="text-xs text-error">${this._runError.message}</span>
+                                      </div>
+                                  `
+                                : ''}
+                        </div>
+                    </div>
+                    <div class="modal-action px-5 pb-4 pt-3 mt-0 border-t border-base-300/50 flex items-center justify-between">
+                        <span class="text-[10px] text-base-content/25 font-mono"
+                            >${this._detail?.initMessageTypes ? Object.keys(this._detail.initMessageTypes).length + ' Felder' : ''}</span
+                        >
+                        <div class="flex gap-2">
+                            <button class="btn btn-ghost btn-sm" @click=${() => this._closeRunModal()}>Abbrechen</button>
+                            <button
+                                class="btn btn-success btn-sm"
+                                ?disabled=${!this._runMessageValid || this._runSending}
+                                @click=${() => this._runFlow()}
+                            >
+                                ${this._runSending
+                                    ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                    : html`<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M5 3l14 9-14 9V3z" />
+                                      </svg>`}
+                                Ausführen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <form method="dialog" class="modal-backdrop"><button @click=${() => this._closeRunModal()}>close</button></form>
+            </dialog>
 
             <!-- Stub Source Modal -->
             <dialog id="fc-dev-source-modal" class="modal">

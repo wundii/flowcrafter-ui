@@ -68,6 +68,7 @@ export class FcApp extends BaseElement {
         _serverOffline: { state: true },
         _uiVersion: { state: true },
         _versionMismatch: { state: true },
+        _versionPatchDiffers: { state: true },
         _serviceReady: { state: true },
         _toolboxOpen: { state: true },
         activeTab: { state: true },
@@ -97,6 +98,7 @@ export class FcApp extends BaseElement {
         this._serverOffline = false
         this._uiVersion = null
         this._versionMismatch = false
+        this._versionPatchDiffers = false
         this._serviceReady = false
         this._toolboxOpen = false
         this.activeTab = 'overview'
@@ -240,10 +242,24 @@ export class FcApp extends BaseElement {
     _checkVersionMismatch() {
         if (!this._uiVersion || !this._serverInfo?.version) return
         if (this._uiVersion === 'preview') return
-        this._versionMismatch = this._uiVersion !== this._serverInfo.version
+        this._versionMismatch = !this._versionsCompatible(this._uiVersion, this._serverInfo.version)
+        this._versionPatchDiffers = !this._versionMismatch && this._uiVersion !== this._serverInfo.version
         if (this._versionMismatch && !sessionStorage.getItem(VERSION_MISMATCH_ACK)) {
             this.updateComplete.then(() => this.querySelector('#version-mismatch-modal')?.showModal())
         }
+    }
+
+    _versionsCompatible(a, b) {
+        const parse = v => {
+            const [major, minor] = String(v).replace(/^v/, '').split('.')
+            return [Number(major), Number(minor)]
+        }
+        const [aMajor, aMinor] = parse(a)
+        const [bMajor, bMinor] = parse(b)
+        if (Number.isNaN(aMajor) || Number.isNaN(bMajor) || Number.isNaN(aMinor) || Number.isNaN(bMinor)) {
+            return a === b
+        }
+        return aMajor === bMajor && aMinor === bMinor
     }
 
     _closeVersionMismatchModal() {
@@ -661,12 +677,27 @@ export class FcApp extends BaseElement {
                                                                   >
                                                               </div>
                                                           </div>`
-                                                        : html`<div class="flex items-baseline justify-between gap-3">
-                                                              <span class="text-xs text-base-content/50 shrink-0">Server + UI</span>
-                                                              <span class="font-mono text-xs text-right text-base-content/60"
-                                                                  >${this._uiVersion}</span
-                                                              >
-                                                          </div>`
+                                                        : this._versionPatchDiffers
+                                                          ? html`<div class="flex flex-col gap-1.5">
+                                                                <div class="flex items-baseline justify-between gap-3">
+                                                                    <span class="text-xs text-base-content/50 shrink-0">UI</span>
+                                                                    <span class="font-mono text-xs text-right text-base-content/60"
+                                                                        >${this._uiVersion}</span
+                                                                    >
+                                                                </div>
+                                                                <div class="flex items-baseline justify-between gap-3">
+                                                                    <span class="text-xs text-base-content/50 shrink-0">Server</span>
+                                                                    <span class="font-mono text-xs text-right text-base-content/60"
+                                                                        >${this._serverInfo.version}</span
+                                                                    >
+                                                                </div>
+                                                            </div>`
+                                                          : html`<div class="flex items-baseline justify-between gap-3">
+                                                                <span class="text-xs text-base-content/50 shrink-0">Server + UI</span>
+                                                                <span class="font-mono text-xs text-right text-base-content/60"
+                                                                    >${this._uiVersion}</span
+                                                                >
+                                                            </div>`
                                                   : ''}
                                               ${this._serverInfo?.php
                                                   ? html`<div class="flex items-baseline justify-between gap-3">
