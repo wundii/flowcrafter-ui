@@ -1,6 +1,7 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
+import { renderApiError } from '../utils/error.js'
 import './fc-exception-chart.js'
 import './fc-flow-chart.js'
 
@@ -132,8 +133,8 @@ export class FcOverview extends BaseElement {
             this._recentExceptions = recentExcRes?.items ?? []
             this._problematicFlows = problematicRes?.items ?? []
             this._lastLoaded = new Date()
-        } catch {
-            this._error = true
+        } catch (err) {
+            this._error = err
         }
         this._loading = false
         if (!isInitialLoad) {
@@ -329,12 +330,7 @@ export class FcOverview extends BaseElement {
         }
 
         if (this._error) {
-            return html`
-                <div class="alert alert-error">
-                    <span>Fehler beim Laden des Dashboards.</span>
-                    <button class="btn btn-sm btn-ghost ml-2" @click=${this._load}>↻ Retry</button>
-                </div>
-            `
+            return renderApiError(this._error, { compact: true, retry: this._load })
         }
 
         const lastLoadedLabel = this._lastLoaded

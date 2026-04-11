@@ -1,6 +1,7 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
+import { renderApiError } from '../utils/error.js'
 
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
@@ -33,7 +34,7 @@ export class FcQueueList extends BaseElement {
         try {
             this._queues = await api.getQueues()
         } catch (err) {
-            this._error = err.message
+            this._error = err
         } finally {
             this._loading = false
         }
@@ -63,13 +64,7 @@ export class FcQueueList extends BaseElement {
                 </div>
             `
 
-        if (this._error)
-            return html`
-                <div class="alert alert-error">
-                    <span>Fehler beim Laden: ${this._error}</span>
-                    <button class="btn btn-sm btn-ghost ml-2" @click=${this._load}>↻ Retry</button>
-                </div>
-            `
+        if (this._error) return renderApiError(this._error, { compact: true, retry: this._load })
 
         const isEmpty = this._queues.length === 0
 

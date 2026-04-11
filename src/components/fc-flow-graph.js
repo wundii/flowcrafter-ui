@@ -1,6 +1,7 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
+import { renderApiError } from '../utils/error.js'
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js'
 import './fc-json-editor.js'
 import './fc-source-viewer.js'
@@ -363,7 +364,7 @@ export class FcFlowGraph extends BaseElement {
             if (err.message.includes('404')) {
                 this._stubSourceError = `${stubSource} ist nicht mehr verfügbar.`
             } else {
-                this._stubSourceError = err.message
+                this._stubSourceError = err
             }
             this.updateComplete.then(() => {
                 this.querySelector('#fc-stub-source-modal')?.showModal()
@@ -427,7 +428,7 @@ export class FcFlowGraph extends BaseElement {
                 })
             )
         } catch (err) {
-            this._sendError = err.message
+            this._sendError = err
         } finally {
             this._sending = false
         }
@@ -1255,7 +1256,7 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                   <div class="flex items-center justify-between px-5 py-3 border-t border-base-300 flex-shrink-0">
                                       <div class="flex-1 mr-4">
                                           ${this._sendError
-                                              ? html`<span class="text-xs text-error">${this._sendError}</span>`
+                                              ? renderApiError(this._sendError, { compact: true })
                                               : html`<span class="text-xs text-base-content/30 font-mono"
                                                     >${this.flow?.flowHash ?? ''}</span
                                                 >`}
@@ -1354,7 +1355,7 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                             ${this._stubSource !== null
                                 ? html`<fc-source-viewer class="block h-full" .value=${this._stubSource}></fc-source-viewer>`
                                 : this._stubSourceError
-                                  ? html`<div class="p-4 text-error text-sm">${this._stubSourceError}</div>`
+                                  ? html`<div class="p-4">${renderApiError(this._stubSourceError)}</div>`
                                   : html`<div class="p-4 text-base-content/40 text-sm">Loading...</div>`}
                         </div>
                     </div>

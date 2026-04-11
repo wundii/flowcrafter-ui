@@ -1,6 +1,7 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
+import { renderApiError } from '../utils/error.js'
 import './fc-flow-graph.js'
 import './fc-source-viewer.js'
 
@@ -136,7 +137,7 @@ export class FcDev extends BaseElement {
             this._detail = data
             this._validationCache = { ...this._validationCache, [className]: data.valid && !data.hashDrift }
         } catch (err) {
-            this._detailError = err.message
+            this._detailError = err
         } finally {
             this._detailLoading = false
         }
@@ -191,7 +192,7 @@ export class FcDev extends BaseElement {
             const data = await api.getStubSource(source)
             this._srcContent = data.source ?? ''
         } catch (err) {
-            this._srcError = err.message
+            this._srcError = err
         } finally {
             this._srcLoading = false
         }
@@ -323,11 +324,7 @@ export class FcDev extends BaseElement {
         }
 
         if (this._detailError) {
-            return html`
-                <div class="p-4">
-                    <div class="alert alert-error"><span>Fehler: ${this._detailError}</span></div>
-                </div>
-            `
+            return html`<div class="p-4">${renderApiError(this._detailError)}</div>`
         }
 
         if (!this._detail) return ''
@@ -604,96 +601,7 @@ export class FcDev extends BaseElement {
         }
 
         if (this._error) {
-            const e = this._error
-            return html`
-                <div class="h-[calc(100vh-10rem)] rounded-box border border-error/30 bg-base-100 overflow-auto flex flex-col">
-                    <!-- Header -->
-                    <div class="px-6 py-4 border-b border-error/20 bg-error/5 shrink-0 flex items-center gap-3">
-                        <svg class="w-5 h-5 text-error shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                            />
-                        </svg>
-                        <div>
-                            <div class="font-semibold text-error text-sm">Fehler beim Laden der Flows</div>
-                            ${e.file
-                                ? html`<div class="text-[10px] font-mono text-base-content/40 mt-0.5">
-                                      ${e.file}${e.line ? `:${e.line}` : ''}
-                                  </div>`
-                                : ''}
-                        </div>
-                        <button class="btn btn-xs btn-ghost ml-auto text-error/70 hover:text-error" @click=${this._load}>
-                            Erneut versuchen
-                        </button>
-                    </div>
-
-                    <div class="flex-1 p-6 flex flex-col gap-6 min-h-0">
-                        <!-- Error message -->
-                        <div>
-                            <div class="text-xs font-semibold text-base-content/40 uppercase tracking-wider mb-1.5">Fehlermeldung</div>
-                            <code
-                                class="block text-sm font-mono text-error bg-error/5 border border-error/20 rounded-lg px-4 py-3 break-all"
-                                >${e.message}</code
-                            >
-                        </div>
-
-                        <!-- File context -->
-                        ${e.fileContext?.length
-                            ? html`
-                                  <div>
-                                      <div class="text-xs font-semibold text-base-content/40 uppercase tracking-wider mb-1.5">
-                                          Quelldatei
-                                          <span class="font-mono font-normal normal-case ml-1 text-base-content/30">${e.file}</span>
-                                      </div>
-                                      <div class="rounded-lg border border-base-300 overflow-hidden text-xs font-mono leading-relaxed">
-                                          ${e.fileContext.map(
-                                              l => html`
-                                                  <div
-                                                      class="flex gap-0 ${l.highlighted
-                                                          ? 'bg-error/10 border-l-2 border-error'
-                                                          : 'border-l-2 border-transparent'}"
-                                                  >
-                                                      <span
-                                                          class="select-none w-12 shrink-0 px-3 py-0.5 text-right ${l.highlighted
-                                                              ? 'text-error font-bold'
-                                                              : 'text-base-content/25'} border-r border-base-300"
-                                                          >${l.number}</span
-                                                      >
-                                                      <pre
-                                                          class="flex-1 px-4 py-0.5 ${l.highlighted
-                                                              ? 'text-error/90'
-                                                              : 'text-base-content/70'} overflow-x-auto whitespace-pre"
-                                                      >
-${l.content}</pre
-                                                      >
-                                                  </div>
-                                              `
-                                          )}
-                                      </div>
-                                  </div>
-                              `
-                            : ''}
-
-                        <!-- Stack trace -->
-                        ${e.trace
-                            ? html`
-                                  <div>
-                                      <div class="text-xs font-semibold text-base-content/40 uppercase tracking-wider mb-1.5">
-                                          Stack Trace
-                                      </div>
-                                      <pre
-                                          class="text-xs font-mono text-base-content/50 bg-base-200/50 border border-base-300 rounded-lg px-4 py-3 overflow-auto max-h-64 whitespace-pre leading-relaxed"
-                                      >
-${e.trace}</pre
-                                      >
-                                  </div>
-                              `
-                            : ''}
-                    </div>
-                </div>
-            `
+            return renderApiError(this._error, { detailed: true, retry: this._load })
         }
 
         return html`
@@ -756,7 +664,7 @@ ${e.trace}</pre
                                   <span class="loading loading-spinner loading-md"></span>
                               </div>`
                             : this._srcError
-                              ? html`<div class="p-4 text-error text-sm">${this._srcError}</div>`
+                              ? html`<div class="p-4">${renderApiError(this._srcError, { compact: true })}</div>`
                               : this._srcContent !== null
                                 ? html`<fc-source-viewer class="block h-full" .value=${this._srcContent}></fc-source-viewer>`
                                 : ''}

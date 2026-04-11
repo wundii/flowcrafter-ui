@@ -30,7 +30,12 @@ function postJson(path, body) {
     }).then(async res => {
         if (!res.ok) {
             const data = await res.json().catch(() => ({}))
-            throw new Error(data.error ?? `HTTP ${res.status}`)
+            const err = new Error(data.error ?? `HTTP ${res.status}`)
+            err.file = data.file ?? null
+            err.line = data.line ?? null
+            err.trace = data.trace ?? null
+            err.fileContext = data.fileContext ?? null
+            throw err
         }
         return res.json()
     })

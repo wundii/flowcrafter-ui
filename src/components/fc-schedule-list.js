@@ -1,6 +1,7 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
+import { renderApiError } from '../utils/error.js'
 import './fc-source-viewer.js'
 
 function shortClass(fqn) {
@@ -78,7 +79,7 @@ export class FcScheduleList extends BaseElement {
         try {
             this._schedules = await api.getSchedules()
         } catch (err) {
-            this._error = err.message
+            this._error = err
         } finally {
             this._loading = false
         }
@@ -143,7 +144,7 @@ export class FcScheduleList extends BaseElement {
             await api.runSchedule(this._runClassName)
             this._runSuccess = true
         } catch (err) {
-            this._runError = err.message
+            this._runError = err
         } finally {
             this._running = false
         }
@@ -430,13 +431,7 @@ export class FcScheduleList extends BaseElement {
                 </div>
             `
 
-        if (this._error)
-            return html`
-                <div class="alert alert-error">
-                    <span>Fehler beim Laden: ${this._error}</span>
-                    <button class="btn btn-sm btn-ghost ml-2" @click=${this._load}>Retry</button>
-                </div>
-            `
+        if (this._error) return renderApiError(this._error, { compact: true, retry: this._load })
 
         return html`
             ${this._activeGroup ? this._renderGroup() : this._renderRoot()}
@@ -547,7 +542,7 @@ export class FcScheduleList extends BaseElement {
                                       Möchtest du <strong>${this._runName}</strong> wirklich manuell starten?
                                   </p>
                                   ${this._runError
-                                      ? html`<div class="alert alert-error py-2 px-3 text-xs mt-4"><span>${this._runError}</span></div>`
+                                      ? html`<div class="mt-4">${renderApiError(this._runError, { compact: true })}</div>`
                                       : ''}
                                   <div class="modal-action mt-3">
                                       <button class="btn btn-ghost btn-sm" @click=${this._closeRun} ?disabled=${this._running}>

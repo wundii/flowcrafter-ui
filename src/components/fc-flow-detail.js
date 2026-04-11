@@ -1,6 +1,7 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
+import { renderApiError } from '../utils/error.js'
 import { buildRuns } from '../services/runs.js'
 import { buildRunDiff } from '../services/run-diff.js'
 import './fc-flow-graph.js'
@@ -125,7 +126,7 @@ export class FcFlowDetail extends BaseElement {
                 })
             )
         } catch (err) {
-            this.error = err.message
+            this.error = err
         } finally {
             this.loading = false
         }
@@ -428,7 +429,7 @@ export class FcFlowDetail extends BaseElement {
                           <span class="loading loading-spinner loading-lg"></span>
                       </div>`
                     : this.error
-                      ? html`<div class="alert alert-error"><span>${this.error}</span></div>`
+                      ? renderApiError(this.error)
                       : this._renderDetail()}
             </div>
         `

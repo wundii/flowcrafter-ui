@@ -1,6 +1,7 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
+import { renderApiError } from '../utils/error.js'
 
 function formatDate(iso) {
     if (!iso) return '–'
@@ -39,7 +40,7 @@ export class FcTypeList extends BaseElement {
             const to = new Date().toISOString()
             this.schemas = await api.getFlowTypes({ from, to })
         } catch (err) {
-            this.error = err.message
+            this.error = err
         } finally {
             this.loading = false
         }
@@ -278,13 +279,7 @@ export class FcTypeList extends BaseElement {
                 </div>
             `
 
-        if (this.error)
-            return html`
-                <div class="alert alert-error">
-                    <span>Fehler beim Laden: ${this.error}</span>
-                    <button class="btn btn-sm btn-ghost ml-2" @click=${this._load}>↻ Retry</button>
-                </div>
-            `
+        if (this.error) return renderApiError(this.error, { compact: true, retry: this._load })
 
         if (this.schemas.length === 0) return html`<div class="alert alert-info"><span>Keine Types gefunden.</span></div>`
 
