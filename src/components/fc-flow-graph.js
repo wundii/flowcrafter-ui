@@ -934,7 +934,7 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                   </div>
                               </div>
 
-                              <div class="p-4 grid md:grid-cols-2 gap-6">
+                              <div class="p-4 grid md:grid-cols-2 gap-6 max-h-96">
                                   <div>
                                       <div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3">
                                           ↓ Eingehende Messages

@@ -1,4 +1,5 @@
 import { html } from 'lit'
+import { unsafeHTML } from 'lit/directives/unsafe-html.js'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { buildRuns } from '../services/runs.js'
@@ -59,16 +60,18 @@ export class FcDev extends BaseElement {
         _error: { state: true },
         _filter: { state: true },
         _flows: { state: true },
+        _lastRunFlow: { state: true },
+        _lastRunOutput: { state: true },
         _loading: { state: true },
-        _selected: { state: true },
-        _sidebarWidth: { state: true },
+        _outputModalSelectedStub: { state: true },
         _runError: { state: true },
         _runMessage: { state: true },
         _runMessageValid: { state: true },
         _runModalLoading: { state: true },
         _runResult: { state: true },
         _runSending: { state: true },
-        _lastRunFlow: { state: true },
+        _selected: { state: true },
+        _sidebarWidth: { state: true },
         _srcContent: { state: true },
         _srcError: { state: true },
         _srcLoading: { state: true },
@@ -85,16 +88,17 @@ export class FcDev extends BaseElement {
         this._error = null
         this._filter = ''
         this._flows = []
+        this._lastRunFlow = null
+        this._lastRunOutput = null
         this._loading = true
-        this._selected = null
-        this._sidebarWidth = 300
         this._runError = null
         this._runMessage = {}
         this._runMessageValid = true
         this._runModalLoading = false
         this._runResult = null
         this._runSending = false
-        this._lastRunFlow = null
+        this._selected = null
+        this._sidebarWidth = 300
         this._srcContent = null
         this._srcError = null
         this._srcLoading = false
@@ -149,6 +153,7 @@ export class FcDev extends BaseElement {
         this._detailLoading = true
         this._selected = className
         this._lastRunFlow = null
+        this._lastRunOutput = null
         try {
             const data = await api.getDevFlow(className)
             this._detail = data
@@ -251,9 +256,43 @@ export class FcDev extends BaseElement {
     }
 
     _closeRunModal() {
-        this.querySelector('#fc-dev-run-modal')?.close()
+        const dialog = this.querySelector('#fc-dev-run-modal')
+        const box = dialog?.querySelector('.modal-box')
+        if (box) {
+            box.style.position = ''
+            box.style.margin = ''
+            box.style.left = ''
+            box.style.top = ''
+        }
+        dialog?.close()
         this._runResult = null
         this._runError = null
+    }
+
+    _startModalDrag(e, dialogId = 'fc-dev-run-modal') {
+        const dialog = this.querySelector(`#${dialogId}`)
+        const box = dialog?.querySelector('.modal-box')
+        if (!box) return
+        e.preventDefault()
+        const rect = box.getBoundingClientRect()
+        const startX = e.clientX
+        const startY = e.clientY
+        const origLeft = rect.left
+        const origTop = rect.top
+        box.style.position = 'fixed'
+        box.style.margin = '0'
+        box.style.left = `${origLeft}px`
+        box.style.top = `${origTop}px`
+        const onMove = ev => {
+            box.style.left = `${origLeft + ev.clientX - startX}px`
+            box.style.top = `${origTop + ev.clientY - startY}px`
+        }
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove)
+            document.removeEventListener('mouseup', onUp)
+        }
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
     }
 
     async _runFlow() {
@@ -269,7 +308,12 @@ export class FcDev extends BaseElement {
             this._runResult = result
             if (result.success && result.flow) {
                 this._lastRunFlow = result.flow
+                this._lastRunOutput = result.output ?? null
+                this._outputModalSelectedStub = result.output?.[0]?.class ?? null
                 this.querySelector('#fc-dev-run-modal')?.close()
+                if (result.output?.length) {
+                    this.querySelector('#fc-dev-output-modal')?.showModal()
+                }
             }
         } catch (err) {
             this._runError = err
@@ -609,23 +653,43 @@ export class FcDev extends BaseElement {
                 ${d.valid && d.schema
                     ? html`
                           ${this._lastRunFlow
-                              ? html`
-                                    <div
-                                        class="flex items-center justify-between px-3 py-1.5 bg-success/10 border-b border-success/20 text-xs shrink-0"
-                                    >
-                                        <span class="text-success font-semibold">Run-Ergebnis</span>
-                                        <button
-                                            class="btn btn-ghost btn-xs"
-                                            @click=${() => {
-                                                this._lastRunFlow = null
-                                            }}
+                              ? (() => {
+                                    const run = buildRuns(this._lastRunFlow).at(-1) ?? null
+                                    const dur = run?.duration ?? null
+                                    const durLabel = dur === null ? '' : dur < 1000 ? `${dur}ms` : `${(dur / 1000).toFixed(1)}s`
+                                    return html`
+                                        <div
+                                            class="flex items-center justify-between px-3 py-1.5 bg-success/10 border-b border-success/20 text-xs shrink-0"
                                         >
-                                            × Schema-Ansicht
-                                        </button>
-                                    </div>
-                                `
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-success font-semibold">Run-Ergebnis</span>
+                                                ${durLabel ? html`<span class="text-base-content/40 font-mono">${durLabel}</span>` : ''}
+                                            </div>
+                                            <div class="flex items-center gap-1">
+                                                ${this._lastRunOutput?.length
+                                                    ? html`
+                                                          <button
+                                                              class="btn btn-ghost btn-xs"
+                                                              @click=${() => this.querySelector('#fc-dev-output-modal')?.showModal()}
+                                                          >
+                                                              Output anzeigen
+                                                          </button>
+                                                      `
+                                                    : ''}
+                                                <button
+                                                    class="btn btn-ghost btn-xs"
+                                                    @click=${() => {
+                                                        this._lastRunFlow = null
+                                                    }}
+                                                >
+                                                    × Schema-Ansicht
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `
+                                })()
                               : ''}
-                          <div class="flex-1 overflow-hidden m-3">
+                          <div class="flex-1 overflow-auto m-3">
                               ${(() => {
                                   const graphRun = this._lastRunFlow ? (buildRuns(this._lastRunFlow).at(-1) ?? null) : null
                                   const graphFlow = this._lastRunFlow ?? this._syntheticFlow(d.schema)
@@ -775,7 +839,8 @@ export class FcDev extends BaseElement {
                 <div class="modal-box w-[960px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden">
                     <!-- Header -->
                     <div
-                        class="bg-gradient-to-r from-success/10 via-success/5 to-transparent px-5 pt-4 pb-3 border-b border-base-300/50 shrink-0"
+                        class="bg-gradient-to-r from-success/10 via-success/5 to-transparent px-5 pt-4 pb-3 border-b border-base-300/50 shrink-0 cursor-move select-none"
+                        @mousedown=${e => this._startModalDrag(e)}
                     >
                         <div class="flex items-center justify-between gap-3">
                             <div class="flex items-center gap-3 min-w-0">
@@ -950,6 +1015,37 @@ export class FcDev extends BaseElement {
                                       </div>
                                   `
                                 : ''}
+                            ${this._runResult?.output
+                                ? html`
+                                      <div class="rounded-lg bg-base-300/60 border border-base-300 flex flex-col overflow-hidden">
+                                          <div
+                                              class="flex items-center gap-2 px-3 py-1.5 border-b border-base-300/60 bg-base-300/40 shrink-0"
+                                          >
+                                              <svg
+                                                  class="w-3.5 h-3.5 text-base-content/40"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                  />
+                                              </svg>
+                                              <span class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest"
+                                                  >Output</span
+                                              >
+                                          </div>
+                                          <pre
+                                              class="text-xs font-mono text-base-content/80 px-3 py-2.5 overflow-auto max-h-40 whitespace-pre-wrap"
+                                          >
+${this._runResult.output}</pre
+                                          >
+                                      </div>
+                                  `
+                                : ''}
                         </div>
                     </div>
                     <div class="modal-action px-5 pb-4 pt-3 mt-0 border-t border-base-300/50 flex items-center justify-between">
@@ -973,7 +1069,92 @@ export class FcDev extends BaseElement {
                         </div>
                     </div>
                 </div>
-                <form method="dialog" class="modal-backdrop"><button @click=${() => this._closeRunModal()}>close</button></form>
+                <form method="dialog" class="modal-backdrop">
+                    <button @click=${() => this._closeRunModal()}>close</button>
+                </form>
+            </dialog>
+
+            <!-- Console Output Modal -->
+            <dialog id="fc-dev-output-modal" class="modal">
+                <div class="modal-box w-[800px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden">
+                    <!-- Header -->
+                    <div
+                        class="bg-gradient-to-r from-warning/10 via-warning/5 to-transparent px-5 pt-4 pb-3 border-b border-base-300/50 shrink-0 cursor-move select-none"
+                        @mousedown=${e => this._startModalDrag(e, 'fc-dev-output-modal')}
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-warning/15 border border-warning/20 flex items-center justify-center shrink-0"
+                                >
+                                    <svg
+                                        class="w-4 h-4 text-warning"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                        />
+                                    </svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <h3 class="font-bold text-sm leading-tight">Console Output</h3>
+                                    <p class="text-[11px] font-mono text-base-content/40 mt-0.5 truncate">${this._selected}</p>
+                                </div>
+                            </div>
+                            <button
+                                class="btn btn-sm btn-ghost btn-circle shrink-0"
+                                @click=${() => this.querySelector('#fc-dev-output-modal')?.close()}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex min-h-0" style="height: 420px">
+                        <!-- Left: Stub list -->
+                        <div class="w-64 shrink-0 border-r border-base-300 bg-base-200/40 flex flex-col overflow-y-auto">
+                            <div class="px-4 py-3 border-b border-base-300/50 shrink-0">
+                                <div class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest">Stubs mit Output</div>
+                            </div>
+                            <div class="flex flex-col flex-1 overflow-y-auto py-1.5 gap-0.5 px-2">
+                                ${(this._lastRunOutput ?? []).map(
+                                    entry => html`
+                                        <button
+                                            class="px-3 py-2 text-left text-xs font-mono rounded-lg truncate transition-colors ${this
+                                                ._outputModalSelectedStub === entry.class
+                                                ? 'bg-warning/15 text-warning font-semibold border border-warning/20'
+                                                : 'hover:bg-base-300/50 text-base-content/70'}"
+                                            @click=${() => {
+                                                this._outputModalSelectedStub = entry.class
+                                            }}
+                                        >
+                                            ${entry.class.split('\\').at(-1)}
+                                        </button>
+                                    `
+                                )}
+                            </div>
+                        </div>
+                        <!-- Right: Output content -->
+                        <div
+                            class="flex-1 overflow-auto p-4 font-mono text-xs whitespace-pre-wrap [&_pre]:whitespace-pre-wrap [&_pre]:m-0 text-base-content/80"
+                        >
+                            ${(() => {
+                                const allStyles = (this._lastRunOutput ?? [])
+                                    .flatMap(e => [...e.content.matchAll(/<style[\s\S]*?<\/style>/gi)].map(m => m[0]))
+                                    .join('')
+                                const selected = (
+                                    (this._lastRunOutput ?? []).find(e => e.class === this._outputModalSelectedStub)?.content ?? ''
+                                ).trim()
+                                return unsafeHTML(allStyles + selected)
+                            })()}
+                        </div>
+                    </div>
+                </div>
+                <form method="dialog" class="modal-backdrop"><button>close</button></form>
             </dialog>
 
             <!-- Stub Source Modal -->
@@ -1002,7 +1183,9 @@ export class FcDev extends BaseElement {
                                 : ''}
                     </div>
                 </div>
-                <form method="dialog" class="modal-backdrop"><button @click=${() => this._closeSourceModal()}>close</button></form>
+                <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                    <button @click=${() => this._closeSourceModal()}>close</button>
+                </form>
             </dialog>
         `
     }
