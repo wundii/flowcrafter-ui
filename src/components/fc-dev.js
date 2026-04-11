@@ -665,6 +665,7 @@ export class FcDev extends BaseElement {
                                           .runResults=${graphRun?.results ?? null}
                                           .readonly=${true}
                                           .stubDiff=${stubDiff}
+                                          .messageSchemas=${this._lastRunFlow ? null : (this._detail?.messageSchemas ?? null)}
                                           @source-requested=${e => this._handleSourceRequested(e)}
                                       ></fc-flow-graph>
                                   `

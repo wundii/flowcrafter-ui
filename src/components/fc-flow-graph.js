@@ -261,6 +261,7 @@ export class FcFlowGraph extends BaseElement {
         _tooltip: { state: true }, // { x, y, label, data } | null
         _diffTooltip: { state: true }, // { x, y, source, diff } | null
         flow: { type: Object },
+        messageSchemas: { type: Object }, // { [fqClassName]: { [propName]: typeString } } — optional, only passed from devtool
         stubDiff: { type: Object }, // { [source]: { status: 'added'|'changed'|'unchanged', changes: {messages:{added,removed},returnTypes:{added,removed}} } }
         priorRuns: { type: Array }, // all runs up to and including the selected run (oldest first)
         readonly: { type: Boolean },
@@ -507,6 +508,32 @@ export class FcFlowGraph extends BaseElement {
         const selMsgs = this.selectedStub ? msgsOf(this.selectedStub) : []
         const selExcs = this.selectedStub ? excsOf(this.selectedStub) : []
         const selRess = this.selectedStub ? ressOf(this.selectedStub) : []
+
+        const typeColor = type => {
+            const base = type.startsWith('?') ? type.slice(1) : type
+            if (base === 'string') return 'text-sky-400'
+            if (base === 'int' || base === 'float') return 'text-amber-400'
+            if (base === 'bool') return 'text-violet-400'
+            if (base === 'array') return 'text-orange-400'
+            return 'text-base-content/40'
+        }
+        const msgProps = msgClass => {
+            const props = this.messageSchemas?.[msgClass]
+            if (!props || Object.keys(props).length === 0) return ''
+            return html`
+                <div class="flex flex-col gap-0.5 mt-1">
+                    ${Object.entries(props).map(([name, type]) => {
+                        const nullable = type.startsWith('?')
+                        const base = nullable ? type.slice(1) : type
+                        return html`<span class="text-xs font-mono"
+                            ><span class="text-base-content/40">${name}</span><span class="text-base-content/20">:</span>${nullable
+                                ? html`<span class="text-base-content/25">?</span>`
+                                : ''}<span class="${typeColor(type)}">${base}</span></span
+                        >`
+                    })}
+                </div>
+            `
+        }
 
         return html`
             <div style="position:relative;">
@@ -950,6 +977,7 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                                                   </button>`
                                                                 : ''}
                                                         </div>
+                                                        ${msgProps(msgClass)}
                                                         ${received.length === 0
                                                             ? !this.readonly
                                                                 ? html`<div class="text-xs text-base-content/30 italic px-2">
@@ -1090,6 +1118,7 @@ ${ex.traceString}</pre
                                                                             >${short(rt)}</span
                                                                         >
                                                                     </div>
+                                                                    ${msgProps(rt)}
                                                                     ${outData
                                                                         ? html`<div class="rounded-lg bg-base-300 p-3 mb-1">
                                                                               <div class="flex items-center gap-2 mb-2">
