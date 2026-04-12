@@ -756,7 +756,7 @@ export class FcFlowGraph extends BaseElement {
                     ? html`
                           <div
                               style="position:fixed; left:${this._diffTooltip.x}px; top:${this._diffTooltip.y}px; z-index:9999;"
-                              class="w-72 rounded-box border border-base-300 bg-base-100 shadow-lg p-4"
+                              class="w-96 rounded-box border border-base-300 bg-base-100 shadow-lg p-4"
                               @mouseenter=${() => clearTimeout(this._diffTooltipTimer)}
                               @mouseleave=${() => {
                                   this._diffTooltipTimer = setTimeout(() => (this._diffTooltip = null), 150)
@@ -777,63 +777,92 @@ export class FcFlowGraph extends BaseElement {
                               <div class="font-mono text-[10px] text-base-content/50 mb-3 truncate">${this._diffTooltip.source}</div>
                               ${this._diffTooltip.diff.status === 'messageDrift' && this._diffTooltip.diff.changes?.properties?.length
                                   ? html`
-                                        ${this._diffTooltip.diff.changes.properties.map(
-                                            p => html`
-                                                <div class="mb-2">
-                                                    <div class="text-[10px] text-base-content/40 uppercase tracking-wider mb-1">
-                                                        ${p.class.split('\\').pop()}
+                                        ${this._diffTooltip.diff.changes.properties.map(p => {
+                                            const mainClass = p.class.split('\\').pop()
+                                            const allClasses = [
+                                                ...new Set([
+                                                    ...Object.keys(p.livePropertyNames ?? {}),
+                                                    ...Object.keys(p.storedPropertyNames ?? {}),
+                                                ]),
+                                            ].sort((a, b) => (a === mainClass ? -1 : b === mainClass ? 1 : 0))
+
+                                            const renderPropCell = prop => {
+                                                if (!prop) return html`<span class="text-base-content/30">—</span>`
+                                                const colonIdx = prop.indexOf(':')
+                                                if (colonIdx === -1) return html`${prop}`
+                                                return html`${prop.slice(0, colonIdx)}<span class="text-base-content/30"
+                                                        >${prop.slice(colonIdx)}</span
+                                                    >`
+                                            }
+
+                                            const renderTable = (cls, liveArr, storedArr) => {
+                                                const liveSet = new Set(liveArr)
+                                                const storedSet = new Set(storedArr)
+                                                return html`
+                                                    <div class="mb-2">
+                                                        <div
+                                                            class="text-[10px] uppercase tracking-wider mb-1 ${cls === mainClass
+                                                                ? 'text-base-content/60 font-semibold'
+                                                                : 'text-base-content/30'}"
+                                                        >
+                                                            ${cls}
+                                                        </div>
+                                                        <table class="w-full text-[10px] font-mono border-collapse">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th
+                                                                        class="text-left text-base-content/40 font-semibold pb-0.5 pr-3 w-1/2"
+                                                                        style="border-bottom:1px solid rgba(75,85,99,0.2)"
+                                                                    >
+                                                                        Alt
+                                                                    </th>
+                                                                    <th
+                                                                        class="text-left text-base-content/40 font-semibold pb-0.5 w-1/2"
+                                                                        style="border-bottom:1px solid rgba(75,85,99,0.2)"
+                                                                    >
+                                                                        Neu
+                                                                    </th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                ${Array.from({ length: Math.max(storedArr.length, liveArr.length) }).map(
+                                                                    (_, i) => {
+                                                                        const storedProp = storedArr[i]
+                                                                        const liveProp = liveArr[i]
+                                                                        const removed =
+                                                                            storedProp &&
+                                                                            !storedSet.has(liveProp) &&
+                                                                            !liveSet.has(storedProp)
+                                                                        const added =
+                                                                            liveProp && !liveSet.has(storedProp) && !storedSet.has(liveProp)
+                                                                        return html`
+                                                                            <tr>
+                                                                                <td
+                                                                                    class="py-0.5 pr-3 break-all align-top"
+                                                                                    style="color:${removed ? '#f97316' : 'inherit'}"
+                                                                                >
+                                                                                    ${renderPropCell(storedProp)}
+                                                                                </td>
+                                                                                <td
+                                                                                    class="py-0.5 break-all align-top"
+                                                                                    style="color:${added ? '#22c55e' : 'inherit'}"
+                                                                                >
+                                                                                    ${renderPropCell(liveProp)}
+                                                                                </td>
+                                                                            </tr>
+                                                                        `
+                                                                    }
+                                                                )}
+                                                            </tbody>
+                                                        </table>
                                                     </div>
-                                                    <table class="w-full text-[10px] font-mono border-collapse">
-                                                        <thead>
-                                                            <tr>
-                                                                <th
-                                                                    class="text-left text-base-content/40 font-semibold pb-0.5 pr-3 w-1/2"
-                                                                    style="border-bottom:1px solid rgba(75,85,99,0.2)"
-                                                                >
-                                                                    Alt
-                                                                </th>
-                                                                <th
-                                                                    class="text-left text-base-content/40 font-semibold pb-0.5 w-1/2"
-                                                                    style="border-bottom:1px solid rgba(75,85,99,0.2)"
-                                                                >
-                                                                    Neu
-                                                                </th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            ${(() => {
-                                                                const liveSet = new Set(p.live)
-                                                                const storedSet = new Set(p.stored)
-                                                                return Array.from({
-                                                                    length: Math.max(p.stored.length, p.live.length),
-                                                                }).map((_, i) => {
-                                                                    const storedProp = p.stored[i]
-                                                                    const liveProp = p.live[i]
-                                                                    const removed = storedProp && !liveSet.has(storedProp)
-                                                                    const added = liveProp && !storedSet.has(liveProp)
-                                                                    return html`
-                                                                        <tr>
-                                                                            <td
-                                                                                class="py-0.5 pr-3 truncate"
-                                                                                style="color:${removed ? '#f97316' : 'inherit'}"
-                                                                            >
-                                                                                ${storedProp ?? '—'}
-                                                                            </td>
-                                                                            <td
-                                                                                class="py-0.5 truncate"
-                                                                                style="color:${added ? '#22c55e' : 'inherit'}"
-                                                                            >
-                                                                                ${liveProp ?? '—'}
-                                                                            </td>
-                                                                        </tr>
-                                                                    `
-                                                                })
-                                                            })()}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            `
-                                        )}
+                                                `
+                                            }
+
+                                            return html`${allClasses.map(cls =>
+                                                renderTable(cls, p.livePropertyNames?.[cls] ?? [], p.storedPropertyNames?.[cls] ?? [])
+                                            )}`
+                                        })}
                                     `
                                   : this._diffTooltip.diff.changes
                                     ? html`

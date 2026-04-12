@@ -587,7 +587,7 @@ const server = createServer(async (req, res) => {
                     )
                 }
 
-                let messageSources = {}
+                const messageSources = {}
                 if (messageSourcesRes.ok) {
                     const rawMsgText = await messageSourcesRes.text()
                     try {

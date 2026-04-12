@@ -186,20 +186,23 @@ export class FcDev extends BaseElement {
                 const localMessageSchemas = data.messageSchemas ?? {}
                 const changedSet = new Set((data.changedMessages ?? []).map(m => m.class))
                 for (const [cls, propsByShortName] of Object.entries(importedMessageSources)) {
-                    if (changedSet.has(cls)) continue       // lokale DB hat bereits erkannt
+                    if (changedSet.has(cls)) continue // lokale DB hat bereits erkannt
                     if (!localMessageSchemas[cls]) continue // Klasse lokal nicht vorhanden → kein Vergleich
 
+                    const shortName = cls.split('\\').pop()
                     const liveProps = Object.keys(localMessageSchemas[cls]).sort()
-                    const importedProps = Object.values(propsByShortName).flat().sort()
+                    const importedTopLevel = (propsByShortName[shortName] ?? []).map(p => p.split(':')[0]).sort()
 
-                    if (JSON.stringify(liveProps) !== JSON.stringify(importedProps)) {
+                    if (JSON.stringify(liveProps) !== JSON.stringify(importedTopLevel)) {
                         data.changedMessages = data.changedMessages ?? []
                         data.changedMessages.push({
                             class: cls,
                             liveHash: null,
                             storedHash: null,
                             liveProperties: liveProps,
-                            storedProperties: importedProps,
+                            storedProperties: propsByShortName[shortName] ?? [],
+                            livePropertyNames: { [shortName]: liveProps },
+                            storedPropertyNames: propsByShortName,
                         })
                     }
                 }
@@ -209,7 +212,7 @@ export class FcDev extends BaseElement {
                 //    Lokale Reflection-Daten haben immer Vorrang.
                 if (!data.messageSchemas) data.messageSchemas = {}
                 for (const [cls, propsByShortName] of Object.entries(importedMessageSources)) {
-                    if (data.messageSchemas[cls]) continue  // lokal bekannt → überspringen
+                    if (data.messageSchemas[cls]) continue // lokal bekannt → überspringen
                     const props = {}
                     for (const propList of Object.values(propsByShortName)) {
                         for (const propName of propList) {
@@ -748,6 +751,8 @@ export class FcDev extends BaseElement {
                                                                 class: m,
                                                                 live: messageDriftMap[m]?.liveProperties ?? [],
                                                                 stored: messageDriftMap[m]?.storedProperties ?? [],
+                                                                livePropertyNames: messageDriftMap[m]?.livePropertyNames ?? {},
+                                                                storedPropertyNames: messageDriftMap[m]?.storedPropertyNames ?? {},
                                                             })),
                                                         },
                                                     }
