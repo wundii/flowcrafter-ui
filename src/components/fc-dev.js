@@ -82,6 +82,7 @@ export class FcDev extends BaseElement {
         _importModalError: { state: true },
         _importUrl: { state: true },
         _importSecret: { state: true },
+        _storedSchemas: { state: true },
     }
 
     constructor() {
@@ -114,6 +115,7 @@ export class FcDev extends BaseElement {
         this._importModalError = null
         this._importUrl = ''
         this._importSecret = ''
+        this._storedSchemas = []
     }
 
     _startResize(e) {
@@ -143,9 +145,14 @@ export class FcDev extends BaseElement {
         this._error = null
         this._loading = true
         try {
-            const [flows, devImport] = await Promise.all([api.getDevFlows(), api.getDevImport().catch(() => null)])
+            const [flows, devImport, storedSchemas] = await Promise.all([
+                api.getDevFlows(),
+                api.getDevImport().catch(() => null),
+                api.getSchemas().catch(() => []),
+            ])
             this._flows = flows
             this._devImport = devImport
+            this._storedSchemas = Array.isArray(storedSchemas) ? storedSchemas : []
         } catch (err) {
             this._error = {
                 message: err.message,
@@ -514,6 +521,13 @@ export class FcDev extends BaseElement {
 
         const d = this._detail
         const selectedFlow = this._flows.find(f => f.className === this._selected)
+        const _typeBase = d.schema?.type?.replace(/\.v\d+$/, '')
+        const _storedExact = d.storedHash !== null
+        const _storedPrevVersion =
+            !_storedExact &&
+            !!_typeBase &&
+            this._storedSchemas.some(s => s.type && s.type !== d.schema?.type && s.type.replace(/\.v\d+$/, '') === _typeBase)
+        const _storedNone = !_storedExact && !_storedPrevVersion
 
         return html`
             <div class="flex flex-col h-full overflow-hidden">
@@ -523,7 +537,9 @@ export class FcDev extends BaseElement {
                         ? 'from-error/5'
                         : d.hashDrift
                           ? 'from-orange-500/5'
-                          : 'from-primary/5'}"
+                          : _storedNone || _storedPrevVersion
+                            ? 'from-info/5'
+                            : 'from-primary/5'}"
                 >
                     <div class="flex items-start gap-3">
                         <div
@@ -531,7 +547,9 @@ export class FcDev extends BaseElement {
                                 ? 'bg-error/10 text-error'
                                 : d.hashDrift
                                   ? 'bg-orange-500/10 text-orange-500'
-                                  : 'bg-primary/10 text-primary'} flex items-center justify-center shrink-0 mt-0.5"
+                                  : _storedNone || _storedPrevVersion
+                                    ? 'bg-info/10 text-info'
+                                    : 'bg-primary/10 text-primary'} flex items-center justify-center shrink-0 mt-0.5"
                         >
                             <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path
@@ -595,44 +613,80 @@ export class FcDev extends BaseElement {
                                                 >).
                                             </span>
                                         `
-                                      : html`
-                                            <svg
-                                                class="w-3.5 h-3.5 text-success shrink-0"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2.5"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                            </svg>
-                                            <span class="text-xs font-semibold text-success">Schema gültig</span>
-                                            <span class="text-xs text-base-content/50"
-                                                >— Das Schema ist syntaktisch
-                                                korrekt${d.storedHash !== null ? ' und entspricht der gespeicherten Version.' : '.'}</span
-                                            >
-                                            <button
-                                                class="btn btn-xs btn-success btn-outline ml-1 shrink-0"
-                                                ?disabled=${this._runModalLoading}
-                                                @click=${() => this._openRunModal()}
-                                            >
-                                                ${this._runModalLoading
-                                                    ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                                    : html`<svg
-                                                          class="w-3 h-3"
-                                                          fill="none"
-                                                          stroke="currentColor"
-                                                          stroke-width="2"
-                                                          viewBox="0 0 24 24"
-                                                      >
-                                                          <path
-                                                              stroke-linecap="round"
-                                                              stroke-linejoin="round"
-                                                              d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
-                                                          />
-                                                      </svg>`}
-                                                ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
-                                            </button>
-                                        `}
+                                      : _storedNone
+                                        ? html`
+                                              <svg
+                                                  class="w-3.5 h-3.5 text-info shrink-0"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2.5"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                              </svg>
+                                              <span class="text-xs font-semibold text-info">Neuer Flow-Typ</span>
+                                              <span class="text-xs text-base-content/50"
+                                                  >— Das Schema ist syntaktisch korrekt, aber
+                                                  <code class="font-mono bg-base-300/50 px-1 rounded">${d.schema?.type}</code>
+                                                  wurde noch nie registriert.</span
+                                              >
+                                          `
+                                        : _storedPrevVersion
+                                          ? html`
+                                                <svg
+                                                    class="w-3.5 h-3.5 text-info shrink-0"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2.5"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                                </svg>
+                                                <span class="text-xs font-semibold text-info">Neue Version</span>
+                                                <span class="text-xs text-base-content/50"
+                                                    >— Das Schema ist syntaktisch korrekt.
+                                                    <code class="font-mono bg-base-300/50 px-1 rounded">${d.schema?.type}</code>
+                                                    ist eine neue Version — eine frühere Version dieses Flow-Typs ist bereits
+                                                    <registriert class=""></registriert
+                                                ></span>
+                                            `
+                                          : html`
+                                                <svg
+                                                    class="w-3.5 h-3.5 text-success shrink-0"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2.5"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                                </svg>
+                                                <span class="text-xs font-semibold text-success">Schema gültig</span>
+                                                <span class="text-xs text-base-content/50"
+                                                    >— Das Schema ist syntaktisch korrekt und entspricht der gespeicherten Version.</span
+                                                >
+                                                <button
+                                                    class="btn btn-xs btn-success btn-outline ml-1 shrink-0"
+                                                    ?disabled=${this._runModalLoading}
+                                                    @click=${() => this._openRunModal()}
+                                                >
+                                                    ${this._runModalLoading
+                                                        ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                                        : html`<svg
+                                                              class="w-3 h-3"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              stroke-width="2"
+                                                              viewBox="0 0 24 24"
+                                                          >
+                                                              <path
+                                                                  stroke-linecap="round"
+                                                                  stroke-linejoin="round"
+                                                                  d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
+                                                              />
+                                                          </svg>`}
+                                                    ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
+                                                </button>
+                                            `}
                             </div>
                             ${d.valid && d.changedMessages?.length > 0
                                 ? html`
@@ -736,8 +790,19 @@ export class FcDev extends BaseElement {
                                       : (() => {
                                             const messageDriftMap = Object.fromEntries((d.changedMessages ?? []).map(m => [m.class, m]))
                                             const messageDriftClasses = new Set(Object.keys(messageDriftMap))
-                                            const base =
-                                                d.hashDrift && d.storedSchema ? computeStubDiff(d.schema.stubs, d.storedSchema.stubs) : {}
+                                            const _typeBase = d.schema?.type?.replace(/\.v\d+$/, '')
+                                            const _hasAnyVersion =
+                                                _typeBase &&
+                                                this._storedSchemas.some(s => s.type && s.type.replace(/\.v\d+$/, '') === _typeBase)
+                                            const base = d.storedSchema
+                                                ? d.hashDrift
+                                                    ? computeStubDiff(d.schema.stubs, d.storedSchema.stubs)
+                                                    : {}
+                                                : !_hasAnyVersion
+                                                  ? Object.fromEntries(
+                                                        (d.schema.stubs ?? []).map(s => [s.source, { status: 'added', changes: null }])
+                                                    )
+                                                  : {}
                                             const diff = { ...base }
                                             for (const stub of d.schema.stubs ?? []) {
                                                 const affectedMessages = [...stub.messages, ...stub.returnTypes].filter(m =>

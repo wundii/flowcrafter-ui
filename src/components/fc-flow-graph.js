@@ -513,31 +513,39 @@ export class FcFlowGraph extends BaseElement {
         const selExcs = this.selectedStub ? excsOf(this.selectedStub) : []
         const selRess = this.selectedStub ? ressOf(this.selectedStub) : []
 
+        const primitiveTypes = new Set(['string', 'int', 'float', 'bool', 'array', 'mixed', 'null', 'void', 'never', 'object'])
         const typeColor = type => {
             const base = type.startsWith('?') ? type.slice(1) : type
             if (base === 'string') return 'text-sky-400'
             if (base === 'int' || base === 'float') return 'text-amber-400'
             if (base === 'bool') return 'text-violet-400'
             if (base === 'array') return 'text-orange-400'
+            if (!primitiveTypes.has(base)) return 'text-emerald-400'
             return 'text-base-content/40'
         }
-        const msgProps = msgClass => {
+        const renderMsgProps = (msgClass, depth, visited) => {
             const props = this.messageSchemas?.[msgClass]
             if (!props || Object.keys(props).length === 0) return ''
             return html`
-                <div class="flex flex-col gap-0.5 mt-1">
+                <div class="flex flex-col gap-0.5 ${depth > 0 ? 'mt-0.5 ml-3 pl-2 border-l border-base-content/10' : 'mt-1'}">
                     ${Object.entries(props).map(([name, type]) => {
                         const nullable = type.startsWith('?')
                         const base = nullable ? type.slice(1) : type
-                        return html`<span class="text-xs font-mono"
-                            ><span class="text-base-content/40">${name}</span><span class="text-base-content/20">:</span>${nullable
-                                ? html`<span class="text-base-content/25">?</span>`
-                                : ''}<span class="${typeColor(type)}">${base}</span></span
-                        >`
+                        const subClass = base.split('|').find(p => !primitiveTypes.has(p) && this.messageSchemas?.[p])
+                        const hasNested = !!subClass && !visited.has(subClass)
+                        return html`
+                            <span class="text-xs font-mono leading-snug"
+                                ><span class="text-base-content/40">${name}</span><span class="text-base-content/20">:</span>${nullable
+                                    ? html`<span class="text-base-content/25">?</span>`
+                                    : ''}<span class="${typeColor(type)}">${base.split('\\').pop()}</span></span
+                            >
+                            ${hasNested ? renderMsgProps(subClass, depth + 1, new Set([...visited, subClass])) : ''}
+                        `
                     })}
                 </div>
             `
         }
+        const msgProps = msgClass => renderMsgProps(msgClass, 0, new Set([msgClass]))
 
         return html`
             <div style="position:relative;">
