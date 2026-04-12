@@ -1,5 +1,5 @@
 import { createServer } from 'node:http'
-import { readFileSync, writeFileSync, existsSync, mkdirSync, createReadStream } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, createReadStream } from 'node:fs'
 import { join, extname, dirname } from 'node:path'
 import { scryptSync, randomBytes, timingSafeEqual, createHash, createCipheriv, createDecipheriv } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
@@ -11,6 +11,7 @@ const AUTH_FILE = './data/auth.json'
 const CONNECTION_FILE = './data/connection.json'
 const AI_FILE = './data/ai.json'
 const KEY_FILE = './data/.key'
+const DEV_IMPORT_FILE = './data/dev-import.json'
 const DIST = join(dirname(fileURLToPath(import.meta.url)), 'dist')
 
 const MIME = {
@@ -104,6 +105,21 @@ function saveAiConfig(provider, apiKey, model) {
 
 function clearAiConfig() {
     if (existsSync(AI_FILE)) writeFileSync(AI_FILE, JSON.stringify({ provider: null, encryptedApiKey: null, model: null }, null, 2))
+}
+
+// ─── Dev import store ─────────────────────────────────────────────────────────
+function loadDevImport() {
+    if (!existsSync(DEV_IMPORT_FILE)) return null
+    return JSON.parse(readFileSync(DEV_IMPORT_FILE, 'utf8'))
+}
+
+function saveDevImport(data) {
+    mkdirSync(dirname(DEV_IMPORT_FILE), { recursive: true })
+    writeFileSync(DEV_IMPORT_FILE, JSON.stringify(data, null, 2))
+}
+
+function clearDevImport() {
+    if (existsSync(DEV_IMPORT_FILE)) unlinkSync(DEV_IMPORT_FILE)
 }
 
 // ─── AI analysis ─────────────────────────────────────────────────────────────
@@ -320,6 +336,7 @@ function normalizeMetricsPath(p) {
     if (p === '/api/connection') return '/api/connection'
     if (p === '/api/ai-config') return '/api/ai-config'
     if (p === '/api/version') return '/api/version'
+    if (p.startsWith('/api/dev-import')) return '/api/dev-import'
     if (p === '/api/fc-ping') return '/api/fc-ping'
     if (p === '/api/analyze') return '/api/analyze'
     if (p === '/metrics') return '/metrics'
@@ -514,6 +531,98 @@ const server = createServer(async (req, res) => {
         if (method === 'DELETE') {
             clearAiConfig()
             return json(res, { ok: true })
+        }
+
+        return json(res, { error: 'Not found.' }, 404)
+    }
+
+    // ── Dev import API ───────────────────────────────────────────────────────
+    if (path.startsWith('/api/dev-import')) {
+        const db = loadDb()
+        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+
+        if (method === 'GET' && path === '/api/dev-import') {
+            return json(res, loadDevImport())
+        }
+
+        if (method === 'DELETE' && path === '/api/dev-import') {
+            clearDevImport()
+            return json(res, { ok: true })
+        }
+
+        if (method === 'POST' && path === '/api/dev-import') {
+            const body = await readBody(req)
+
+            // Save pre-built snapshot (from client-side fetch)
+            if (body?.schemas) {
+                saveDevImport(body)
+                return json(res, body)
+            }
+
+            // Server-side fetch: { url, secret }
+            const { url: importUrl, secret } = body
+            if (!importUrl) return json(res, { error: 'url fehlt.' }, 400)
+
+            const baseUrl = importUrl.replace(/\/$/, '')
+            const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
+
+            try {
+                const [schemasRes, messageSourcesRes] = await Promise.all([
+                    fetch(`${baseUrl}/api/schemas`, { headers }),
+                    fetch(`${baseUrl}/api/schema/message-sources`, { headers }),
+                ])
+
+                if (schemasRes.status === 401) return json(res, { error: 'Authentifizierung fehlgeschlagen — Bearer Secret prüfen.' }, 401)
+                if (!schemasRes.ok) return json(res, { error: `Fehler vom Server: HTTP ${schemasRes.status}` }, 502)
+
+                const rawText = await schemasRes.text()
+                let schemas
+                try {
+                    schemas = JSON.parse(rawText)
+                } catch {
+                    return json(
+                        res,
+                        { error: 'Kein gültiges JSON erhalten. Bitte die PHP-Backend-URL angeben, nicht die UI-Server-URL.' },
+                        502
+                    )
+                }
+
+                let messageSources = {}
+                if (messageSourcesRes.ok) {
+                    const rawMsgText = await messageSourcesRes.text()
+                    try {
+                        const msgSourcesArr = JSON.parse(rawMsgText)
+                        if (Array.isArray(msgSourcesArr)) {
+                            for (const entry of msgSourcesArr) {
+                                if (entry.messageSource) {
+                                    messageSources[entry.messageSource] = entry.propertyNames ?? {}
+                                }
+                            }
+                        }
+                    } catch {
+                        // message-sources nicht verfügbar — kein Fehler
+                    }
+                }
+
+                const schemasMap = {}
+                for (const s of schemas) {
+                    schemasMap[s.type] = { storedHash: s.schemaHash, stubs: s.stubs }
+                }
+                const snapshot = {
+                    importedAt: new Date().toISOString(),
+                    sourceUrl: baseUrl,
+                    schemaCount: Object.keys(schemasMap).length,
+                    messageSourceCount: Object.keys(messageSources).length,
+                    schemas: schemasMap,
+                    messageSources,
+                }
+                saveDevImport(snapshot)
+                return json(res, snapshot)
+            } catch (err) {
+                const cause = err.cause?.code ?? err.cause?.message ?? err.message
+                console.error('Dev import error:', cause)
+                return json(res, { error: `Verbindung fehlgeschlagen: ${cause}` }, 502)
+            }
         }
 
         return json(res, { error: 'Not found.' }, 404)

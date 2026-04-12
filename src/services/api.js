@@ -277,4 +277,36 @@ export const api = {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
         }).then(res => res.json())
     },
+
+    getDevImport() {
+        const token = sessionStorage.getItem('fc_token') ?? ''
+        return fetch('/api/dev-import', {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }).then(res => res.json())
+    },
+
+    clearDevImport() {
+        const token = sessionStorage.getItem('fc_token') ?? ''
+        return fetch('/api/dev-import', {
+            method: 'DELETE',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }).then(res => res.json())
+    },
+
+    /** @param {object} snapshot */
+    saveDevImport(snapshot) {
+        const token = sessionStorage.getItem('fc_token') ?? ''
+        return fetch('/api/dev-import', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(snapshot),
+        }).then(async res => {
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
+            return data
+        })
+    },
 }

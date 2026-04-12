@@ -12,6 +12,7 @@ export default defineConfig({
             '/api/connection': 'http://localhost:3000',
             '/api/ai-config': 'http://localhost:3000',
             '/api/version': 'http://localhost:3000',
+            '/api/dev-import': 'http://localhost:3000',
             '/api/analyze': {
                 target: 'http://localhost:3000',
                 configure: proxy => {

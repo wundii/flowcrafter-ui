@@ -77,6 +77,11 @@ export class FcDev extends BaseElement {
         _srcLoading: { state: true },
         _srcSource: { state: true },
         _validationCache: { state: true },
+        _devImport: { state: true },
+        _importModalLoading: { state: true },
+        _importModalError: { state: true },
+        _importUrl: { state: true },
+        _importSecret: { state: true },
     }
 
     constructor() {
@@ -104,6 +109,11 @@ export class FcDev extends BaseElement {
         this._srcLoading = false
         this._srcSource = null
         this._validationCache = {}
+        this._devImport = null
+        this._importModalLoading = false
+        this._importModalError = null
+        this._importUrl = ''
+        this._importSecret = ''
     }
 
     _startResize(e) {
@@ -133,7 +143,9 @@ export class FcDev extends BaseElement {
         this._error = null
         this._loading = true
         try {
-            this._flows = await api.getDevFlows()
+            const [flows, devImport] = await Promise.all([api.getDevFlows(), api.getDevImport().catch(() => null)])
+            this._flows = flows
+            this._devImport = devImport
         } catch (err) {
             this._error = {
                 message: err.message,
@@ -156,6 +168,57 @@ export class FcDev extends BaseElement {
         this._lastRunOutput = null
         try {
             const data = await api.getDevFlow(className)
+            if (this._devImport && data.schema?.type) {
+                // 1. Schema-Fallback: storedHash + storedSchema aus Import wenn lokal nicht in DB
+                const imp = this._devImport.schemas?.[data.schema.type]
+                if (imp) {
+                    if (data.storedHash === null) data.storedHash = imp.storedHash
+                    if (data.storedSchema === null) data.storedSchema = { type: data.schema.type, stubs: imp.stubs }
+                    data.hashDrift = data.hash !== null && data.storedHash !== null && data.hash !== data.storedHash
+                }
+
+                const importedMessageSources = this._devImport.messageSources ?? {}
+
+                // 2. changedMessages-Enrichment aus Import
+                //    Nur für Klassen die lokal per Reflection bekannt sind (data.messageSchemas),
+                //    aber in der lokalen DB fehlen (daher noch nicht in data.changedMessages).
+                //    Importiertes Format: { ShortName: [propName, ...] }
+                const localMessageSchemas = data.messageSchemas ?? {}
+                const changedSet = new Set((data.changedMessages ?? []).map(m => m.class))
+                for (const [cls, propsByShortName] of Object.entries(importedMessageSources)) {
+                    if (changedSet.has(cls)) continue       // lokale DB hat bereits erkannt
+                    if (!localMessageSchemas[cls]) continue // Klasse lokal nicht vorhanden → kein Vergleich
+
+                    const liveProps = Object.keys(localMessageSchemas[cls]).sort()
+                    const importedProps = Object.values(propsByShortName).flat().sort()
+
+                    if (JSON.stringify(liveProps) !== JSON.stringify(importedProps)) {
+                        data.changedMessages = data.changedMessages ?? []
+                        data.changedMessages.push({
+                            class: cls,
+                            liveHash: null,
+                            storedHash: null,
+                            liveProperties: liveProps,
+                            storedProperties: importedProps,
+                        })
+                    }
+                }
+
+                // 3. messageSchemas-Fallback für Klassen die lokal nicht existieren
+                //    Transformation: { ShortName: [propName, ...] } → { propName: '?' }
+                //    Lokale Reflection-Daten haben immer Vorrang.
+                if (!data.messageSchemas) data.messageSchemas = {}
+                for (const [cls, propsByShortName] of Object.entries(importedMessageSources)) {
+                    if (data.messageSchemas[cls]) continue  // lokal bekannt → überspringen
+                    const props = {}
+                    for (const propList of Object.values(propsByShortName)) {
+                        for (const propName of propList) {
+                            props[propName] = '?'
+                        }
+                    }
+                    data.messageSchemas[cls] = props
+                }
+            }
             this._detail = data
             this._validationCache = { ...this._validationCache, [className]: data.valid && !data.hashDrift }
         } catch (err) {
@@ -453,7 +516,7 @@ export class FcDev extends BaseElement {
             <div class="flex flex-col h-full overflow-hidden">
                 <!-- Header -->
                 <div
-                    class="px-5 py-4 border-b border-base-300/50 shrink-0 bg-gradient-to-br via-transparent to-transparent ${!d.valid
+                    class="px-5 py-3 border-b border-base-300/50 shrink-0 bg-gradient-to-br via-transparent to-transparent ${!d.valid
                         ? 'from-error/5'
                         : d.hashDrift
                           ? 'from-orange-500/5'
@@ -483,171 +546,143 @@ export class FcDev extends BaseElement {
                                       ${selectedFlow.file}
                                   </div>`
                                 : ''}
+                            <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                ${!d.valid
+                                    ? html`
+                                          <svg
+                                              class="w-3.5 h-3.5 text-error shrink-0"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              stroke-width="2.5"
+                                              viewBox="0 0 24 24"
+                                          >
+                                              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                          </svg>
+                                          <span class="text-xs font-semibold text-error">Schema ungültig</span>
+                                          <span class="text-xs text-base-content/50">— ${d.error}</span>
+                                      `
+                                    : d.hashDrift
+                                      ? html`
+                                            <svg
+                                                class="w-3.5 h-3.5 text-orange-500 shrink-0"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                                />
+                                            </svg>
+                                            <span class="text-xs font-semibold text-orange-500"
+                                                >Schema ungültig — neue Version erforderlich</span
+                                            >
+                                            <span class="text-xs text-base-content/50">
+                                                Das Schema wurde geändert, der Flow-Typ
+                                                <code class="font-mono bg-base-300/50 px-1 rounded">${d.schema?.type}</code>
+                                                ist bereits in der Datenbank gespeichert. Bitte den Versionsbezeichner erhöhen (z.B.
+                                                <code class="font-mono bg-base-300/50 px-1 rounded"
+                                                    >${nextVersion(d.schema?.type)?.current ?? 'v1'}</code
+                                                >
+                                                →
+                                                <code class="font-mono bg-base-300/50 px-1 rounded"
+                                                    >${nextVersion(d.schema?.type)?.next ?? 'v2'}</code
+                                                >).
+                                            </span>
+                                        `
+                                      : html`
+                                            <svg
+                                                class="w-3.5 h-3.5 text-success shrink-0"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2.5"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                            </svg>
+                                            <span class="text-xs font-semibold text-success">Schema gültig</span>
+                                            <span class="text-xs text-base-content/50"
+                                                >— Das Schema ist syntaktisch
+                                                korrekt${d.storedHash !== null ? ' und entspricht der gespeicherten Version.' : '.'}</span
+                                            >
+                                            <button
+                                                class="btn btn-xs btn-success btn-outline ml-1 shrink-0"
+                                                ?disabled=${this._runModalLoading}
+                                                @click=${() => this._openRunModal()}
+                                            >
+                                                ${this._runModalLoading
+                                                    ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                                    : html`<svg
+                                                          class="w-3 h-3"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
+                                                          />
+                                                      </svg>`}
+                                                ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
+                                            </button>
+                                        `}
+                            </div>
+                            ${d.valid && d.changedMessages?.length > 0
+                                ? html`
+                                      <div class="flex items-start gap-1.5 mt-1 flex-wrap">
+                                          <svg
+                                              class="w-3.5 h-3.5 text-yellow-500 shrink-0 mt-0.5"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              stroke-width="2"
+                                              viewBox="0 0 24 24"
+                                          >
+                                              <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                              />
+                                          </svg>
+                                          <span class="text-xs font-semibold text-yellow-500">Nachrichtenstruktur geändert</span>
+                                          <span class="text-xs text-base-content/50">
+                                              — Konstruktor geändert, verarbeitete Flows nur noch <strong>Readonly</strong>. Empfehlung:
+                                              <code class="font-mono bg-base-300/50 px-1 rounded"
+                                                  >${nextVersion(d.schema?.type)?.current ?? 'v1'}</code
+                                              >
+                                              →
+                                              <code class="font-mono bg-base-300/50 px-1 rounded"
+                                                  >${nextVersion(d.schema?.type)?.next ?? 'v2'}</code
+                                              >.
+                                          </span>
+                                          <div class="w-full flex flex-wrap gap-1 mt-0.5 ml-5">
+                                              ${d.changedMessages.map(
+                                                  m => html`
+                                                      <span
+                                                          class="text-[10px] font-mono text-yellow-500/80 bg-yellow-500/10 px-1.5 py-0.5 rounded"
+                                                          title="${m.class}"
+                                                          >${shortClass(m.class)}</span
+                                                      >
+                                                  `
+                                              )}
+                                          </div>
+                                      </div>
+                                  `
+                                : ''}
                         </div>
                         ${d.hash
-                            ? html`<div class="flex flex-col items-end gap-1 shrink-0">
-                                  ${d.hashDrift
-                                      ? html`<span class="badge badge-xs bg-orange-500/15 text-orange-500 border-orange-500/30"
-                                            >Schema geändert</span
-                                        >`
-                                      : d.storedHash === null
-                                        ? html`<span class="badge badge-xs badge-ghost">nicht deployed</span>`
-                                        : html`<span class="badge badge-xs badge-success">aktuell</span>`}
-                                  <span class="text-[10px] font-mono text-base-content/30">${d.hash}</span>
-                              </div>`
+                            ? html`
+                                  <div class="flex flex-col items-end gap-0.5 shrink-0">
+                                      <span class="text-[10px] text-base-content/30 uppercase tracking-wide">Schema-Hash</span>
+                                      <span class="text-xs font-mono text-base-content/40">${d.hash}</span>
+                                  </div>
+                              `
                             : ''}
                     </div>
                 </div>
-
-                <!-- Status banner -->
-                ${!d.valid
-                    ? html`
-                          <div class="px-5 py-3 border-b border-error/30 bg-error/5 shrink-0">
-                              <div class="flex items-start gap-3">
-                                  <svg
-                                      class="w-5 h-5 text-error shrink-0 mt-0.5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      stroke-width="2.5"
-                                      viewBox="0 0 24 24"
-                                  >
-                                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                  <div class="flex-1 min-w-0">
-                                      <div class="font-semibold text-error text-sm">Schema ungültig</div>
-                                      <div class="text-xs text-base-content/60 mt-1">${d.error}</div>
-                                  </div>
-                              </div>
-                          </div>
-                      `
-                    : d.hashDrift
-                      ? html`
-                            <div class="px-5 py-3 border-b border-orange-500/30 bg-orange-500/5 shrink-0">
-                                <div class="flex items-start gap-3">
-                                    <svg
-                                        class="w-5 h-5 text-orange-500 shrink-0 mt-0.5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                                        />
-                                    </svg>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="font-semibold text-orange-500 text-sm">Schema ungültig — neue Version erforderlich</div>
-                                        <div class="text-xs text-base-content/60 mt-1">
-                                            Das Schema wurde geändert, der Flow-Typ
-                                            <code class="font-mono bg-base-300/50 px-1 rounded">${d.schema?.type}</code>
-                                            ist bereits in der Datenbank gespeichert. Bitte den Versionsbezeichner erhöhen (z.B.
-                                            <code class="font-mono bg-base-300/50 px-1 rounded"
-                                                >${nextVersion(d.schema?.type)?.current ?? 'v1'}</code
-                                            >
-                                            →
-                                            <code class="font-mono bg-base-300/50 px-1 rounded"
-                                                >${nextVersion(d.schema?.type)?.next ?? 'v2'}</code
-                                            >).
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `
-                      : html`
-                            <div class="px-5 py-3 border-b border-success/30 bg-success/5 shrink-0">
-                                <div class="flex items-start gap-3">
-                                    <svg
-                                        class="w-5 h-5 text-success shrink-0 mt-0.5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2.5"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                    </svg>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="font-semibold text-success text-sm">Schema gültig</div>
-                                        <div class="text-xs text-base-content/60 mt-1">
-                                            Das Schema ist syntaktisch
-                                            korrekt${d.storedHash !== null ? ' und entspricht der gespeicherten Version.' : '.'}
-                                        </div>
-                                    </div>
-                                    <button
-                                        class="btn btn-sm btn-success btn-outline shrink-0 m-2"
-                                        ?disabled=${this._runModalLoading}
-                                        @click=${() => this._openRunModal()}
-                                    >
-                                        ${this._runModalLoading
-                                            ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                            : html`<svg
-                                                  class="w-3.5 h-3.5"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  stroke-width="2"
-                                                  viewBox="0 0 24 24"
-                                              >
-                                                  <path
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round"
-                                                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
-                                                  />
-                                              </svg>`}
-                                        ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
-                                    </button>
-                                </div>
-                            </div>
-                        `}
-
-                <!-- Message drift banner -->
-                ${d.valid && d.changedMessages?.length > 0
-                    ? html`
-                          <div class="px-5 py-3 border-b border-yellow-500/30 bg-yellow-500/5 shrink-0">
-                              <div class="flex items-start gap-3">
-                                  <svg
-                                      class="w-5 h-5 text-yellow-500 shrink-0 mt-0.5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      stroke-width="2"
-                                      viewBox="0 0 24 24"
-                                  >
-                                      <path
-                                          stroke-linecap="round"
-                                          stroke-linejoin="round"
-                                          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                                      />
-                                  </svg>
-                                  <div class="flex-1 min-w-0">
-                                      <div class="font-semibold text-yellow-500 text-sm">Nachrichtenstruktur geändert</div>
-                                      <div class="text-xs text-base-content/60 mt-1">
-                                          Folgende Messages haben einen geänderten Konstruktor — alle verarbeiteten Flows werden nur noch
-                                          als
-                                          <strong>Readonly</strong> interpretiert. Empfehlung: Versionsbezeichner erhöhen (z.B.
-                                          <code class="font-mono bg-base-300/50 px-1 rounded"
-                                              >${nextVersion(d.schema?.type)?.current ?? 'v1'}</code
-                                          >
-                                          →
-                                          <code class="font-mono bg-base-300/50 px-1 rounded"
-                                              >${nextVersion(d.schema?.type)?.next ?? 'v2'}</code
-                                          >).
-                                      </div>
-                                      <ul class="mt-2 flex flex-col gap-0.5">
-                                          ${d.changedMessages.map(
-                                              m => html`
-                                                  <li class="text-[10px] font-mono text-yellow-500/80 flex items-center gap-1.5">
-                                                      <span class="text-yellow-500 font-bold">!</span>
-                                                      ${shortClass(m.class)}
-                                                      <span class="text-base-content/30" title="${m.class}">${m.class}</span>
-                                                  </li>
-                                              `
-                                          )}
-                                      </ul>
-                                  </div>
-                              </div>
-                          </div>
-                      `
-                    : ''}
 
                 <!-- Graph -->
                 ${d.valid && d.schema
@@ -803,22 +838,39 @@ export class FcDev extends BaseElement {
                         <span class="text-xs font-semibold text-base-content/50 uppercase tracking-wider">
                             ${this._flows.length} lokale Flow${this._flows.length !== 1 ? 's' : ''}
                         </span>
-                        <button
-                            class="btn btn-xs btn-ghost btn-circle"
-                            title="Neu laden"
-                            @click=${async () => {
-                                await this._load()
-                                if (this._selected) this._selectFlow(this._selected)
-                            }}
-                        >
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                />
-                            </svg>
-                        </button>
+                        <div class="flex items-center gap-0.5">
+                            <button
+                                class="btn btn-xs btn-ghost btn-circle ${this._devImport ? 'text-success/70' : 'text-base-content/30'}"
+                                title="${this._devImport
+                                    ? `Prod-Import aktiv\n${this._devImport.sourceUrl}\n${new Date(this._devImport.importedAt).toLocaleString('de-DE')}\n${this._devImport.schemaCount} Schemas · ${this._devImport.messageSourceCount ?? 0} Message Sources`
+                                    : 'Prod-Import'}"
+                                @click=${() => this.querySelector('#fc-dev-import-modal')?.showModal()}
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
+                                    />
+                                </svg>
+                            </button>
+                            <button
+                                class="btn btn-xs btn-ghost btn-circle"
+                                title="Neu laden"
+                                @click=${async () => {
+                                    await this._load()
+                                    if (this._selected) this._selectFlow(this._selected)
+                                }}
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     <!-- Sidebar content -->
                     <div class="flex-1 overflow-hidden p-2">${this._renderSidebar()}</div>
@@ -1155,6 +1207,160 @@ ${this._runResult.output}</pre
                     </div>
                 </div>
                 <form method="dialog" class="modal-backdrop"><button>close</button></form>
+            </dialog>
+
+            <!-- Prod Import Modal -->
+            <dialog id="fc-dev-import-modal" class="modal">
+                <div class="modal-box w-[720px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden">
+                    <!-- Header -->
+                    <div
+                        class="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-5 pt-4 pb-3 border-b border-base-300/50 shrink-0 cursor-move select-none"
+                        @mousedown=${e => this._startModalDrag(e, 'fc-dev-import-modal')}
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0"
+                                >
+                                    <svg
+                                        class="w-4 h-4 text-primary"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
+                                        />
+                                    </svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <h3 class="font-bold text-sm leading-tight">Prod-Import</h3>
+                                    <p class="text-[11px] text-base-content/40 mt-0.5">
+                                        Schemas und MessageSchemas von einer FlowCrafter-Instanz importieren
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                class="btn btn-sm btn-ghost btn-circle shrink-0"
+                                @click=${() => this.querySelector('#fc-dev-import-modal')?.close()}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Body -->
+                    <div class="flex divide-x divide-base-300/50 min-h-[240px]">
+                        <!-- Left: Formular -->
+                        <div class="flex flex-col gap-4 p-5 flex-1">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-base-content/60 uppercase tracking-wide">PHP-Backend URL</label>
+                                <input
+                                    type="url"
+                                    class="input input-sm input-bordered font-mono text-xs"
+                                    placeholder="http://192.168.1.4:8000"
+                                    .value=${this._importUrl}
+                                    @input=${e => (this._importUrl = e.target.value)}
+                                />
+                                <span class="text-[10px] text-base-content/40">Direkte URL zum PHP-Backend, nicht zum UI-Server</span>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-base-content/60 uppercase tracking-wide">Bearer Secret</label>
+                                <input
+                                    type="password"
+                                    class="input input-sm input-bordered font-mono text-xs"
+                                    placeholder="Secret"
+                                    .value=${this._importSecret}
+                                    @input=${e => (this._importSecret = e.target.value)}
+                                />
+                            </div>
+                            ${this._importModalError
+                                ? html`<div class="text-xs text-error bg-error/5 border border-error/20 rounded-lg px-3 py-2">
+                                      ${this._importModalError}
+                                  </div>`
+                                : ''}
+                            <button
+                                class="btn btn-sm btn-primary mt-auto"
+                                ?disabled=${this._importModalLoading || !this._importUrl}
+                                @click=${async () => {
+                                    this._importModalLoading = true
+                                    this._importModalError = null
+                                    try {
+                                        const result = await api.saveDevImport({
+                                            url: this._importUrl,
+                                            secret: this._importSecret,
+                                        })
+                                        this._devImport = result
+                                        if (this._selected) this._selectFlow(this._selected)
+                                    } catch (err) {
+                                        this._importModalError = err.message
+                                    } finally {
+                                        this._importModalLoading = false
+                                    }
+                                }}
+                            >
+                                ${this._importModalLoading
+                                    ? html`<span class="loading loading-spinner loading-xs"></span> Importiere…`
+                                    : html`<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                              <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
+                                              />
+                                          </svg>
+                                          Daten importieren`}
+                            </button>
+                        </div>
+                        <!-- Right: Aktueller Import -->
+                        <div class="flex flex-col p-5 w-64 shrink-0">
+                            <span class="text-xs font-semibold text-base-content/60 uppercase tracking-wide mb-3">Aktueller Import</span>
+                            ${this._devImport
+                                ? html`
+                                      <div class="flex flex-col gap-2 text-xs flex-1">
+                                          <div class="flex flex-col gap-0.5">
+                                              <span class="text-base-content/40 uppercase tracking-wide text-[10px]">Quelle</span>
+                                              <span class="font-mono text-base-content/70 break-all">${this._devImport.sourceUrl}</span>
+                                          </div>
+                                          <div class="flex flex-col gap-0.5">
+                                              <span class="text-base-content/40 uppercase tracking-wide text-[10px]">Importiert am</span>
+                                              <span class="text-base-content/70"
+                                                  >${new Date(this._devImport.importedAt).toLocaleString('de-DE')}</span
+                                              >
+                                          </div>
+                                          <div class="flex flex-col gap-0.5">
+                                              <span class="text-base-content/40 uppercase tracking-wide text-[10px]">Schemas</span>
+                                              <span class="font-semibold text-success">${this._devImport.schemaCount}</span>
+                                          </div>
+                                          <div class="flex flex-col gap-0.5">
+                                              <span class="text-base-content/40 uppercase tracking-wide text-[10px]">Message Sources</span>
+                                              <span
+                                                  class="font-semibold ${this._devImport.messageSourceCount > 0
+                                                      ? 'text-success'
+                                                      : 'text-base-content/30'}"
+                                                  >${this._devImport.messageSourceCount ?? 0}</span
+                                              >
+                                          </div>
+                                          <button
+                                              class="btn btn-sm btn-error btn-outline mt-auto"
+                                              @click=${async () => {
+                                                  await api.clearDevImport()
+                                                  this._devImport = null
+                                                  if (this._selected) this._selectFlow(this._selected)
+                                              }}
+                                          >
+                                              Import löschen
+                                          </button>
+                                      </div>
+                                  `
+                                : html`<p class="text-xs text-base-content/30 italic">Kein Import vorhanden</p>`}
+                        </div>
+                    </div>
+                </div>
+                <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                    <button @click=${() => this.querySelector('#fc-dev-import-modal')?.close()}>close</button>
+                </form>
             </dialog>
 
             <!-- Stub Source Modal -->
