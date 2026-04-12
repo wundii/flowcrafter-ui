@@ -845,19 +845,20 @@ export class FcDev extends BaseElement {
                         </span>
                         <div class="flex items-center gap-0.5">
                             <button
-                                class="btn btn-xs btn-ghost btn-circle ${this._devImport ? 'text-success/70' : 'text-base-content/30'}"
+                                class="btn btn-xs gap-1 ${this._devImport ? 'btn-success btn-outline' : 'btn-ghost text-base-content/50'}"
                                 title="${this._devImport
-                                    ? `Prod-Import aktiv\n${this._devImport.sourceUrl}\n${new Date(this._devImport.importedAt).toLocaleString('de-DE')}\n${this._devImport.schemaCount} Schemas · ${this._devImport.messageSourceCount ?? 0} Message Sources`
-                                    : 'Prod-Import'}"
+                                    ? `Schema Import aktiv\n${this._devImport.sourceUrl}\n${new Date(this._devImport.importedAt).toLocaleString('de-DE')}\n${this._devImport.schemaCount} Schemas · ${this._devImport.messageSourceCount ?? 0} Message Sources`
+                                    : 'Schema Import'}"
                                 @click=${() => this.querySelector('#fc-dev-import-modal')?.showModal()}
                             >
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path
                                         stroke-linecap="round"
                                         stroke-linejoin="round"
                                         d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
                                     />
                                 </svg>
+                                <span class="text-[10px]">Schema Import</span>
                             </button>
                             <button
                                 class="btn btn-xs btn-ghost btn-circle"
@@ -1216,7 +1217,7 @@ ${this._runResult.output}</pre
 
             <!-- Prod Import Modal -->
             <dialog id="fc-dev-import-modal" class="modal">
-                <div class="modal-box w-[720px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden">
+                <div class="modal-box w-[580px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden">
                     <!-- Header -->
                     <div
                         class="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-5 pt-4 pb-3 border-b border-base-300/50 shrink-0 cursor-move select-none"
@@ -1242,9 +1243,9 @@ ${this._runResult.output}</pre
                                     </svg>
                                 </div>
                                 <div class="min-w-0">
-                                    <h3 class="font-bold text-sm leading-tight">Prod-Import</h3>
+                                    <h3 class="font-bold text-sm leading-tight">Schema Import</h3>
                                     <p class="text-[11px] text-base-content/40 mt-0.5">
-                                        Schemas und MessageSchemas von einer FlowCrafter-Instanz importieren
+                                        Schemas und MessageSources von einer FlowCrafter-Service-Instanz importieren
                                     </p>
                                 </div>
                             </div>
@@ -1264,18 +1265,18 @@ ${this._runResult.output}</pre
                                 <label class="text-xs font-semibold text-base-content/60 uppercase tracking-wide">PHP-Backend URL</label>
                                 <input
                                     type="url"
-                                    class="input input-sm input-bordered font-mono text-xs"
-                                    placeholder="http://192.168.1.4:8000"
+                                    class="input input-sm input-bordered font-mono text-xs w-full"
+                                    placeholder="http://localhost:8000"
                                     .value=${this._importUrl}
                                     @input=${e => (this._importUrl = e.target.value)}
                                 />
-                                <span class="text-[10px] text-base-content/40">Direkte URL zum PHP-Backend, nicht zum UI-Server</span>
+                                <span class="text-[10px] text-base-content/40">Direkte URL zum PHP-Backend API Service</span>
                             </div>
                             <div class="flex flex-col gap-1.5">
-                                <label class="text-xs font-semibold text-base-content/60 uppercase tracking-wide">Bearer Secret</label>
+                                <label class="text-xs font-semibold text-base-content/60 uppercase tracking-wide">Secret</label>
                                 <input
                                     type="password"
-                                    class="input input-sm input-bordered font-mono text-xs"
+                                    class="input input-sm input-bordered font-mono text-xs w-full"
                                     placeholder="Secret"
                                     .value=${this._importSecret}
                                     @input=${e => (this._importSecret = e.target.value)}
@@ -1287,7 +1288,7 @@ ${this._runResult.output}</pre
                                   </div>`
                                 : ''}
                             <button
-                                class="btn btn-sm btn-primary mt-auto"
+                                class="btn btn-sm btn-primary mt-auto w-full"
                                 ?disabled=${this._importModalLoading || !this._importUrl}
                                 @click=${async () => {
                                     this._importModalLoading = true
