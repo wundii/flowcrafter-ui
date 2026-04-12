@@ -75,14 +75,14 @@ export class FcLogin extends BaseElement {
     render() {
         if (this._mode === 'loading')
             return html`
-                <div class="min-h-screen bg-base-100 flex items-center justify-center">
+                <div class="min-h-[100dvh] bg-base-100 flex items-center justify-center">
                     <span class="loading loading-spinner loading-lg"></span>
                 </div>
             `
 
         if (this._mode === 'error')
             return html`
-                <div class="min-h-screen bg-base-100 flex items-center justify-center p-4">
+                <div class="min-h-[100dvh] bg-base-100 flex items-center justify-center p-4">
                     <div class="alert alert-error max-w-sm">
                         <span>${this._error}</span>
                         <button
@@ -101,7 +101,7 @@ export class FcLogin extends BaseElement {
         const isSetup = this._mode === 'setup'
 
         return html`
-            <div class="min-h-screen bg-base-100 flex items-center justify-center p-4">
+            <div class="min-h-[100dvh] bg-base-100 flex items-center justify-center p-4">
                 <div class="w-full max-w-sm">
                     <!-- Logo -->
                     <div class="text-center mb-8">

@@ -395,6 +395,64 @@ export class FcDev extends BaseElement {
         }
     }
 
+    _stubNameFromError(err) {
+        if (!err?.file) return null
+        const match = err.file.match(/([^/\\]+)\.php$/)
+        return match ? match[1] : null
+    }
+
+    _renderRunError() {
+        const err =
+            this._runError ?? (this._runResult && !this._runResult.success ? { message: this._runResult.error, ...this._runResult } : null)
+        if (!err) return ''
+        const stubName = this._stubNameFromError(err)
+        const msg = err.message ?? ''
+        const file = err.file ?? null
+        const line = err.line ?? null
+        const fileLine = file ? `${file}${line !== null ? `:${line}` : ''}` : null
+        const hasDetails = !!(file || err.trace || err.fileContext?.length)
+        return html`
+            <div class="rounded-lg bg-error/8 border border-error/25 px-3 py-2.5 shrink-0">
+                <div class="flex items-start gap-2.5">
+                    <svg class="w-4 h-4 text-error shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                        />
+                    </svg>
+                    <div class="flex-1 min-w-0">
+                        ${stubName
+                            ? html`
+                                  <div class="flex items-center gap-1.5 mb-1">
+                                      <span class="text-xs text-base-content/40">${stubName}</span>
+                                  </div>
+                              `
+                            : ''}
+                        <div class="text-xs text-error font-medium">${msg}</div>
+                        ${fileLine
+                            ? html`<div class="text-[10px] font-mono text-base-content/40 mt-1 break-all leading-relaxed">${fileLine}</div>`
+                            : ''}
+                    </div>
+                    ${hasDetails
+                        ? html`
+                              <button
+                                  class="btn btn-xs btn-ghost text-error/70 hover:text-error shrink-0"
+                                  @click=${() => this._openRunErrorModal()}
+                              >
+                                  Details
+                              </button>
+                          `
+                        : ''}
+                </div>
+            </div>
+        `
+    }
+
+    _openRunErrorModal() {
+        this.querySelector('#fc-dev-run-error-modal')?.showModal()
+    }
+
     _renderValidationIcon(className) {
         const valid = this._validationCache[className]
         if (valid === undefined) return ''
@@ -630,6 +688,28 @@ export class FcDev extends BaseElement {
                                                   <code class="font-mono bg-base-300/50 px-1 rounded">${d.schema?.type}</code>
                                                   wurde noch nie registriert.</span
                                               >
+                                              <button
+                                                  class="btn btn-xs btn-info btn-outline ml-1 shrink-0"
+                                                  ?disabled=${this._runModalLoading}
+                                                  @click=${() => this._openRunModal()}
+                                              >
+                                                  ${this._runModalLoading
+                                                      ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                                      : html`<svg
+                                                            class="w-3 h-3"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            stroke-width="2"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                stroke-linecap="round"
+                                                                stroke-linejoin="round"
+                                                                d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
+                                                            />
+                                                        </svg>`}
+                                                  ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
+                                              </button>
                                           `
                                         : _storedPrevVersion
                                           ? html`
@@ -649,6 +729,28 @@ export class FcDev extends BaseElement {
                                                     ist eine neue Version — eine frühere Version dieses Flow-Typs ist bereits
                                                     <registriert class=""></registriert
                                                 ></span>
+                                                <button
+                                                    class="btn btn-xs btn-info btn-outline ml-1 shrink-0"
+                                                    ?disabled=${this._runModalLoading}
+                                                    @click=${() => this._openRunModal()}
+                                                >
+                                                    ${this._runModalLoading
+                                                        ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                                        : html`<svg
+                                                              class="w-3 h-3"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              stroke-width="2"
+                                                              viewBox="0 0 24 24"
+                                                          >
+                                                              <path
+                                                                  stroke-linecap="round"
+                                                                  stroke-linejoin="round"
+                                                                  d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
+                                                              />
+                                                          </svg>`}
+                                                    ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
+                                                </button>
                                             `
                                           : html`
                                                 <svg
@@ -1098,46 +1200,7 @@ export class FcDev extends BaseElement {
                                       </div>
                                   `
                                 : ''}
-                            ${this._runResult && !this._runResult.success
-                                ? html`
-                                      <div class="rounded-lg bg-error/8 border border-error/25 px-4 py-3 flex items-start gap-3">
-                                          <svg
-                                              class="w-4 h-4 text-error shrink-0 mt-0.5"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              stroke-width="2"
-                                              viewBox="0 0 24 24"
-                                          >
-                                              <path
-                                                  stroke-linecap="round"
-                                                  stroke-linejoin="round"
-                                                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-                                              />
-                                          </svg>
-                                          <span class="text-xs text-error">${this._runResult.error}</span>
-                                      </div>
-                                  `
-                                : ''}
-                            ${this._runError
-                                ? html`
-                                      <div class="rounded-lg bg-error/8 border border-error/25 px-4 py-3 flex items-start gap-3">
-                                          <svg
-                                              class="w-4 h-4 text-error shrink-0 mt-0.5"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              stroke-width="2"
-                                              viewBox="0 0 24 24"
-                                          >
-                                              <path
-                                                  stroke-linecap="round"
-                                                  stroke-linejoin="round"
-                                                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-                                              />
-                                          </svg>
-                                          <span class="text-xs text-error">${this._runError.message}</span>
-                                      </div>
-                                  `
-                                : ''}
+                            ${this._renderRunError()}
                             ${this._runResult?.output
                                 ? html`
                                       <div class="rounded-lg bg-base-300/60 border border-base-300 flex flex-col overflow-hidden">
@@ -1194,6 +1257,65 @@ ${this._runResult.output}</pre
                 </div>
                 <form method="dialog" class="modal-backdrop">
                     <button @click=${() => this._closeRunModal()}>close</button>
+                </form>
+            </dialog>
+
+            <!-- Run Error Detail Modal -->
+            <dialog id="fc-dev-run-error-modal" class="modal">
+                <div class="modal-box w-[1100px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden max-h-[85vh]">
+                    <!-- Header -->
+                    <div
+                        class="bg-gradient-to-r from-error/10 via-error/5 to-transparent px-5 pt-4 pb-3 border-b border-base-300/50 shrink-0 cursor-move select-none"
+                        @mousedown=${e => this._startModalDrag(e, 'fc-dev-run-error-modal')}
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-error/15 border border-error/20 flex items-center justify-center shrink-0"
+                                >
+                                    <svg class="w-4 h-4 text-error" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                                        />
+                                    </svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <h3 class="font-bold text-sm leading-tight text-error">Fehlerdetails</h3>
+                                    <p class="text-[11px] font-mono text-base-content/40 mt-0.5 truncate">${this._selected}</p>
+                                </div>
+                            </div>
+                            <button
+                                class="btn btn-sm btn-ghost btn-circle shrink-0"
+                                @click=${() => this.querySelector('#fc-dev-run-error-modal')?.close()}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Body -->
+                    <div class="overflow-y-auto flex-1 p-6">
+                        ${(() => {
+                            const err =
+                                this._runError ??
+                                (this._runResult && !this._runResult.success
+                                    ? { message: this._runResult.error, ...this._runResult }
+                                    : null)
+                            if (!err) return ''
+                            const stubName = this._stubNameFromError(err)
+                            return html` ${renderApiError(err, { detailed: true })} `
+                        })()}
+                    </div>
+                    <!-- Footer -->
+                    <div class="px-5 pb-4 pt-3 border-t border-base-300/50 flex justify-end shrink-0">
+                        <button class="btn btn-sm btn-ghost" @click=${() => this.querySelector('#fc-dev-run-error-modal')?.close()}>
+                            Schließen
+                        </button>
+                    </div>
+                </div>
+                <form method="dialog" class="modal-backdrop">
+                    <button @click=${() => this.querySelector('#fc-dev-run-error-modal')?.close()}>close</button>
                 </form>
             </dialog>
 

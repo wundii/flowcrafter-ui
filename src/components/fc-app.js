@@ -1187,7 +1187,7 @@ export class FcApp extends BaseElement {
 
                                   <div class="px-6 pb-6 pt-4">
                                       <!-- Provider info -->
-                                      <div class="rounded-lg bg-base-200 border border-base-300 px-3 py-2.5 mb-4">
+                                      <div class="rounded-lg bg-base-200 border border-base-300 px-3 py-2.5 mb-3">
                                           <p class="text-xs text-base-content/60">
                                               Die AI-Analyse nutzt Claude von Anthropic. Ein API-Key wird unter
                                               <a
@@ -1198,6 +1198,33 @@ export class FcApp extends BaseElement {
                                                   >console.anthropic.com</a
                                               >
                                               erstellt.
+                                          </p>
+                                      </div>
+                                      <!-- Claude Code Plugin hint -->
+                                      <div class="rounded-lg bg-base-200 border border-base-300 px-3 py-2.5 mb-4 flex items-start gap-2.5">
+                                          <svg
+                                              class="w-3.5 h-3.5 text-base-content/40 shrink-0 mt-0.5"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              stroke-width="2"
+                                              viewBox="0 0 24 24"
+                                          >
+                                              <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
+                                              />
+                                          </svg>
+                                          <p class="text-xs text-base-content/60">
+                                              Für die Entwicklung mit Claude Code gibt es das
+                                              <a
+                                                  href="https://github.com/wundii/flowcrafter-claude"
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  class="link link-primary"
+                                                  >flowcrafter-claude</a
+                                              >
+                                              Plugin — generiert Flows, Stubs und Messages per Slash-Command direkt im Editor.
                                           </p>
                                       </div>
 
