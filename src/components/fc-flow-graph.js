@@ -2,6 +2,7 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
+import { formatDuration } from '../utils/duration.js'
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js'
 import './fc-info-box.js'
 import './fc-json-editor.js'
@@ -488,47 +489,12 @@ export class FcFlowGraph extends BaseElement {
         const flowExceptions = this.runExceptions ?? this.flow.flowExceptions ?? []
         const flowResults = this.runResults ?? this.flow.flowResults ?? []
 
-        // Stub timing: only when a run is selected (runMessages !== null)
-        // START = earliest event where stubSource = this stub
-        // END   = earliest time any returnType of this stub appears as messageSource elsewhere
-        //         (= when the stub's output first lands at the next stub)
-        //         For bool stubs (no returnTypes): END = result timestamp
-        const hasTimings = this.runMessages !== null
+        // Stub timing: read pre-computed timings from the API (flow.flowRunTimings keyed by runtimeHash)
+        const hasTimings = this.runId !== null && Array.isArray(this.flow?.flowRunTimings?.[this.runId])
         const stubTimingsMap = {}
         if (hasTimings) {
-            // earliest appearance of each messageSource class across all messages
-            const firstAppearance = {}
-            for (const msg of flowMessages) {
-                const t = new Date(msg.time).getTime()
-                if (firstAppearance[msg.messageSource] === undefined || t < firstAppearance[msg.messageSource])
-                    firstAppearance[msg.messageSource] = t
-            }
-
-            for (const stub of stubs) {
-                const stubMsgs = flowMessages.filter(m => m.stubSource === stub.source)
-                const stubExcs = flowExceptions.filter(e => e.stubSource === stub.source)
-                const stubRess = flowResults.filter(r => r.stubSource === stub.source)
-                const allEvents = [...stubMsgs, ...stubExcs, ...stubRess]
-                if (allEvents.length === 0) continue
-
-                // START = when the last input arrived (stub can only process once all inputs are present)
-                // Fall back to min of all events if no input messages are found in schema
-                const inputMsgs = stubMsgs.filter(m => stub.messages.includes(m.messageSource))
-                const startT =
-                    inputMsgs.length > 0
-                        ? Math.max(...inputMsgs.map(m => new Date(m.time).getTime()))
-                        : Math.min(...allEvents.map(e => new Date(e.time).getTime()))
-
-                let endT
-                if (stub.returnTypes.length > 0) {
-                    const outputTimes = stub.returnTypes.map(rt => firstAppearance[rt]).filter(t => t !== undefined)
-                    endT = outputTimes.length > 0 ? Math.min(...outputTimes) : startT
-                } else {
-                    // bool stub: end = result timestamp
-                    endT = stubRess.length > 0 ? Math.max(...stubRess.map(r => new Date(r.time).getTime())) : startT
-                }
-
-                stubTimingsMap[stub.source] = { min: startT, max: endT }
+            for (const timing of this.flow.flowRunTimings[this.runId]) {
+                stubTimingsMap[timing.stubSource] = timing
             }
         }
 
@@ -647,7 +613,9 @@ export class FcFlowGraph extends BaseElement {
                                     <!-- Header -->
                                     <div
                                         style="height:${HEADER_H}px; display:flex; align-items:center; gap:8px;
-                            padding:0 10px; ${hasTimings ? '' : `border-bottom:1px solid ${st.color}33;`}"
+                            padding:0 10px; ${hasTimings
+                                            ? ''
+                                            : `background-image:linear-gradient(to right,transparent 10px,${st.color}33 10px,${st.color}33 calc(100% - 10px),transparent calc(100% - 10px));background-size:100% 1px;background-repeat:no-repeat;background-position:bottom;`}"
                                         @mouseenter=${e => {
                                             clearTimeout(this._diffTooltipTimer)
                                             const elRect = e.currentTarget.getBoundingClientRect()
@@ -687,12 +655,10 @@ export class FcFlowGraph extends BaseElement {
                                                   <div style="flex:1; height:1px; background:${st.color}33;"></div>
                                                   <span
                                                       style="font-size:9px; font-family:monospace; color:${st.color};
-                                      font-weight:600; flex-shrink:0; opacity:0.8;"
+                                      font-weight:600; width:44px; text-align:center; flex-shrink:0; opacity:0.8;"
                                                   >
                                                       ${stubTimingsMap[stub.source]
-                                                          ? stubTimingsMap[stub.source].max - stubTimingsMap[stub.source].min === 0
-                                                              ? '< 1ms'
-                                                              : `${stubTimingsMap[stub.source].max - stubTimingsMap[stub.source].min}ms`
+                                                          ? formatDuration(stubTimingsMap[stub.source].duration)
                                                           : '—'}
                                                   </span>
                                                   <div style="flex:1; height:1px; background:${st.color}33;"></div>

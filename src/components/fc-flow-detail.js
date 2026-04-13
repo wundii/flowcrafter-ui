@@ -2,6 +2,7 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
+import { formatDuration } from '../utils/duration.js'
 import { buildRuns } from '../services/runs.js'
 import { buildRunDiff } from '../services/run-diff.js'
 import './fc-flow-graph.js'
@@ -14,15 +15,6 @@ function shortClass(fqn) {
 function formatDate(iso) {
     if (!iso) return '—'
     return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' })
-}
-
-function formatDuration(ms) {
-    if (ms < 1000) return `${ms}ms`
-    const s = ms / 1000
-    if (s < 60) return `${s.toFixed(1)}s`
-    const m = Math.floor(s / 60)
-    const rem = Math.round(s % 60)
-    return `${m}m ${rem}s`
 }
 
 export class FcFlowDetail extends BaseElement {

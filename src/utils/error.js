@@ -67,8 +67,7 @@ export function renderApiError(error, opts = {}) {
                 <div class="px-6 py-4 border-b border-error/20 bg-error/5 shrink-0 flex items-center gap-3">
                     ${warningIconLg}
                     <div class="flex-1 min-w-0">
-                        <div class="font-semibold text-error text-sm">${msg}</div>
-                        ${fileLine ? html`<div class="text-[10px] font-mono text-base-content/40 mt-0.5 truncate">${fileLine}</div>` : ''}
+                        <div class="font-semibold text-error text-sm">Fehler aufgetreten</div>
                     </div>
                     ${retry
                         ? html`<button class="btn btn-xs btn-ghost text-error/70 hover:text-error shrink-0" @click=${retry}>
@@ -88,10 +87,7 @@ export function renderApiError(error, opts = {}) {
                     ${fileContext?.length
                         ? html`
                               <div>
-                                  <div class="text-xs font-semibold text-base-content/40 uppercase tracking-wider mb-1.5">
-                                      Quelldatei
-                                      <span class="font-mono font-normal normal-case ml-1 text-base-content/30">${file}</span>
-                                  </div>
+                                  <div class="text-xs font-semibold text-base-content/40 uppercase tracking-wider mb-1.5">Quelldatei</div>
                                   <div class="rounded-lg border border-base-300 overflow-hidden text-xs font-mono leading-relaxed">
                                       ${fileContext.map(
                                           l => html`
