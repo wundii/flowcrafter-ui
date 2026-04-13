@@ -511,7 +511,13 @@ export class FcFlowGraph extends BaseElement {
                 const allEvents = [...stubMsgs, ...stubExcs, ...stubRess]
                 if (allEvents.length === 0) continue
 
-                const startT = Math.min(...allEvents.map(e => new Date(e.time).getTime()))
+                // START = when the last input arrived (stub can only process once all inputs are present)
+                // Fall back to min of all events if no input messages are found in schema
+                const inputMsgs = stubMsgs.filter(m => stub.messages.includes(m.messageSource))
+                const startT =
+                    inputMsgs.length > 0
+                        ? Math.max(...inputMsgs.map(m => new Date(m.time).getTime()))
+                        : Math.min(...allEvents.map(e => new Date(e.time).getTime()))
 
                 let endT
                 if (stub.returnTypes.length > 0) {
