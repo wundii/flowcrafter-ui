@@ -3,6 +3,7 @@ import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js'
+import './fc-info-box.js'
 import './fc-json-editor.js'
 import './fc-source-viewer.js'
 
@@ -17,26 +18,32 @@ const ROW_GAP = 12
 const PAD_X = 36
 const PAD_Y = 32
 const LONG_EDGE_AREA = 40 // extra canvas space at top for arced long edges
+const TIMING_ROW_H = 16 // height of the per-stub timing row shown below the header
 
 // ─── Node sizing ──────────────────────────────────────────────────────────────
-function nodeHeight(stub) {
-    return HEADER_H + PORT_PAD_V * 2 + Math.max(stub.messages.length, stub.returnTypes.length, 1) * PORT_ROW_H
+function nodeHeight(stub, withTimingRow = false) {
+    return (
+        HEADER_H +
+        (withTimingRow ? TIMING_ROW_H : 0) +
+        PORT_PAD_V * 2 +
+        Math.max(stub.messages.length, stub.returnTypes.length, 1) * PORT_ROW_H
+    )
 }
 
 function portAreaH(stub) {
     return Math.max(stub.messages.length, stub.returnTypes.length, 1) * PORT_ROW_H
 }
 
-function inputPortY(stub, i) {
+function inputPortY(stub, i, withTimingRow = false) {
     const n = stub.messages.length || 1
     const slotH = portAreaH(stub) / n
-    return HEADER_H + PORT_PAD_V + i * slotH + slotH / 2
+    return HEADER_H + (withTimingRow ? TIMING_ROW_H : 0) + PORT_PAD_V + i * slotH + slotH / 2
 }
 
-function outputPortY(stub, j) {
+function outputPortY(stub, j, withTimingRow = false) {
     const n = stub.returnTypes.length || 1
     const slotH = portAreaH(stub) / n
-    return HEADER_H + PORT_PAD_V + j * slotH + slotH / 2
+    return HEADER_H + (withTimingRow ? TIMING_ROW_H : 0) + PORT_PAD_V + j * slotH + slotH / 2
 }
 
 // ─── Status ───────────────────────────────────────────────────────────────────
@@ -70,7 +77,7 @@ const DIFF_STATUS = {
 const MSG_COLOR = { finish: '#22c55e', process: '#3b82f6', wait: '#eab308' }
 
 // ─── Graph layout ─────────────────────────────────────────────────────────────
-function buildLayout(stubs) {
+function buildLayout(stubs, withTimingRow = false) {
     const stubMap = Object.fromEntries(stubs.map(s => [s.source, s]))
     const adjList = Object.fromEntries(stubs.map(s => [s.source, []]))
     const edges = []
@@ -125,7 +132,7 @@ function buildLayout(stubs) {
         let y = PAD_Y + topOffset
         for (const src of byCol[c] ?? []) {
             positions[src] = { x: PAD_X + c * (NODE_W + COL_GAP), y }
-            y += nodeHeight(stubMap[src]) + ROW_GAP
+            y += nodeHeight(stubMap[src], withTimingRow) + ROW_GAP
         }
         svgH = Math.max(svgH, y - ROW_GAP + PAD_Y)
     }
@@ -145,7 +152,20 @@ function getThemeColors() {
 }
 
 // ─── SVG string builder ───────────────────────────────────────────────────────
-function buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExceptions, flowResults, colOf, topOffset, bgColor, bg2Color) {
+function buildSvgString(
+    edges,
+    positions,
+    stubs,
+    stubMap,
+    flowMessages,
+    flowExceptions,
+    flowResults,
+    colOf,
+    topOffset,
+    bgColor,
+    bg2Color,
+    withTimingRow = false
+) {
     const statusOf = src => getNodeStatus(src, flowMessages, flowExceptions, flowResults)
     const colorOf = src => STATUS[statusOf(src)].color
 
@@ -184,9 +204,9 @@ function buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExce
             tp = positions[e.to]
         if (!fp || !tp) continue
         const x1 = fp.x + NODE_W,
-            y1 = fp.y + outputPortY(stubMap[e.from], e.outIdx)
+            y1 = fp.y + outputPortY(stubMap[e.from], e.outIdx, withTimingRow)
         const x2 = tp.x,
-            y2 = tp.y + inputPortY(stubMap[e.to], e.inIdx)
+            y2 = tp.y + inputPortY(stubMap[e.to], e.inIdx, withTimingRow)
         const colSpan = (colOf[e.to] ?? 0) - (colOf[e.from] ?? 0)
         const isLong = colSpan > 1
         const d = isLong ? bezierLong(x1, y1, x2, y2) : bezierNormal(x1, y1, x2, y2)
@@ -211,11 +231,11 @@ function buildSvgString(edges, positions, stubs, stubMap, flowMessages, flowExce
         const pos = positions[stub.source]
         const col = colorOf(stub.source)
         for (let i = 0; i < stub.messages.length; i++) {
-            parts.push(`<circle cx="${pos.x}" cy="${pos.y + inputPortY(stub, i)}"
+            parts.push(`<circle cx="${pos.x}" cy="${pos.y + inputPortY(stub, i, withTimingRow)}"
         r="${PORT_R}" fill="${esc(bg2Color)}" stroke="${esc(col)}" stroke-width="2"/>`)
         }
         for (let j = 0; j < stub.returnTypes.length; j++) {
-            parts.push(`<circle cx="${pos.x + NODE_W}" cy="${pos.y + outputPortY(stub, j)}"
+            parts.push(`<circle cx="${pos.x + NODE_W}" cy="${pos.y + outputPortY(stub, j, withTimingRow)}"
         r="${PORT_R}" fill="${esc(bg2Color)}" stroke="${esc(col)}" stroke-width="2"/>`)
         }
     }
@@ -249,6 +269,8 @@ const fmtJson = (obj, max = 30) => {
 // ─── Component ────────────────────────────────────────────────────────────────
 export class FcFlowGraph extends BaseElement {
     static properties = {
+        _diffTooltip: { state: true }, // { x, y, source, diff } | null
+        _excTooltip: { state: true }, // { x, y, exc } | null
         _modalMsg: { state: true }, // { stubSource, messageClass, payload, valid }
         _observerRunning: { state: true },
         _sendError: { state: true },
@@ -259,10 +281,8 @@ export class FcFlowGraph extends BaseElement {
         _stubSourceError: { state: true },
         _stubSourceName: { state: true },
         _tooltip: { state: true }, // { x, y, label, data } | null
-        _diffTooltip: { state: true }, // { x, y, source, diff } | null
         flow: { type: Object },
         messageSchemas: { type: Object }, // { [fqClassName]: { [propName]: typeString } } — optional, only passed from devtool
-        stubDiff: { type: Object }, // { [source]: { status: 'added'|'changed'|'unchanged', changes: {messages:{added,removed},returnTypes:{added,removed}} } }
         priorRuns: { type: Array }, // all runs up to and including the selected run (oldest first)
         readonly: { type: Boolean },
         runExceptions: { type: Array }, // overrides flow.flowExceptions for a specific run
@@ -270,10 +290,15 @@ export class FcFlowGraph extends BaseElement {
         runMessages: { type: Array }, // overrides flow.flowMessages for a specific run
         runResults: { type: Array }, // overrides flow.flowResults for a specific run
         selectedStub: { state: true },
+        stubDiff: { type: Object }, // { [source]: { status: 'added'|'changed'|'unchanged', changes: {messages:{added,removed},returnTypes:{added,removed}} } }
     }
 
     constructor() {
         super()
+        this._diffTooltip = null
+        this._diffTooltipTimer = null
+        this._excTooltip = null
+        this._excTooltipTimer = null
         this._modalMsg = null
         this._observerRunning = false
         this._sendError = null
@@ -284,10 +309,7 @@ export class FcFlowGraph extends BaseElement {
         this._stubSourceError = null
         this._stubSourceName = null
         this._tooltip = null
-        this._diffTooltip = null
-        this._diffTooltipTimer = null
         this.flow = null
-        this.stubDiff = null
         this.priorRuns = null
         this.readonly = false
         this.runExceptions = null
@@ -295,6 +317,7 @@ export class FcFlowGraph extends BaseElement {
         this.runMessages = null
         this.runResults = null
         this.selectedStub = null
+        this.stubDiff = null
         injectAnimation()
     }
 
@@ -354,10 +377,10 @@ export class FcFlowGraph extends BaseElement {
             this.dispatchEvent(new CustomEvent('source-requested', { detail: { source: stubSource }, bubbles: true, composed: true }))
             return
         }
-        this._stubSourceName = stubSource
         this._stubSource = null
-        this._stubSourceError = null
         this._stubSourceCurrent = true
+        this._stubSourceError = null
+        this._stubSourceName = stubSource
         try {
             const data = stubHash ? await api.getStubSourceByHash(stubHash) : await api.getStubSource(stubSource)
             this._stubSource = data.source ?? ''
@@ -380,9 +403,9 @@ export class FcFlowGraph extends BaseElement {
     _closeSourceModal() {
         this.querySelector('#fc-stub-source-modal')?.close()
         this._stubSource = null
+        this._stubSourceCurrent = true
         this._stubSourceError = null
         this._stubSourceName = null
-        this._stubSourceCurrent = true
     }
 
     _onEditorChange(e) {
@@ -465,7 +488,45 @@ export class FcFlowGraph extends BaseElement {
         const flowExceptions = this.runExceptions ?? this.flow.flowExceptions ?? []
         const flowResults = this.runResults ?? this.flow.flowResults ?? []
 
-        const { edges, positions, svgW, svgH, stubMap, colOf, topOffset } = buildLayout(stubs)
+        // Stub timing: only when a run is selected (runMessages !== null)
+        // START = earliest event where stubSource = this stub
+        // END   = earliest time any returnType of this stub appears as messageSource elsewhere
+        //         (= when the stub's output first lands at the next stub)
+        //         For bool stubs (no returnTypes): END = result timestamp
+        const hasTimings = this.runMessages !== null
+        const stubTimingsMap = {}
+        if (hasTimings) {
+            // earliest appearance of each messageSource class across all messages
+            const firstAppearance = {}
+            for (const msg of flowMessages) {
+                const t = new Date(msg.time).getTime()
+                if (firstAppearance[msg.messageSource] === undefined || t < firstAppearance[msg.messageSource])
+                    firstAppearance[msg.messageSource] = t
+            }
+
+            for (const stub of stubs) {
+                const stubMsgs = flowMessages.filter(m => m.stubSource === stub.source)
+                const stubExcs = flowExceptions.filter(e => e.stubSource === stub.source)
+                const stubRess = flowResults.filter(r => r.stubSource === stub.source)
+                const allEvents = [...stubMsgs, ...stubExcs, ...stubRess]
+                if (allEvents.length === 0) continue
+
+                const startT = Math.min(...allEvents.map(e => new Date(e.time).getTime()))
+
+                let endT
+                if (stub.returnTypes.length > 0) {
+                    const outputTimes = stub.returnTypes.map(rt => firstAppearance[rt]).filter(t => t !== undefined)
+                    endT = outputTimes.length > 0 ? Math.min(...outputTimes) : startT
+                } else {
+                    // bool stub: end = result timestamp
+                    endT = stubRess.length > 0 ? Math.max(...stubRess.map(r => new Date(r.time).getTime())) : startT
+                }
+
+                stubTimingsMap[stub.source] = { min: startT, max: endT }
+            }
+        }
+
+        const { edges, positions, svgW, svgH, stubMap, colOf, topOffset } = buildLayout(stubs, hasTimings)
 
         const statusOf = src => getNodeStatus(src, flowMessages, flowExceptions, flowResults)
         const styleOf = src => {
@@ -505,7 +566,8 @@ export class FcFlowGraph extends BaseElement {
             colOf,
             topOffset,
             theme.bg1,
-            theme.bg2
+            theme.bg2,
+            hasTimings
         )
 
         const selStub = this.selectedStub ? stubMap[this.selectedStub] : null
@@ -559,7 +621,7 @@ export class FcFlowGraph extends BaseElement {
                             const excs = excsOf(stub.source)
                             const ress = ressOf(stub.source)
                             const selected = this.selectedStub === stub.source
-                            const nh = nodeHeight(stub)
+                            const nh = nodeHeight(stub, hasTimings)
                             const maxPorts = Math.max(stub.messages.length, stub.returnTypes.length, 1)
 
                             return html`
@@ -579,16 +641,15 @@ export class FcFlowGraph extends BaseElement {
                                     <!-- Header -->
                                     <div
                                         style="height:${HEADER_H}px; display:flex; align-items:center; gap:8px;
-                            padding:0 10px; border-bottom:1px solid ${st.color}33;"
+                            padding:0 10px; ${hasTimings ? '' : `border-bottom:1px solid ${st.color}33;`}"
                                         @mouseenter=${e => {
-                                            if (!this.stubDiff?.[stub.source]) return
                                             clearTimeout(this._diffTooltipTimer)
                                             const elRect = e.currentTarget.getBoundingClientRect()
                                             this._diffTooltip = {
                                                 x: elRect.left,
                                                 y: elRect.bottom + 6,
                                                 source: stub.source,
-                                                diff: this.stubDiff[stub.source],
+                                                diff: this.stubDiff?.[stub.source] ?? null,
                                             }
                                         }}
                                         @mouseleave=${() => {
@@ -601,7 +662,6 @@ export class FcFlowGraph extends BaseElement {
                                         <span
                                             style="font-weight:700; font-size:11px; color:var(--color-base-content); flex:1;
                                overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
-                                            title="${stub.source}"
                                             >${short(stub.source)}</span
                                         >
                                         <span
@@ -610,6 +670,29 @@ export class FcFlowGraph extends BaseElement {
                                             >${stub.messageEnum}</span
                                         >
                                     </div>
+
+                                    <!-- Timing row -->
+                                    ${hasTimings
+                                        ? html`
+                                              <div
+                                                  style="height:${TIMING_ROW_H}px; display:flex; align-items:center;
+                                      padding:0 10px; gap:5px;"
+                                              >
+                                                  <div style="flex:1; height:1px; background:${st.color}33;"></div>
+                                                  <span
+                                                      style="font-size:9px; font-family:monospace; color:${st.color};
+                                      font-weight:600; flex-shrink:0; opacity:0.8;"
+                                                  >
+                                                      ${stubTimingsMap[stub.source]
+                                                          ? stubTimingsMap[stub.source].max - stubTimingsMap[stub.source].min === 0
+                                                              ? '< 1ms'
+                                                              : `${stubTimingsMap[stub.source].max - stubTimingsMap[stub.source].min}ms`
+                                                          : '—'}
+                                                  </span>
+                                                  <div style="flex:1; height:1px; background:${st.color}33;"></div>
+                                              </div>
+                                          `
+                                        : ''}
 
                                     <!-- Port rows -->
                                     <div style="padding:${PORT_PAD_V}px 0;">
@@ -671,22 +754,46 @@ export class FcFlowGraph extends BaseElement {
                                                     >
                                                         ${i === 0 && excs.length > 0
                                                             ? html`
-                                                                  <span
-                                                                      style="font-size:10px;color:#ef4444;font-weight:600;
+                                                                  <div
+                                                                      style="cursor:pointer;overflow:hidden;"
+                                                                      @mouseenter=${e => {
+                                                                          clearTimeout(this._excTooltipTimer)
+                                                                          const hostRect = this.getBoundingClientRect()
+                                                                          const elRect = e.currentTarget.getBoundingClientRect()
+                                                                          const tooltipWidth = 360
+                                                                          const xLeft = elRect.left - hostRect.left
+                                                                          const alignRight = xLeft + tooltipWidth > hostRect.width
+                                                                          this._excTooltip = {
+                                                                              x: alignRight
+                                                                                  ? hostRect.width - (elRect.right - hostRect.left)
+                                                                                  : xLeft,
+                                                                              alignRight,
+                                                                              y: elRect.bottom - hostRect.top + 6,
+                                                                              exc: excs[0],
+                                                                          }
+                                                                      }}
+                                                                      @mouseleave=${() => {
+                                                                          this._excTooltipTimer = setTimeout(
+                                                                              () => (this._excTooltip = null),
+                                                                              150
+                                                                          )
+                                                                      }}
+                                                                  >
+                                                                      <span
+                                                                          style="font-size:10px;color:#ef4444;font-weight:600;
                                          font-family:monospace;white-space:nowrap;
-                                         overflow:hidden;text-overflow:ellipsis;text-align:right;"
-                                                                      title="${excs[0].message}"
-                                                                      >✕ Exception</span
-                                                                  >
-                                                                  <span
-                                                                      style="font-size:9px;color:#ef4444;opacity:0.7;
-                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;"
-                                                                      title="${excs[0].message}"
-                                                                  >
-                                                                      ${excs[0].message.length > 28
-                                                                          ? excs[0].message.slice(0, 28) + '…'
-                                                                          : excs[0].message}
-                                                                  </span>
+                                         overflow:hidden;text-overflow:ellipsis;text-align:right;display:block;"
+                                                                          >✕ Exception</span
+                                                                      >
+                                                                      <span
+                                                                          style="font-size:9px;color:#ef4444;opacity:0.7;
+                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;display:block;"
+                                                                      >
+                                                                          ${excs[0].message.length > 28
+                                                                              ? excs[0].message.slice(0, 28) + '…'
+                                                                              : excs[0].message}
+                                                                      </span>
+                                                                  </div>
                                                               `
                                                             : i === 0 && ress.length > 0
                                                               ? html`
@@ -770,71 +877,93 @@ export class FcFlowGraph extends BaseElement {
                                   this._diffTooltipTimer = setTimeout(() => (this._diffTooltip = null), 150)
                               }}
                           >
-                              <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box flex items-center justify-between mb-3">
+                              <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box flex items-baseline gap-2 mb-3">
                                   <span
-                                      class="text-xs font-semibold uppercase tracking-wider"
-                                      style="color:${DIFF_STATUS[this._diffTooltip.diff.status]?.color}"
+                                      class="text-xs font-semibold uppercase tracking-wider shrink-0"
+                                      style="color:${DIFF_STATUS[this._diffTooltip.diff?.status]?.color ?? 'var(--color-base-content)'}"
                                   >
-                                      ${this._diffTooltip.diff.status === 'added'
-                                          ? 'Neu hinzugefügt'
-                                          : this._diffTooltip.diff.status === 'messageDrift'
-                                            ? 'Nachrichtenstruktur geändert'
-                                            : 'Schema geändert'}
+                                      ${this._diffTooltip.diff === null
+                                          ? short(this._diffTooltip.source)
+                                          : this._diffTooltip.diff.status === 'added'
+                                            ? 'Neu hinzugefügt'
+                                            : this._diffTooltip.diff.status === 'unchanged'
+                                              ? 'Aktuell'
+                                              : this._diffTooltip.diff.status === 'messageDrift'
+                                                ? 'Nachrichtenstruktur geändert'
+                                                : 'Schema geändert'}
                                   </span>
+                                  <span class="text-xs text-base-content/40 font-normal normal-case tracking-normal font-mono truncate"
+                                      >${this._diffTooltip.source}</span
+                                  >
                               </div>
-                              <div class="font-mono text-[10px] text-base-content/50 mb-3 truncate">${this._diffTooltip.source}</div>
-                              ${this._diffTooltip.diff.status === 'messageDrift' && this._diffTooltip.diff.changes?.properties?.length
-                                  ? html`
-                                        ${this._diffTooltip.diff.changes.properties.map(p => {
-                                            const mainClass = p.class.split('\\').pop()
-                                            const allClasses = [
-                                                ...new Set([
-                                                    ...Object.keys(p.livePropertyNames ?? {}),
-                                                    ...Object.keys(p.storedPropertyNames ?? {}),
-                                                ]),
-                                            ].sort((a, b) => (a === mainClass ? -1 : b === mainClass ? 1 : 0))
+                              ${this._diffTooltip.diff.status === 'added'
+                                  ? ''
+                                  : this._diffTooltip.diff.status === 'unchanged'
+                                    ? html`
+                                          <div class="space-y-1.5 text-xs text-base-content/70">
+                                              <div class="flex gap-2">
+                                                  <span class="text-success shrink-0">✓</span>
+                                                  <span>Stub entspricht dem gespeicherten Schema</span>
+                                              </div>
+                                              <div class="flex gap-2">
+                                                  <span class="text-success shrink-0">✓</span>
+                                                  <span>Input- und Output-Messages unverändert</span>
+                                              </div>
+                                          </div>
+                                      `
+                                    : this._diffTooltip.diff.status === 'messageDrift' && this._diffTooltip.diff.changes?.properties?.length
+                                      ? html`
+                                            ${this._diffTooltip.diff.changes.properties.map(p => {
+                                                const mainClass = p.class.split('\\').pop()
+                                                const allClasses = [
+                                                    ...new Set([
+                                                        ...Object.keys(p.livePropertyNames ?? {}),
+                                                        ...Object.keys(p.storedPropertyNames ?? {}),
+                                                    ]),
+                                                ].sort((a, b) => (a === mainClass ? -1 : b === mainClass ? 1 : 0))
 
-                                            const renderPropCell = prop => {
-                                                if (!prop) return html`<span class="text-base-content/30">—</span>`
-                                                const colonIdx = prop.indexOf(':')
-                                                if (colonIdx === -1) return html`${prop}`
-                                                return html`${prop.slice(0, colonIdx)}<span class="text-base-content/30"
-                                                        >${prop.slice(colonIdx)}</span
-                                                    >`
-                                            }
+                                                const renderPropCell = prop => {
+                                                    if (!prop) return html`<span class="text-base-content/30">—</span>`
+                                                    const colonIdx = prop.indexOf(':')
+                                                    if (colonIdx === -1) return html`${prop}`
+                                                    return html`${prop.slice(0, colonIdx)}<span class="text-base-content/30"
+                                                            >${prop.slice(colonIdx)}</span
+                                                        >`
+                                                }
 
-                                            const renderTable = (cls, liveArr, storedArr) => {
-                                                const liveSet = new Set(liveArr)
-                                                const storedSet = new Set(storedArr)
-                                                return html`
-                                                    <div class="mb-2">
-                                                        <div
-                                                            class="text-[10px] uppercase tracking-wider mb-1 ${cls === mainClass
-                                                                ? 'text-base-content/60 font-semibold'
-                                                                : 'text-base-content/30'}"
-                                                        >
-                                                            ${cls}
-                                                        </div>
-                                                        <table class="w-full text-[10px] font-mono border-collapse">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th
-                                                                        class="text-left text-base-content/40 font-semibold pb-0.5 pr-3 w-1/2"
-                                                                        style="border-bottom:1px solid rgba(75,85,99,0.2)"
-                                                                    >
-                                                                        Alt
-                                                                    </th>
-                                                                    <th
-                                                                        class="text-left text-base-content/40 font-semibold pb-0.5 w-1/2"
-                                                                        style="border-bottom:1px solid rgba(75,85,99,0.2)"
-                                                                    >
-                                                                        Neu
-                                                                    </th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                ${Array.from({ length: Math.max(storedArr.length, liveArr.length) }).map(
-                                                                    (_, i) => {
+                                                const renderTable = (cls, liveArr, storedArr) => {
+                                                    const liveSet = new Set(liveArr)
+                                                    const storedSet = new Set(storedArr)
+                                                    return html`
+                                                        <div class="mb-2">
+                                                            <div
+                                                                class="text-[10px] uppercase tracking-wider mb-1 ${cls === mainClass
+                                                                    ? 'text-base-content/60 font-semibold'
+                                                                    : 'text-base-content/30'}"
+                                                            >
+                                                                ${cls}
+                                                            </div>
+                                                            <table class="w-full text-[10px] font-mono border-collapse">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th
+                                                                            class="text-left text-base-content/40 font-semibold pb-0.5 pr-3 w-1/2"
+                                                                            style="border-bottom:1px solid rgba(75,85,99,0.2)"
+                                                                        >
+                                                                            Alt
+                                                                        </th>
+                                                                        <th
+                                                                            class="text-left text-base-content/40 font-semibold pb-0.5 w-1/2"
+                                                                            style="border-bottom:1px solid rgba(75,85,99,0.2)"
+                                                                        >
+                                                                            Neu
+                                                                        </th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    ${Array.from({
+                                                                        length: Math.max(storedArr.length, liveArr.length),
+                                                                    }).map((_, i) => {
                                                                         const storedProp = storedArr[i]
                                                                         const liveProp = liveArr[i]
                                                                         const removed =
@@ -859,67 +988,74 @@ export class FcFlowGraph extends BaseElement {
                                                                                 </td>
                                                                             </tr>
                                                                         `
-                                                                    }
-                                                                )}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                `
-                                            }
+                                                                    })}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    `
+                                                }
 
-                                            return html`${allClasses.map(cls =>
-                                                renderTable(cls, p.livePropertyNames?.[cls] ?? [], p.storedPropertyNames?.[cls] ?? [])
-                                            )}`
-                                        })}
-                                    `
-                                  : this._diffTooltip.diff.changes
-                                    ? html`
-                                          ${this._diffTooltip.diff.changes.messages.added.length
-                                              ? html`<div class="mb-1">
-                                                    <span class="text-[10px] text-base-content/40 uppercase tracking-wider">Input +</span>
-                                                    ${this._diffTooltip.diff.changes.messages.added.map(
-                                                        m =>
-                                                            html`<div class="text-xs font-mono text-success truncate ml-1">
-                                                                + ${m.split('\\').pop()}
-                                                            </div>`
-                                                    )}
-                                                </div>`
-                                              : ''}
-                                          ${this._diffTooltip.diff.changes.messages.removed.length
-                                              ? html`<div class="mb-1">
-                                                    <span class="text-[10px] text-base-content/40 uppercase tracking-wider">Input −</span>
-                                                    ${this._diffTooltip.diff.changes.messages.removed.map(
-                                                        m =>
-                                                            html`<div class="text-xs font-mono text-error truncate ml-1">
-                                                                − ${m.split('\\').pop()}
-                                                            </div>`
-                                                    )}
-                                                </div>`
-                                              : ''}
-                                          ${this._diffTooltip.diff.changes.returnTypes.added.length
-                                              ? html`<div class="mb-1">
-                                                    <span class="text-[10px] text-base-content/40 uppercase tracking-wider">Output +</span>
-                                                    ${this._diffTooltip.diff.changes.returnTypes.added.map(
-                                                        m =>
-                                                            html`<div class="text-xs font-mono text-success truncate ml-1">
-                                                                + ${m.split('\\').pop()}
-                                                            </div>`
-                                                    )}
-                                                </div>`
-                                              : ''}
-                                          ${this._diffTooltip.diff.changes.returnTypes.removed.length
-                                              ? html`<div>
-                                                    <span class="text-[10px] text-base-content/40 uppercase tracking-wider">Output −</span>
-                                                    ${this._diffTooltip.diff.changes.returnTypes.removed.map(
-                                                        m =>
-                                                            html`<div class="text-xs font-mono text-error truncate ml-1">
-                                                                − ${m.split('\\').pop()}
-                                                            </div>`
-                                                    )}
-                                                </div>`
-                                              : ''}
-                                      `
-                                    : ''}
+                                                return html`${allClasses.map(cls =>
+                                                    renderTable(cls, p.livePropertyNames?.[cls] ?? [], p.storedPropertyNames?.[cls] ?? [])
+                                                )}`
+                                            })}
+                                        `
+                                      : this._diffTooltip.diff.changes
+                                        ? html`
+                                              ${this._diffTooltip.diff.changes.messages.added.length
+                                                  ? html`<div class="mb-1">
+                                                        <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
+                                                            >Input +</span
+                                                        >
+                                                        ${this._diffTooltip.diff.changes.messages.added.map(
+                                                            m =>
+                                                                html`<div class="text-xs font-mono text-success truncate ml-1">
+                                                                    + ${m.split('\\').pop()}
+                                                                </div>`
+                                                        )}
+                                                    </div>`
+                                                  : ''}
+                                              ${this._diffTooltip.diff.changes.messages.removed.length
+                                                  ? html`<div class="mb-1">
+                                                        <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
+                                                            >Input −</span
+                                                        >
+                                                        ${this._diffTooltip.diff.changes.messages.removed.map(
+                                                            m =>
+                                                                html`<div class="text-xs font-mono text-error truncate ml-1">
+                                                                    − ${m.split('\\').pop()}
+                                                                </div>`
+                                                        )}
+                                                    </div>`
+                                                  : ''}
+                                              ${this._diffTooltip.diff.changes.returnTypes.added.length
+                                                  ? html`<div class="mb-1">
+                                                        <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
+                                                            >Output +</span
+                                                        >
+                                                        ${this._diffTooltip.diff.changes.returnTypes.added.map(
+                                                            m =>
+                                                                html`<div class="text-xs font-mono text-success truncate ml-1">
+                                                                    + ${m.split('\\').pop()}
+                                                                </div>`
+                                                        )}
+                                                    </div>`
+                                                  : ''}
+                                              ${this._diffTooltip.diff.changes.returnTypes.removed.length
+                                                  ? html`<div>
+                                                        <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
+                                                            >Output −</span
+                                                        >
+                                                        ${this._diffTooltip.diff.changes.returnTypes.removed.map(
+                                                            m =>
+                                                                html`<div class="text-xs font-mono text-error truncate ml-1">
+                                                                    − ${m.split('\\').pop()}
+                                                                </div>`
+                                                        )}
+                                                    </div>`
+                                                  : ''}
+                                          `
+                                        : ''}
                           </div>
                       `
                     : ''}
@@ -932,15 +1068,48 @@ export class FcFlowGraph extends BaseElement {
                                   ? `right:${this._tooltip.x}px`
                                   : `left:${this._tooltip.x}px`}; top:${this._tooltip.y}px;
                            z-index:50; max-width:360px;"
-                              class="rounded-box border border-base-300 bg-base-100 shadow-xl p-3"
                               @mouseenter=${() => this._onTooltipEnter()}
                               @mouseleave=${() => this._hideTooltip()}
                           >
-                              <div class="font-semibold text-sm text-base-content mb-0.5 break-all">${this._tooltip.label}</div>
-                              <div class="text-xs font-mono text-base-content/40 mb-2 break-all">${this._tooltip.messageSource}</div>
-                              <pre class="text-xs font-mono text-base-content/90 whitespace-pre-wrap overflow-auto max-h-48">
+                              <fc-info-box
+                                  title="${this._tooltip.label}"
+                                  subtitle="${this._tooltip.messageSource}"
+                                  .content=${html`<pre
+                                      class="text-xs font-mono text-base-content/90 whitespace-pre-wrap overflow-auto max-h-48"
+                                  >
 ${JSON.stringify(this._tooltip.data, null, 2)}</pre
-                              >
+                                  >`}
+                              ></fc-info-box>
+                          </div>
+                      `
+                    : ''}
+
+                <!-- ── Exception tooltip ── -->
+                ${this._excTooltip
+                    ? html`
+                          <div
+                              style="position:absolute; ${this._excTooltip.alignRight
+                                  ? `right:${this._excTooltip.x}px`
+                                  : `left:${this._excTooltip.x}px`}; top:${this._excTooltip.y}px;
+                           z-index:50; max-width:360px;"
+                              @mouseenter=${() => clearTimeout(this._excTooltipTimer)}
+                              @mouseleave=${() => {
+                                  this._excTooltipTimer = setTimeout(() => (this._excTooltip = null), 150)
+                              }}
+                          >
+                              <div class="rounded-box border border-base-300 bg-base-100 shadow-lg">
+                                  <div class="bg-base-200 px-4 py-3 rounded-t-box">
+                                      <span class="text-xs font-semibold uppercase tracking-wider text-error">Exception</span>
+                                  </div>
+                                  <div class="px-4 py-3 space-y-2">
+                                      <div class="text-xs font-semibold text-base-content/80 break-words">
+                                          ${this._excTooltip.exc.message}
+                                      </div>
+                                      <div class="font-mono text-[10px] text-base-content/40">
+                                          ${this._excTooltip.exc.file}:${this._excTooltip.exc.line}
+                                      </div>
+                                  </div>
+                              </div>
                           </div>
                       `
                     : ''}
@@ -977,7 +1146,7 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                   </div>
                               </div>
 
-                              <div class="p-4 grid md:grid-cols-2 gap-6 max-h-96">
+                              <div class="p-4 grid md:grid-cols-2 gap-6">
                                   <div>
                                       <div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3">
                                           ↓ Eingehende Messages
@@ -1088,19 +1257,21 @@ ${JSON.stringify(m.message, null, 2)}</pre
                                   <div>
                                       ${selExcs.length
                                           ? html`
-                                                <div class="text-xs font-semibold uppercase tracking-wide text-error/70 mb-3">
+                                                <div class="text-xs font-semibold uppercase tracking-wide text-error mb-3">
                                                     ✕ Exceptions
                                                 </div>
                                                 ${selExcs.map(
                                                     ex => html`
-                                                        <div class="alert alert-error text-xs mb-2 p-3">
-                                                            <div class="w-full">
+                                                        <div
+                                                            class="rounded-box bg-error/80 border border-error text-error-content text-xs mb-2 p-3"
+                                                        >
+                                                            <div class="min-w-0 w-full overflow-hidden">
                                                                 <div class="font-semibold mb-1">${ex.message}</div>
                                                                 <div class="opacity-60">${ex.file}:${ex.line}</div>
                                                                 <details class="mt-2">
                                                                     <summary class="cursor-pointer opacity-50">Stacktrace</summary>
                                                                     <pre
-                                                                        class="mt-1 text-xs overflow-auto whitespace-pre-wrap opacity-70 max-h-48"
+                                                                        class="mt-1 text-xs overflow-auto whitespace-pre-wrap opacity-70 max-h-48 bg-base-200 text-base-content rounded p-1"
                                                                     >
 ${ex.traceString}</pre
                                                                     >

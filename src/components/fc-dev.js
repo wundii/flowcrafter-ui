@@ -5,8 +5,26 @@ import { api } from '../services/api.js'
 import { buildRuns } from '../services/runs.js'
 import { renderApiError } from '../utils/error.js'
 import './fc-flow-graph.js'
+import './fc-info-box.js'
 import './fc-json-editor.js'
 import './fc-source-viewer.js'
+
+const devModeTooltipContent = () => html`
+    <div class="space-y-1.5 text-xs text-base-content/70">
+        <div class="flex gap-2">
+            <span class="text-warning shrink-0">✕</span>
+            <span>Kein Storage in der Flowcrafter Datenbank</span>
+        </div>
+        <div class="flex gap-2">
+            <span class="text-warning shrink-0">✕</span>
+            <span>Keine Queue-Einträge werden angelegt</span>
+        </div>
+        <div class="flex gap-2">
+            <span class="text-success shrink-0">✓</span>
+            <span>Schnelles Testen ohne Seiteneffekte</span>
+        </div>
+    </div>
+`
 
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
@@ -57,9 +75,14 @@ export class FcDev extends BaseElement {
         _detail: { state: true },
         _detailError: { state: true },
         _detailLoading: { state: true },
+        _devImport: { state: true },
         _error: { state: true },
         _filter: { state: true },
         _flows: { state: true },
+        _importModalError: { state: true },
+        _importModalLoading: { state: true },
+        _importSecret: { state: true },
+        _importUrl: { state: true },
         _lastRunFlow: { state: true },
         _lastRunOutput: { state: true },
         _loading: { state: true },
@@ -68,6 +91,7 @@ export class FcDev extends BaseElement {
         _runMessage: { state: true },
         _runMessageValid: { state: true },
         _runModalLoading: { state: true },
+        _runPayload: { state: true },
         _runResult: { state: true },
         _runSending: { state: true },
         _selected: { state: true },
@@ -76,13 +100,8 @@ export class FcDev extends BaseElement {
         _srcError: { state: true },
         _srcLoading: { state: true },
         _srcSource: { state: true },
-        _validationCache: { state: true },
-        _devImport: { state: true },
-        _importModalLoading: { state: true },
-        _importModalError: { state: true },
-        _importUrl: { state: true },
-        _importSecret: { state: true },
         _storedSchemas: { state: true },
+        _validationCache: { state: true },
     }
 
     constructor() {
@@ -91,9 +110,14 @@ export class FcDev extends BaseElement {
         this._detail = null
         this._detailError = null
         this._detailLoading = false
+        this._devImport = null
         this._error = null
         this._filter = ''
         this._flows = []
+        this._importModalError = null
+        this._importModalLoading = false
+        this._importSecret = ''
+        this._importUrl = ''
         this._lastRunFlow = null
         this._lastRunOutput = null
         this._loading = true
@@ -101,6 +125,7 @@ export class FcDev extends BaseElement {
         this._runMessage = {}
         this._runMessageValid = true
         this._runModalLoading = false
+        this._runPayload = '{}'
         this._runResult = null
         this._runSending = false
         this._selected = null
@@ -109,13 +134,9 @@ export class FcDev extends BaseElement {
         this._srcError = null
         this._srcLoading = false
         this._srcSource = null
-        this._validationCache = {}
-        this._devImport = null
-        this._importModalLoading = false
-        this._importModalError = null
-        this._importUrl = ''
-        this._importSecret = ''
         this._storedSchemas = []
+        this._validationCache = {}
+        this._validateGeneration = 0
     }
 
     _startResize(e) {
@@ -153,6 +174,7 @@ export class FcDev extends BaseElement {
             this._flows = flows
             this._devImport = devImport
             this._storedSchemas = Array.isArray(storedSchemas) ? storedSchemas : []
+            this._validateAllFlows()
         } catch (err) {
             this._error = {
                 message: err.message,
@@ -166,13 +188,30 @@ export class FcDev extends BaseElement {
         }
     }
 
+    async _validateAllFlows() {
+        this._validateGeneration++
+        const gen = this._validateGeneration
+        for (const flow of this._flows) {
+            if (this._validateGeneration !== gen) return
+            if (this._validationCache[flow.className] !== undefined) continue
+            try {
+                const data = await api.getDevFlow(flow.className)
+                if (this._validateGeneration !== gen) return
+                const hashDrift = data.hash !== null && data.storedHash !== null && data.hash !== data.storedHash
+                this._validationCache = { ...this._validationCache, [flow.className]: data.valid && !hashDrift }
+            } catch {
+                // Flow überspringen
+            }
+        }
+    }
+
     async _selectFlow(className) {
         this._detail = null
         this._detailError = null
         this._detailLoading = true
-        this._selected = className
         this._lastRunFlow = null
         this._lastRunOutput = null
+        this._selected = className
         try {
             const data = await api.getDevFlow(className)
             if (this._devImport && data.schema?.type) {
@@ -313,6 +352,7 @@ export class FcDev extends BaseElement {
             this._validationCache = { ...this._validationCache, [this._selected]: data.valid && !data.hashDrift }
             this._runMessage = this._detail?.initMessageSchema ?? {}
             this._runMessageValid = true
+            this._runPayload = JSON.stringify(this._detail?.initMessageSchema ?? {}, null, 2)
         } catch {
             // bei Fehler vorhandene Daten behalten
         } finally {
@@ -621,9 +661,7 @@ export class FcDev extends BaseElement {
                             <div class="font-bold text-base leading-tight">${shortClass(this._selected)}</div>
                             ${d.schema?.type ? html`<div class="text-xs font-mono text-base-content/50 mt-0.5">${d.schema.type}</div>` : ''}
                             ${selectedFlow?.file
-                                ? html`<div class="text-[10px] text-base-content/30 mt-1 truncate font-mono" title="${selectedFlow.file}">
-                                      ${selectedFlow.file}
-                                  </div>`
+                                ? html`<div class="text-[10px] text-base-content/30 mt-1 truncate font-mono">${selectedFlow.file}</div>`
                                 : ''}
                             <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
                                 ${!d.valid
@@ -688,28 +726,36 @@ export class FcDev extends BaseElement {
                                                   <code class="font-mono bg-base-300/50 px-1 rounded">${d.schema?.type}</code>
                                                   wurde noch nie registriert.</span
                                               >
-                                              <button
-                                                  class="btn btn-xs btn-info btn-outline ml-1 shrink-0"
-                                                  ?disabled=${this._runModalLoading}
-                                                  @click=${() => this._openRunModal()}
-                                              >
-                                                  ${this._runModalLoading
-                                                      ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                                      : html`<svg
-                                                            class="w-3 h-3"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            stroke-width="2"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                stroke-linecap="round"
-                                                                stroke-linejoin="round"
-                                                                d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
-                                                            />
-                                                        </svg>`}
-                                                  ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
-                                              </button>
+                                              <div class="relative group/devtip ml-1 shrink-0">
+                                                  <button
+                                                      class="btn btn-xs btn-info btn-outline"
+                                                      ?disabled=${this._runModalLoading}
+                                                      @click=${() => this._openRunModal()}
+                                                  >
+                                                      ${this._runModalLoading
+                                                          ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                                          : html`<svg
+                                                                class="w-3 h-3"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                stroke-width="2"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    stroke-linecap="round"
+                                                                    stroke-linejoin="round"
+                                                                    d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
+                                                                />
+                                                            </svg>`}
+                                                      ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
+                                                  </button>
+                                                  <fc-info-box
+                                                      class="pointer-events-none opacity-0 group-hover/devtip:opacity-100 transition-opacity absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 z-50"
+                                                      title="Dev-Modus"
+                                                      titleColor="text-info"
+                                                      .content=${devModeTooltipContent()}
+                                                  ></fc-info-box>
+                                              </div>
                                           `
                                         : _storedPrevVersion
                                           ? html`
@@ -729,28 +775,36 @@ export class FcDev extends BaseElement {
                                                     ist eine neue Version — eine frühere Version dieses Flow-Typs ist bereits
                                                     <registriert class=""></registriert
                                                 ></span>
-                                                <button
-                                                    class="btn btn-xs btn-info btn-outline ml-1 shrink-0"
-                                                    ?disabled=${this._runModalLoading}
-                                                    @click=${() => this._openRunModal()}
-                                                >
-                                                    ${this._runModalLoading
-                                                        ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                                        : html`<svg
-                                                              class="w-3 h-3"
-                                                              fill="none"
-                                                              stroke="currentColor"
-                                                              stroke-width="2"
-                                                              viewBox="0 0 24 24"
-                                                          >
-                                                              <path
-                                                                  stroke-linecap="round"
-                                                                  stroke-linejoin="round"
-                                                                  d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
-                                                              />
-                                                          </svg>`}
-                                                    ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
-                                                </button>
+                                                <div class="relative group/devtip ml-1 shrink-0">
+                                                    <button
+                                                        class="btn btn-xs btn-info btn-outline"
+                                                        ?disabled=${this._runModalLoading}
+                                                        @click=${() => this._openRunModal()}
+                                                    >
+                                                        ${this._runModalLoading
+                                                            ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                                            : html`<svg
+                                                                  class="w-3 h-3"
+                                                                  fill="none"
+                                                                  stroke="currentColor"
+                                                                  stroke-width="2"
+                                                                  viewBox="0 0 24 24"
+                                                              >
+                                                                  <path
+                                                                      stroke-linecap="round"
+                                                                      stroke-linejoin="round"
+                                                                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
+                                                                  />
+                                                              </svg>`}
+                                                        ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
+                                                    </button>
+                                                    <fc-info-box
+                                                        class="pointer-events-none opacity-0 group-hover/devtip:opacity-100 transition-opacity absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 z-50"
+                                                        title="Dev-Modus"
+                                                        titleColor="text-info"
+                                                        .content=${devModeTooltipContent()}
+                                                    ></fc-info-box>
+                                                </div>
                                             `
                                           : html`
                                                 <svg
@@ -766,28 +820,36 @@ export class FcDev extends BaseElement {
                                                 <span class="text-xs text-base-content/50"
                                                     >— Das Schema ist syntaktisch korrekt und entspricht der gespeicherten Version.</span
                                                 >
-                                                <button
-                                                    class="btn btn-xs btn-success btn-outline ml-1 shrink-0"
-                                                    ?disabled=${this._runModalLoading}
-                                                    @click=${() => this._openRunModal()}
-                                                >
-                                                    ${this._runModalLoading
-                                                        ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                                        : html`<svg
-                                                              class="w-3 h-3"
-                                                              fill="none"
-                                                              stroke="currentColor"
-                                                              stroke-width="2"
-                                                              viewBox="0 0 24 24"
-                                                          >
-                                                              <path
-                                                                  stroke-linecap="round"
-                                                                  stroke-linejoin="round"
-                                                                  d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
-                                                              />
-                                                          </svg>`}
-                                                    ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
-                                                </button>
+                                                <div class="relative group/devtip ml-1 shrink-0">
+                                                    <button
+                                                        class="btn btn-xs btn-success btn-outline"
+                                                        ?disabled=${this._runModalLoading}
+                                                        @click=${() => this._openRunModal()}
+                                                    >
+                                                        ${this._runModalLoading
+                                                            ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                                            : html`<svg
+                                                                  class="w-3 h-3"
+                                                                  fill="none"
+                                                                  stroke="currentColor"
+                                                                  stroke-width="2"
+                                                                  viewBox="0 0 24 24"
+                                                              >
+                                                                  <path
+                                                                      stroke-linecap="round"
+                                                                      stroke-linejoin="round"
+                                                                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
+                                                                  />
+                                                              </svg>`}
+                                                        ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
+                                                    </button>
+                                                    <fc-info-box
+                                                        class="pointer-events-none opacity-0 group-hover/devtip:opacity-100 transition-opacity absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 z-50"
+                                                        title="Dev-Modus"
+                                                        titleColor="text-info"
+                                                        .content=${devModeTooltipContent()}
+                                                    ></fc-info-box>
+                                                </div>
                                             `}
                             </div>
                             ${d.valid && d.changedMessages?.length > 0
@@ -899,7 +961,12 @@ export class FcDev extends BaseElement {
                                             const base = d.storedSchema
                                                 ? d.hashDrift
                                                     ? computeStubDiff(d.schema.stubs, d.storedSchema.stubs)
-                                                    : {}
+                                                    : Object.fromEntries(
+                                                          (d.schema.stubs ?? []).map(s => [
+                                                              s.source,
+                                                              { status: 'unchanged', changes: null },
+                                                          ])
+                                                      )
                                                 : !_hasAnyVersion
                                                   ? Object.fromEntries(
                                                         (d.schema.stubs ?? []).map(s => [s.source, { status: 'added', changes: null }])
@@ -1188,10 +1255,54 @@ export class FcDev extends BaseElement {
                                               <span class="text-[10px] font-mono text-base-content/25"
                                                   >${shortClass(this._initMessageClass(this._detail?.schema))}</span
                                               >
+                                              <div class="flex items-center gap-0.5 ml-auto">
+                                                  <button
+                                                      class="btn btn-xs btn-ghost btn-circle"
+                                                      title="Inhalt kopieren"
+                                                      @click=${() => navigator.clipboard.writeText(this._runPayload)}
+                                                  >
+                                                      <svg
+                                                          class="w-3.5 h-3.5"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                                      </svg>
+                                                  </button>
+                                                  <button
+                                                      class="btn btn-xs btn-ghost btn-circle"
+                                                      title="Aus Zwischenablage einfügen"
+                                                      @click=${async () => {
+                                                          try {
+                                                              const text = await navigator.clipboard.readText()
+                                                              this._runPayload = text
+                                                          } catch {
+                                                              // Clipboard-Zugriff verweigert
+                                                          }
+                                                      }}
+                                                  >
+                                                      <svg
+                                                          class="w-3.5 h-3.5"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                                                          />
+                                                      </svg>
+                                                  </button>
+                                              </div>
                                           </div>
                                           <fc-json-editor
                                               class="flex-1 min-h-0"
-                                              .value=${JSON.stringify(this._detail.initMessageSchema ?? {}, null, 2)}
+                                              .value=${this._runPayload}
                                               @change=${e => {
                                                   this._runMessage = e.detail.valid ? e.detail.value : this._runMessage
                                                   this._runMessageValid = e.detail.valid

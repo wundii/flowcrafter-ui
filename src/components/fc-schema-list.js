@@ -8,6 +8,12 @@ function shortName(fqcn) {
     return fqcn.split('\\').pop()
 }
 
+function namespacePart(fqcn) {
+    const parts = fqcn.split('\\')
+    if (parts.length <= 1) return ''
+    return parts.slice(0, -1).join('\\') + '\\'
+}
+
 function formatDate(iso) {
     if (!iso) return '—'
     return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' })
@@ -20,6 +26,8 @@ export class FcSchemaList extends BaseElement {
         _filter: { state: true },
         _flows: { state: true },
         _graphFlow: { state: true },
+        _graphFlowLabel: { state: true },
+
         _hoveredStub: { state: true },
         _popupX: { state: true },
         _popupY: { state: true },
@@ -37,6 +45,7 @@ export class FcSchemaList extends BaseElement {
         this._filter = ''
         this._flows = []
         this._graphFlow = null
+        this._graphFlowLabel = null
         this._hoveredStub = null
         this._popupX = 0
         this._popupY = 0
@@ -143,6 +152,7 @@ export class FcSchemaList extends BaseElement {
     }
 
     _openGraphModal(flow) {
+        this._graphFlowLabel = flow.label
         this._graphFlow = {
             flowSchema: { stubs: flow.stubs },
             flowMessages: [],
@@ -156,6 +166,7 @@ export class FcSchemaList extends BaseElement {
     _closeGraphModal() {
         this.renderRoot.querySelector('#flow-graph-modal')?.close()
         this._graphFlow = null
+        this._graphFlowLabel = null
     }
 
     _onStubEnter(e, stub) {
@@ -181,12 +192,28 @@ export class FcSchemaList extends BaseElement {
 
         return html`
             <button
-                class="badge badge-sm ${css} ${shared ? 'badge-outline' : ''} cursor-pointer hover:brightness-125 transition-all"
+                class="badge badge-sm ${css} ${shared ? 'badge-outline' : ''} cursor-pointer hover:brightness-125 transition-all gap-1"
+                title=${shared ? `Wird in ${usage.size} Flows verwendet` : ''}
                 @mouseenter=${e => this._onStubEnter(e, stub)}
                 @mouseleave=${() => this._onStubLeave()}
                 @click=${e => this._onStubClick(e, stub)}
             >
                 ${name}
+                ${shared
+                    ? html`<svg
+                          class="w-2.5 h-2.5 opacity-60 shrink-0"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                      >
+                          <circle cx="18" cy="5" r="3" />
+                          <circle cx="6" cy="12" r="3" />
+                          <circle cx="18" cy="19" r="3" />
+                          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                      </svg>`
+                    : ''}
             </button>
         `
     }
@@ -247,46 +274,59 @@ export class FcSchemaList extends BaseElement {
 
         return html`
             <div>
-                <div class="flex items-center gap-2 mb-3">
-                    <input
-                        type="text"
-                        class="input input-sm w-64 font-mono text-xs"
-                        placeholder="Filter..."
-                        .value=${this._filter}
-                        @input=${e => (this._filter = e.target.value)}
-                    />
-                    ${this._filter ? html` <button class="btn btn-sm btn-ghost" @click=${() => (this._filter = '')}>clear</button> ` : ''}
-                    <div class="ml-auto flex items-center gap-1">
-                        <button
-                            class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
-                            title=${this._sortAsc ? 'A → Z' : 'Z → A'}
-                            @click=${() => {
-                                this._sortAsc = !this._sortAsc
-                            }}
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="join">
+                        <input
+                            type="text"
+                            class="input input-sm join-item w-56 font-mono text-xs"
+                            placeholder="Filter..."
+                            .value=${this._filter}
+                            @input=${e => (this._filter = e.target.value)}
+                        />
+                        ${this._filter
+                            ? html`<button class="btn btn-sm btn-ghost join-item" @click=${() => (this._filter = '')}>
+                                  <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                              </button>`
+                            : ''}
+                    </div>
+                    <div class="ml-auto flex items-center gap-2">
+                        <span class="text-xs text-base-content/40 tabular-nums whitespace-nowrap"
+                            >${filtered.length} / ${this._flows.length}</span
                         >
-                            <svg
-                                class="w-3.5 h-3.5 transition-transform ${this._sortAsc ? '' : 'rotate-180'}"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                viewBox="0 0 24 24"
+                        <div class="flex items-center gap-1">
+                            <button
+                                class="btn btn-sm btn-ghost btn-circle border border-base-content/20 hover:border-base-content/40"
+                                title=${this._sortAsc ? 'A → Z' : 'Z → A'}
+                                @click=${() => {
+                                    this._sortAsc = !this._sortAsc
+                                }}
                             >
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9M3 12h5m4 0l4-4m0 0l4 4m-4-4v12" />
-                            </svg>
-                        </button>
-                        <button
-                            class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
-                            title="Neu laden"
-                            @click=${this._load}
-                        >
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                />
-                            </svg>
-                        </button>
+                                <svg
+                                    class="w-3.5 h-3.5 transition-transform ${this._sortAsc ? '' : 'rotate-180'}"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9M3 12h5m4 0l4-4m0 0l4 4m-4-4v12" />
+                                </svg>
+                            </button>
+                            <button
+                                class="btn btn-sm btn-ghost btn-circle border border-base-content/20 hover:border-base-content/40"
+                                title="Neu laden"
+                                @click=${this._load}
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -308,23 +348,57 @@ export class FcSchemaList extends BaseElement {
 
                 <div class="flex flex-col gap-2">
                     ${filtered.length === 0
-                        ? html`<div class="text-center text-base-content/40 py-8">No flows match the current filters.</div>`
-                        : filtered.map(
-                              f => html`
+                        ? html`
+                              <div class="flex flex-col items-center gap-3 py-12 text-base-content/40">
+                                  <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                      <path
+                                          stroke-linecap="round"
+                                          stroke-linejoin="round"
+                                          d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0016.803 15.803z"
+                                      />
+                                  </svg>
+                                  <span class="text-sm">${this._filter ? 'Keine Flows für diesen Filter.' : 'Keine Flows vorhanden.'}</span>
+                              </div>
+                          `
+                        : filtered.map(f => {
+                              const initStubs = f.stubs.filter(s => s.messageEnum === 'init')
+                              const otherStubs = f.stubs.filter(s => s.messageEnum !== 'init')
+                              const hasBoth = initStubs.length > 0 && otherStubs.length > 0
+                              return html`
                                   <div
-                                      class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 px-4 py-3 rounded-box border border-base-300 bg-base-200 hover:border-base-content/20 transition-colors cursor-pointer"
+                                      class="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-4 py-3 rounded-box border border-base-300 bg-base-200 hover:bg-base-100 hover:border-base-content/25 transition-all cursor-pointer"
                                       @click=${() => this._openGraphModal(f)}
                                   >
-                                      <span class="font-mono text-xs text-base-content/80 shrink-0 sm:w-1/3 truncate" title=${f.label}
-                                          >${f.label}</span
+                                      <div class="font-mono shrink-0 sm:w-1/3 min-w-0 overflow-hidden" title=${f.label}>
+                                          ${namespacePart(f.label)
+                                              ? html`<div class="text-[10px] text-base-content/35 leading-tight truncate">
+                                                    ${namespacePart(f.label)}
+                                                </div>`
+                                              : ''}
+                                          <div class="text-xs text-base-content/85 font-semibold leading-tight truncate">
+                                              ${shortName(f.label)}
+                                          </div>
+                                      </div>
+                                      <div class="flex flex-wrap items-center gap-1 flex-1 min-w-0">
+                                          ${initStubs.map(s => this._renderStubBadge(s))}
+                                          ${hasBoth
+                                              ? html`<span class="w-px h-3.5 bg-base-content/20 self-center mx-0.5 rounded-full"></span>`
+                                              : ''}
+                                          ${otherStubs.map(s => this._renderStubBadge(s))}
+                                      </div>
+                                      <svg
+                                          class="w-3.5 h-3.5 text-base-content/25 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          stroke-width="2"
+                                          viewBox="0 0 24 24"
                                       >
-                                      <div class="flex flex-wrap gap-1">${f.stubs.map(s => this._renderStubBadge(s))}</div>
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                      </svg>
                                   </div>
                               `
-                          )}
+                          })}
                 </div>
-
-                <div class="text-xs text-base-content/40 mt-2">${filtered.length} / ${this._flows.length} flows</div>
 
                 <dialog id="stub-source-modal" class="modal">
                     <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
@@ -461,7 +535,19 @@ export class FcSchemaList extends BaseElement {
                                             />
                                         </svg>
                                     </div>
-                                    <h3 class="font-bold text-base leading-tight">Flow Graph</h3>
+                                    <div>
+                                        <h3 class="font-bold text-base leading-tight">Flow Graph</h3>
+                                        ${this._graphFlowLabel
+                                            ? html`<div class="font-mono mt-0.5">
+                                                  ${namespacePart(this._graphFlowLabel)
+                                                      ? html`<span class="text-[10px] text-base-content/35"
+                                                            >${namespacePart(this._graphFlowLabel)}</span
+                                                        >`
+                                                      : ''}
+                                                  <span class="text-xs text-base-content/55">${shortName(this._graphFlowLabel)}</span>
+                                              </div>`
+                                            : ''}
+                                    </div>
                                 </div>
                                 <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${() => this._closeGraphModal()}>
                                     ✕
