@@ -489,11 +489,12 @@ export class FcFlowGraph extends BaseElement {
         const flowExceptions = this.runExceptions ?? this.flow.flowExceptions ?? []
         const flowResults = this.runResults ?? this.flow.flowResults ?? []
 
-        // Stub timing: read pre-computed timings from the API (flow.flowRunTimings keyed by runtimeHash)
-        const hasTimings = this.runId !== null && Array.isArray(this.flow?.flowRunTimings?.[this.runId])
+        // Stub timing: read pre-computed timings from the run's flowStubTimings array
+        const currentRun = this.runId !== null ? ((this.flow?.flowRuns ?? []).find(r => r.flowRuntimeHash === this.runId) ?? null) : null
+        const hasTimings = Array.isArray(currentRun?.flowStubTimings) && currentRun.flowStubTimings.length > 0
         const stubTimingsMap = {}
         if (hasTimings) {
-            for (const timing of this.flow.flowRunTimings[this.runId]) {
+            for (const timing of currentRun.flowStubTimings) {
                 stubTimingsMap[timing.stubSource] = timing
             }
         }
