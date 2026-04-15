@@ -68,6 +68,7 @@ export function renderApiError(error, opts = {}) {
                     ${warningIconLg}
                     <div class="flex-1 min-w-0">
                         <div class="font-semibold text-error text-sm">Fehler aufgetreten</div>
+                        <p class="text-[11px] font-mono text-base-content/40 mt-0.5 truncate">${fileLine}</p>
                     </div>
                     ${retry
                         ? html`<button class="btn btn-xs btn-ghost text-error/70 hover:text-error shrink-0" @click=${retry}>

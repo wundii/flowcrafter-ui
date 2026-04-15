@@ -90,6 +90,7 @@ export class FcDev extends BaseElement {
         _devRawModal: { state: true },
         _loading: { state: true },
         _outputModalSelectedStub: { state: true },
+        _errorModalTab: { state: true },
         _runError: { state: true },
         _runMessage: { state: true },
         _runMessageValid: { state: true },
@@ -127,6 +128,7 @@ export class FcDev extends BaseElement {
         this._lastRunMemory = null
         this._lastRunOutput = null
         this._devRawModal = false
+        this._errorModalTab = 'error'
         this._loading = true
         this._runError = null
         this._runMessage = {}
@@ -423,6 +425,57 @@ export class FcDev extends BaseElement {
         document.addEventListener('mouseup', onUp)
     }
 
+    _startModalResize(e, dialogId) {
+        const dialog = this.querySelector(`#${dialogId}`)
+        const box = dialog?.querySelector('.modal-box')
+        if (!box) return
+        e.preventDefault()
+        e.stopPropagation()
+        const startX = e.clientX
+        const startY = e.clientY
+        const startW = box.offsetWidth
+        const startH = box.offsetHeight
+        let lastW = startW
+        let lastH = startH
+        const onMove = ev => {
+            lastW = Math.max(400, startW + ev.clientX - startX)
+            lastH = Math.max(300, startH + ev.clientY - startY)
+            box.style.width = `${lastW}px`
+            box.style.maxWidth = 'none'
+            box.style.height = `${lastH}px`
+        }
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove)
+            document.removeEventListener('mouseup', onUp)
+            try {
+                localStorage.setItem(`modal-size-${dialogId}`, JSON.stringify({ w: lastW, h: lastH }))
+            } catch {
+                // localStorage not available
+            }
+        }
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
+    }
+
+    _openOutputModal() {
+        const dialog = this.querySelector('#fc-dev-output-modal')
+        if (!dialog) return
+        try {
+            const saved = JSON.parse(localStorage.getItem('modal-size-fc-dev-output-modal') ?? 'null')
+            if (saved) {
+                const box = dialog.querySelector('.modal-box')
+                if (box) {
+                    box.style.width = `${saved.w}px`
+                    box.style.maxWidth = 'none'
+                    box.style.height = `${saved.h}px`
+                }
+            }
+        } catch {
+            // localStorage not available
+        }
+        dialog.showModal()
+    }
+
     async _runFlow() {
         if (!this._selected || !this._detail?.schema) return
         const messageSource = this._initMessageClass(this._detail.schema)
@@ -434,14 +487,14 @@ export class FcDev extends BaseElement {
             const message = typeof this._runMessage === 'string' ? JSON.parse(this._runMessage) : this._runMessage
             const result = await api.runDevFlow(this._selected, messageSource, message)
             this._runResult = result
+            this._lastRunOutput = result.output ?? null
+            this._outputModalSelectedStub = result.output?.[0]?.class ?? null
             if (result.success && result.flow) {
                 this._lastRunFlow = result.flow
                 this._lastRunMemory = result.memory ?? null
-                this._lastRunOutput = result.output ?? null
-                this._outputModalSelectedStub = result.output?.[0]?.class ?? null
                 this.querySelector('#fc-dev-run-modal')?.close()
                 if (result.output?.length) {
-                    this.querySelector('#fc-dev-output-modal')?.showModal()
+                    this._openOutputModal()
                 }
             }
         } catch (err) {
@@ -506,6 +559,7 @@ export class FcDev extends BaseElement {
     }
 
     _openRunErrorModal() {
+        this._errorModalTab = 'error'
         this.querySelector('#fc-dev-run-error-modal')?.showModal()
     }
 
@@ -1016,29 +1070,6 @@ export class FcDev extends BaseElement {
                                                 ${durLabel ? html`<span class="text-base-content/40 font-mono">${durLabel}</span>` : ''}
                                             </div>
                                             <div class="flex items-center gap-1">
-                                                ${this._lastRunOutput?.length
-                                                    ? html`
-                                                          <button
-                                                              class="btn btn-ghost btn-xs btn-circle"
-                                                              title="Output anzeigen"
-                                                              @click=${() => this.querySelector('#fc-dev-output-modal')?.showModal()}
-                                                          >
-                                                              <svg
-                                                                  class="w-3.5 h-3.5"
-                                                                  fill="none"
-                                                                  stroke="currentColor"
-                                                                  stroke-width="2"
-                                                                  viewBox="0 0 24 24"
-                                                              >
-                                                                  <path
-                                                                      stroke-linecap="round"
-                                                                      stroke-linejoin="round"
-                                                                      d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                                  />
-                                                              </svg>
-                                                          </button>
-                                                      `
-                                                    : ''}
                                                 <button
                                                     class="btn btn-ghost btn-xs btn-circle"
                                                     title="Raw JSON"
@@ -1451,37 +1482,6 @@ export class FcDev extends BaseElement {
                                   `
                                 : ''}
                             ${this._renderRunError()}
-                            ${this._runResult?.output
-                                ? html`
-                                      <div class="rounded-lg bg-base-300/60 border border-base-300 flex flex-col overflow-hidden">
-                                          <div
-                                              class="flex items-center gap-2 px-3 py-1.5 border-b border-base-300/60 bg-base-300/40 shrink-0"
-                                          >
-                                              <svg
-                                                  class="w-3.5 h-3.5 text-base-content/40"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  stroke-width="2"
-                                                  viewBox="0 0 24 24"
-                                              >
-                                                  <path
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round"
-                                                      d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                  />
-                                              </svg>
-                                              <span class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest"
-                                                  >Output</span
-                                              >
-                                          </div>
-                                          <pre
-                                              class="text-xs font-mono text-base-content/80 px-3 py-2.5 overflow-auto max-h-40 whitespace-pre-wrap"
-                                          >
-${this._runResult.output}</pre
-                                          >
-                                      </div>
-                                  `
-                                : ''}
                         </div>
                     </div>
                     <div class="modal-action px-5 pb-4 pt-3 mt-0 border-t border-base-300/50 flex items-center justify-between">
@@ -1512,7 +1512,7 @@ ${this._runResult.output}</pre
 
             <!-- Run Error Detail Modal -->
             <dialog id="fc-dev-run-error-modal" class="modal">
-                <div class="modal-box w-[1100px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden max-h-[85vh]">
+                <div class="modal-box w-[1100px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden" style="height: 85vh">
                     <!-- Header -->
                     <div
                         class="bg-gradient-to-r from-error/10 via-error/5 to-transparent px-5 pt-4 pb-3 border-b border-base-300/50 shrink-0 cursor-move select-none"
@@ -1544,18 +1544,102 @@ ${this._runResult.output}</pre
                             </button>
                         </div>
                     </div>
+                    <!-- Tabs (nur wenn auch Console Output vorhanden) -->
+                    ${(this._lastRunOutput ?? []).length
+                        ? html`
+                              <div role="tablist" class="tabs tabs-border px-5 shrink-0 border-b border-base-300/50">
+                                  <button
+                                      role="tab"
+                                      class="tab gap-1.5 ${this._errorModalTab === 'error' ? 'tab-active' : ''}"
+                                      @click=${() => {
+                                          this._errorModalTab = 'error'
+                                      }}
+                                  >
+                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                          <path
+                                              stroke-linecap="round"
+                                              stroke-linejoin="round"
+                                              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                                          />
+                                      </svg>
+                                      Fehlerdetails
+                                  </button>
+                                  <button
+                                      role="tab"
+                                      class="tab gap-1.5 ${this._errorModalTab === 'output' ? 'tab-active' : ''}"
+                                      @click=${() => {
+                                          this._errorModalTab = 'output'
+                                      }}
+                                  >
+                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                          <path
+                                              stroke-linecap="round"
+                                              stroke-linejoin="round"
+                                              d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                          />
+                                      </svg>
+                                      Console Output
+                                  </button>
+                              </div>
+                          `
+                        : ''}
                     <!-- Body -->
-                    <div class="overflow-y-auto flex-1 p-6">
-                        ${(() => {
-                            const err =
-                                this._runError ??
-                                (this._runResult && !this._runResult.success
-                                    ? { message: this._runResult.error, ...this._runResult }
-                                    : null)
-                            if (!err) return ''
-                            const stubName = this._stubNameFromError(err)
-                            return html` ${renderApiError(err, { detailed: true })} `
-                        })()}
+                    <div class="overflow-y-auto flex-1 ${this._errorModalTab === 'output' ? 'flex flex-col min-h-0 p-0' : 'p-6'}">
+                        ${this._errorModalTab === 'error' || !(this._lastRunOutput ?? []).length
+                            ? (() => {
+                                  const err =
+                                      this._runError ??
+                                      (this._runResult && !this._runResult.success
+                                          ? { message: this._runResult.error, ...this._runResult }
+                                          : null)
+                                  if (!err) return ''
+                                  const stubName = this._stubNameFromError(err)
+                                  return html` ${renderApiError(err, { detailed: true })} `
+                              })()
+                            : html`
+                                  <div class="flex flex-1 min-h-0 overflow-hidden">
+                                      ${(this._lastRunOutput ?? []).length > 1
+                                          ? html`
+                                                <div
+                                                    class="w-48 shrink-0 border-r border-base-300/60 bg-base-200/40 flex flex-col overflow-y-auto"
+                                                >
+                                                    <div class="flex flex-col py-1.5 gap-0.5 px-2">
+                                                        ${(this._lastRunOutput ?? []).map(
+                                                            entry => html`
+                                                                <button
+                                                                    class="px-3 py-1.5 text-left text-xs font-mono rounded-lg truncate transition-colors ${this
+                                                                        ._outputModalSelectedStub === entry.class
+                                                                        ? 'bg-base-300/60 text-base-content font-medium'
+                                                                        : 'hover:bg-base-300/50 text-base-content/70'}"
+                                                                    @click=${() => {
+                                                                        this._outputModalSelectedStub = entry.class
+                                                                    }}
+                                                                >
+                                                                    ${entry.class.split('\\').at(-1)}
+                                                                </button>
+                                                            `
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            `
+                                          : ''}
+                                      <div
+                                          class="flex-1 overflow-auto p-4 font-mono text-xs whitespace-pre-wrap [&_pre]:whitespace-pre-wrap [&_pre]:m-0 text-base-content/80"
+                                      >
+                                          ${(() => {
+                                              const allStyles = (this._lastRunOutput ?? [])
+                                                  .flatMap(e => [...e.content.matchAll(/<style[\s\S]*?<\/style>/gi)])
+                                                  .map(m => m[0])
+                                                  .join('')
+                                              const selected = (
+                                                  (this._lastRunOutput ?? []).find(e => e.class === this._outputModalSelectedStub)
+                                                      ?.content ?? ''
+                                              ).trim()
+                                              return unsafeHTML(allStyles + selected)
+                                          })()}
+                                      </div>
+                                  </div>
+                              `}
                     </div>
                     <!-- Footer -->
                     <div class="px-5 pb-4 pt-3 border-t border-base-300/50 flex justify-end shrink-0">
@@ -1570,8 +1654,20 @@ ${this._runResult.output}</pre
             </dialog>
 
             <!-- Console Output Modal -->
-            <dialog id="fc-dev-output-modal" class="modal">
-                <div class="modal-box w-[800px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden">
+            <dialog
+                id="fc-dev-output-modal"
+                class="modal"
+                @close=${() => {
+                    const box = this.querySelector('#fc-dev-output-modal .modal-box')
+                    if (box) {
+                        box.style.position = ''
+                        box.style.margin = ''
+                        box.style.left = ''
+                        box.style.top = ''
+                    }
+                }}
+            >
+                <div class="modal-box w-[800px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden relative" style="height: 500px">
                     <!-- Header -->
                     <div
                         class="bg-gradient-to-r from-warning/10 via-warning/5 to-transparent px-5 pt-4 pb-3 border-b border-base-300/50 shrink-0 cursor-move select-none"
@@ -1609,7 +1705,7 @@ ${this._runResult.output}</pre
                             </button>
                         </div>
                     </div>
-                    <div class="flex min-h-0" style="height: 420px">
+                    <div class="flex flex-1 min-h-0 overflow-hidden">
                         <!-- Left: Stub list -->
                         <div class="w-64 shrink-0 border-r border-base-300 bg-base-200/40 flex flex-col overflow-y-auto">
                             <div class="px-4 py-3 border-b border-base-300/50 shrink-0">
@@ -1621,7 +1717,7 @@ ${this._runResult.output}</pre
                                         <button
                                             class="px-3 py-2 text-left text-xs font-mono rounded-lg truncate transition-colors ${this
                                                 ._outputModalSelectedStub === entry.class
-                                                ? 'bg-warning/15 text-warning font-semibold border border-warning/20'
+                                                ? 'bg-base-300/60 text-base-content font-medium'
                                                 : 'hover:bg-base-300/50 text-base-content/70'}"
                                             @click=${() => {
                                                 this._outputModalSelectedStub = entry.class
@@ -1647,6 +1743,21 @@ ${this._runResult.output}</pre
                                 return unsafeHTML(allStyles + selected)
                             })()}
                         </div>
+                    </div>
+                    <!-- Resize Handle -->
+                    <div
+                        class="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize opacity-25 hover:opacity-60 transition-opacity"
+                        @mousedown=${e => this._startModalResize(e, 'fc-dev-output-modal')}
+                    >
+                        <svg viewBox="0 0 10 10" class="w-full h-full text-base-content/60" fill="currentColor">
+                            <path
+                                d="M8 2L2 8M6 2L2 6M10 2L2 10"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                                fill="none"
+                            />
+                        </svg>
                     </div>
                 </div>
                 <form method="dialog" class="modal-backdrop"><button>close</button></form>
