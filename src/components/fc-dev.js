@@ -3,6 +3,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { buildRuns } from '../services/runs.js'
+import { formatBytes } from '../utils/bytes.js'
 import { renderApiError } from '../utils/error.js'
 import './fc-flow-graph.js'
 import './fc-info-box.js'
@@ -72,6 +73,7 @@ function removedStubs(liveStubs, storedStubs) {
 export class FcDev extends BaseElement {
     static properties = {
         _activeGroup: { state: true },
+        _collapsedGroups: { state: true },
         _detail: { state: true },
         _detailError: { state: true },
         _detailLoading: { state: true },
@@ -85,6 +87,7 @@ export class FcDev extends BaseElement {
         _importUrl: { state: true },
         _lastRunFlow: { state: true },
         _lastRunOutput: { state: true },
+        _devRawModal: { state: true },
         _loading: { state: true },
         _outputModalSelectedStub: { state: true },
         _runError: { state: true },
@@ -92,6 +95,7 @@ export class FcDev extends BaseElement {
         _runMessageValid: { state: true },
         _runModalLoading: { state: true },
         _runPayload: { state: true },
+        _lastRunMemory: { state: true },
         _runResult: { state: true },
         _runSending: { state: true },
         _selected: { state: true },
@@ -107,6 +111,7 @@ export class FcDev extends BaseElement {
     constructor() {
         super()
         this._activeGroup = null
+        this._collapsedGroups = new Set()
         this._detail = null
         this._detailError = null
         this._detailLoading = false
@@ -119,7 +124,9 @@ export class FcDev extends BaseElement {
         this._importSecret = ''
         this._importUrl = ''
         this._lastRunFlow = null
+        this._lastRunMemory = null
         this._lastRunOutput = null
+        this._devRawModal = false
         this._loading = true
         this._runError = null
         this._runMessage = {}
@@ -171,6 +178,13 @@ export class FcDev extends BaseElement {
                 api.getDevImport().catch(() => null),
                 api.getSchemas().catch(() => []),
             ])
+            const allGroups = new Set(flows.map(f => f.group).filter(Boolean))
+            const previousGroups = new Set(this._flows.map(f => f.group).filter(Boolean))
+            const newGroups = [...allGroups].filter(g => !previousGroups.has(g))
+            this._collapsedGroups = new Set([
+                ...[...this._collapsedGroups].filter(g => allGroups.has(g) || g === '__ungrouped__'),
+                ...newGroups,
+            ])
             this._flows = flows
             this._devImport = devImport
             this._storedSchemas = Array.isArray(storedSchemas) ? storedSchemas : []
@@ -210,6 +224,7 @@ export class FcDev extends BaseElement {
         this._detailError = null
         this._detailLoading = true
         this._lastRunFlow = null
+        this._lastRunMemory = null
         this._lastRunOutput = null
         this._selected = className
         try {
@@ -421,6 +436,7 @@ export class FcDev extends BaseElement {
             this._runResult = result
             if (result.success && result.flow) {
                 this._lastRunFlow = result.flow
+                this._lastRunMemory = result.memory ?? null
                 this._lastRunOutput = result.output ?? null
                 this._outputModalSelectedStub = result.output?.[0]?.class ?? null
                 this.querySelector('#fc-dev-run-modal')?.close()
@@ -542,6 +558,31 @@ export class FcDev extends BaseElement {
                         @input=${e => (this._filter = e.target.value)}
                     />
                     ${this._filter ? html`<button class="btn btn-sm btn-ghost px-2" @click=${() => (this._filter = '')}>✕</button>` : ''}
+                    ${sortedGroups.length > 0
+                        ? html`
+                              <div class="flex items-center gap-0.5 shrink-0">
+                                  <button
+                                      class="btn btn-ghost btn-xs btn-circle"
+                                      title="Alle aufklappen"
+                                      @click=${() => (this._collapsedGroups = new Set())}
+                                  >
+                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                      </svg>
+                                  </button>
+                                  <button
+                                      class="btn btn-ghost btn-xs btn-circle"
+                                      title="Alle zuklappen"
+                                      @click=${() =>
+                                          (this._collapsedGroups = new Set([...sortedGroups.map(([name]) => name), '__ungrouped__']))}
+                                  >
+                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                      </svg>
+                                  </button>
+                              </div>
+                          `
+                        : ''}
                 </div>
 
                 ${this._flows.length === 0
@@ -550,21 +591,45 @@ export class FcDev extends BaseElement {
                           ${sortedGroups.map(([groupName, items]) => {
                               const filtered = this._filtered(items)
                               if (filtered.length === 0) return ''
+                              const collapsed = !this._filter && this._collapsedGroups.has(groupName)
                               return html`
                                   <div class="mb-1">
-                                      <div
-                                          class="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider"
+                                      <button
+                                          class="flex items-center gap-1.5 w-full px-2 py-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider hover:text-base-content/70 transition-colors"
+                                          @click=${() => {
+                                              const next = new Set(this._collapsedGroups)
+                                              collapsed ? next.delete(groupName) : next.add(groupName)
+                                              this._collapsedGroups = next
+                                          }}
                                       >
-                                          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                          <svg
+                                              class="w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              stroke-width="2"
+                                              viewBox="0 0 24 24"
+                                          >
+                                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                          </svg>
+                                          <svg
+                                              class="w-3 h-3 shrink-0"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              stroke-width="2"
+                                              viewBox="0 0 24 24"
+                                          >
                                               <path
                                                   stroke-linecap="round"
                                                   stroke-linejoin="round"
                                                   d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v8.25A2.25 2.25 0 004.5 16.5h15a2.25 2.25 0 002.25-2.25V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
                                               />
                                           </svg>
-                                          ${groupName}
-                                      </div>
-                                      ${filtered.map(f => this._renderFlowItem(f))}
+                                          <span class="flex-1 text-left">${groupName}</span>
+                                          <span class="font-mono font-normal normal-case tracking-normal text-base-content/30"
+                                              >${filtered.length}</span
+                                          >
+                                      </button>
+                                      ${collapsed ? '' : filtered.map(f => this._renderFlowItem(f))}
                                   </div>
                               `
                           })}
@@ -572,13 +637,36 @@ export class FcDev extends BaseElement {
                               ? html`
                                     <div class="mb-1">
                                         ${sortedGroups.length > 0
-                                            ? html`<div
-                                                  class="px-2 py-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider"
-                                              >
-                                                  Ohne Gruppe
-                                              </div>`
-                                            : ''}
-                                        ${ungrouped.map(f => this._renderFlowItem(f))}
+                                            ? (() => {
+                                                  const collapsed = !this._filter && this._collapsedGroups.has('__ungrouped__')
+                                                  return html`
+                                                      <button
+                                                          class="flex items-center gap-1.5 w-full px-2 py-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider hover:text-base-content/70 transition-colors"
+                                                          @click=${() => {
+                                                              const next = new Set(this._collapsedGroups)
+                                                              collapsed ? next.delete('__ungrouped__') : next.add('__ungrouped__')
+                                                              this._collapsedGroups = next
+                                                          }}
+                                                      >
+                                                          <svg
+                                                              class="w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              stroke-width="2"
+                                                              viewBox="0 0 24 24"
+                                                          >
+                                                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                                          </svg>
+                                                          <span class="flex-1 text-left">Ohne Gruppe</span>
+                                                          <span
+                                                              class="font-mono font-normal normal-case tracking-normal text-base-content/30"
+                                                              >${ungrouped.length}</span
+                                                          >
+                                                      </button>
+                                                      ${collapsed ? '' : ungrouped.map(f => this._renderFlowItem(f))}
+                                                  `
+                                              })()
+                                            : ungrouped.map(f => this._renderFlowItem(f))}
                                     </div>
                                 `
                               : ''}
@@ -919,26 +1007,77 @@ export class FcDev extends BaseElement {
                                         >
                                             <div class="flex items-center gap-2">
                                                 <span class="text-success font-semibold">Run-Ergebnis</span>
+                                                ${this._lastRunMemory
+                                                    ? html`<span class="text-base-content/40 font-mono"
+                                                          >${formatBytes(this._lastRunMemory.used)} /
+                                                          ${formatBytes(this._lastRunMemory.peak)} Peak</span
+                                                      >`
+                                                    : ''}
                                                 ${durLabel ? html`<span class="text-base-content/40 font-mono">${durLabel}</span>` : ''}
                                             </div>
                                             <div class="flex items-center gap-1">
                                                 ${this._lastRunOutput?.length
                                                     ? html`
                                                           <button
-                                                              class="btn btn-ghost btn-xs"
+                                                              class="btn btn-ghost btn-xs btn-circle"
+                                                              title="Output anzeigen"
                                                               @click=${() => this.querySelector('#fc-dev-output-modal')?.showModal()}
                                                           >
-                                                              Output anzeigen
+                                                              <svg
+                                                                  class="w-3.5 h-3.5"
+                                                                  fill="none"
+                                                                  stroke="currentColor"
+                                                                  stroke-width="2"
+                                                                  viewBox="0 0 24 24"
+                                                              >
+                                                                  <path
+                                                                      stroke-linecap="round"
+                                                                      stroke-linejoin="round"
+                                                                      d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                                  />
+                                                              </svg>
                                                           </button>
                                                       `
                                                     : ''}
                                                 <button
-                                                    class="btn btn-ghost btn-xs"
+                                                    class="btn btn-ghost btn-xs btn-circle"
+                                                    title="Raw JSON"
                                                     @click=${() => {
-                                                        this._lastRunFlow = null
+                                                        this._devRawModal = true
+                                                        this.updateComplete.then(() => this.querySelector('#fc-dev-raw-modal')?.showModal())
                                                     }}
                                                 >
-                                                    × Schema-Ansicht
+                                                    <svg
+                                                        class="w-3.5 h-3.5"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="2"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
+                                                        />
+                                                    </svg>
+                                                </button>
+                                                <button
+                                                    class="btn btn-ghost btn-xs btn-circle"
+                                                    title="Schema-Ansicht"
+                                                    @click=${() => {
+                                                        this._lastRunFlow = null
+                                                        this._lastRunMemory = null
+                                                    }}
+                                                >
+                                                    <svg
+                                                        class="w-3.5 h-3.5"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="2"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
                                                 </button>
                                             </div>
                                         </div>
@@ -1513,6 +1652,88 @@ ${this._runResult.output}</pre
                 <form method="dialog" class="modal-backdrop"><button>close</button></form>
             </dialog>
 
+            <!-- Raw JSON Modal -->
+            <dialog
+                id="fc-dev-raw-modal"
+                class="modal backdrop-blur-sm"
+                @close=${() => {
+                    this._devRawModal = false
+                }}
+            >
+                ${this._devRawModal && this._lastRunFlow
+                    ? html`
+                          <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
+                              <!-- Header -->
+                              <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0">
+                                  <div class="flex items-center justify-between">
+                                      <div class="flex items-center gap-3">
+                                          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                              <svg
+                                                  class="w-5 h-5 text-primary"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
+                                                  />
+                                              </svg>
+                                          </div>
+                                          <div>
+                                              <h3 class="font-bold text-base leading-tight">Raw JSON</h3>
+                                              <div class="flex items-center gap-2">
+                                                  <span class="font-mono text-xs text-base-content/50">${this._lastRunFlow.flowHash}</span>
+                                                  <span class="font-mono text-xs text-base-content/40">·</span>
+                                                  <span class="font-mono text-xs text-base-content/40"
+                                                      >${(() => {
+                                                          const bytes = new Blob([JSON.stringify(this._lastRunFlow, null, 2)]).size
+                                                          return bytes >= 1024 * 1024
+                                                              ? `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+                                                              : `${(bytes / 1024).toFixed(2)} KB`
+                                                      })()}</span
+                                                  >
+                                              </div>
+                                          </div>
+                                      </div>
+                                      <div class="flex items-center gap-2">
+                                          <button
+                                              class="btn btn-ghost btn-sm"
+                                              title="JSON kopieren"
+                                              @click=${() => navigator.clipboard.writeText(JSON.stringify(this._lastRunFlow, null, 2))}
+                                          >
+                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                              </svg>
+                                          </button>
+                                          <button
+                                              class="btn btn-ghost btn-sm btn-square btn-circle"
+                                              @click=${() => this.querySelector('#fc-dev-raw-modal')?.close()}
+                                          >
+                                              ✕
+                                          </button>
+                                      </div>
+                                  </div>
+                              </div>
+                              <!-- Editor -->
+                              <div class="flex-1 overflow-hidden relative">
+                                  <fc-json-editor
+                                      .value=${JSON.stringify(this._lastRunFlow, null, 2)}
+                                      .readonly=${true}
+                                      .search=${true}
+                                  ></fc-json-editor>
+                              </div>
+                          </div>
+                          <form method="dialog" class="modal-backdrop">
+                              <button @click=${() => this.querySelector('#fc-dev-raw-modal')?.close()}>close</button>
+                          </form>
+                      `
+                    : ''}
+            </dialog>
+
             <!-- Prod Import Modal -->
             <dialog id="fc-dev-import-modal" class="modal">
                 <div class="modal-box w-[580px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden">
@@ -1560,7 +1781,9 @@ ${this._runResult.output}</pre
                         <!-- Left: Formular -->
                         <div class="flex flex-col gap-4 p-5 flex-1">
                             <div class="flex flex-col gap-1.5">
-                                <label class="text-xs font-semibold text-base-content/60 uppercase tracking-wide">PHP-Backend URL</label>
+                                <label class="text-xs font-semibold text-base-content/60 uppercase tracking-wide"
+                                    >Url vom PHP-Backend API Service</label
+                                >
                                 <input
                                     type="url"
                                     class="input input-sm input-bordered font-mono text-xs w-full"
@@ -1568,7 +1791,6 @@ ${this._runResult.output}</pre
                                     .value=${this._importUrl}
                                     @input=${e => (this._importUrl = e.target.value)}
                                 />
-                                <span class="text-[10px] text-base-content/40">Direkte URL zum PHP-Backend API Service</span>
                             </div>
                             <div class="flex flex-col gap-1.5">
                                 <label class="text-xs font-semibold text-base-content/60 uppercase tracking-wide">Secret</label>

@@ -65,12 +65,12 @@ export class FcServiceSetup extends BaseElement {
 
                     <div class="card bg-base-200 border border-base-300">
                         <div class="card-body gap-4">
-                            <h2 class="card-title text-base">Service-Verbindung</h2>
+                            <h2 class="card-title text-base">Service API</h2>
 
                             <form @submit=${this._onSubmit} class="flex flex-col gap-3">
                                 <div class="form-control">
                                     <label class="label py-1">
-                                        <span class="label-text text-xs">Service URI</span>
+                                        <span class="label-text text-xs">Url vom PHP-Backend API Service</span>
                                     </label>
                                     <input
                                         type="url"

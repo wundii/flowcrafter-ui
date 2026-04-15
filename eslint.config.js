@@ -25,6 +25,7 @@ export default [
                 Event: 'readonly',
                 URLSearchParams: 'readonly',
                 TextDecoder: 'readonly',
+                Blob: 'readonly',
                 setTimeout: 'readonly',
                 clearTimeout: 'readonly',
                 setInterval: 'readonly',

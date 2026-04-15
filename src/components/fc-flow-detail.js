@@ -366,7 +366,18 @@ export class FcFlowDetail extends BaseElement {
                                               </div>
                                               <div>
                                                   <h3 class="font-bold text-base leading-tight">Raw JSON</h3>
-                                                  <span class="font-mono text-xs text-base-content/50">${this.flow.flowHash}</span>
+                                                  <div class="flex items-center gap-2">
+                                                      <span class="font-mono text-xs text-base-content/50">${this.flow.flowHash}</span>
+                                                      <span class="font-mono text-xs text-base-content/40">·</span>
+                                                      <span class="font-mono text-xs text-base-content/40"
+                                                          >${(() => {
+                                                              const bytes = new Blob([JSON.stringify(this.flow, null, 2)]).size
+                                                              return bytes >= 1024 * 1024
+                                                                  ? `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+                                                                  : `${(bytes / 1024).toFixed(2)} KB`
+                                                          })()}</span
+                                                      >
+                                                  </div>
                                               </div>
                                           </div>
                                           <div class="flex items-center gap-2">
@@ -1268,11 +1279,11 @@ ${JSON.stringify(v, null, 2)}</pre
                                     <span
                                         class="badge badge-xs leading-none ${run.status === 'failed'
                                             ? 'badge-error'
-                                            : run.status === 'incorrect'
+                                            : run.status === 'warning'
                                               ? 'badge-warning'
                                               : 'badge-success'}"
                                     >
-                                        ${run.status === 'failed' ? 'Failed' : run.status === 'incorrect' ? 'Incorrect' : 'OK'}
+                                        ${run.status === 'failed' ? 'Failed' : run.status === 'warning' ? 'Warning' : 'OK'}
                                     </span>
                                 </div>
                                 <div class="flex items-center gap-1">
