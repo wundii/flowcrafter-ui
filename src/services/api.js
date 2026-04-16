@@ -49,23 +49,23 @@ export const api = {
         if (from) p.set('from', from)
         if (to) p.set('to', to)
         if (status) p.set('status', status)
-        return fetchJson(`/api/flows?${p}`)
+        return fetchJson(`/api/flow/flow-list?${p}`)
     },
 
     /** @param {string} hash */
     getFlow(hash) {
-        return fetchJson(`/api/flows/detail?hash=${encodeURIComponent(hash)}`)
+        return fetchJson(`/api/flow/flow-details?hash=${encodeURIComponent(hash)}`)
     },
 
     /** @param {string} runtimeHash */
     getFlowByRuntimeHash(runtimeHash) {
-        return fetchJson(`/api/flows/detail?runtimeHash=${encodeURIComponent(runtimeHash)}`)
+        return fetchJson(`/api/flow/flow-details?runtimeHash=${encodeURIComponent(runtimeHash)}`)
     },
 
     /** @param {{ subject: string, top?: number }} opts */
     searchFlows({ subject, top = 10 }) {
         const p = new URLSearchParams({ subject, top })
-        return fetchJson(`/api/flows/search?${p}`)
+        return fetchJson(`/api/flow/flow-search?${p}`)
     },
 
     /** @param {{ from?: string, to?: string }} [opts] */
@@ -73,7 +73,7 @@ export const api = {
         const p = new URLSearchParams()
         if (from) p.set('from', from)
         if (to) p.set('to', to)
-        return fetchJson(`/api/exceptions/stats?${p}`)
+        return fetchJson(`/api/flow/exceptions-stats?${p}`)
     },
 
     /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, from?: string, to?: string, status?: string }} [opts] */
@@ -82,7 +82,7 @@ export const api = {
         if (from) p.set('from', from)
         if (to) p.set('to', to)
         if (status) p.set('status', status)
-        return fetchJson(`/api/exceptions?${p}`)
+        return fetchJson(`/api/flow/exception-list?${p}`)
     },
 
     /**
@@ -92,21 +92,21 @@ export const api = {
      * @param {string[]} [includeStubs]  stub sources to include (empty = all)
      */
     runFlow(flowHash, messageSource, message, includeStubs = []) {
-        return postJson('/api/flows/run', { flowHash, messageSource, message, includeStubs })
+        return postJson('/api/flow/flow-run', { flowHash, messageSource, message, includeStubs })
     },
 
     /** @param {{ sort?: 'asc'|'desc' }} [opts] */
     getQueues({ sort = 'desc' } = {}) {
         const p = new URLSearchParams({ sort })
-        return fetchJson(`/api/queues?${p}`)
+        return fetchJson(`/api/queue/queue-list?${p}`)
     },
 
     queueFlow(flowHash, messageSource, message, includeStubs = []) {
-        return postJson('/api/queue', { flowHash, messageSource, message, includeStubs })
+        return postJson('/api/queue/enqueue', { flowHash, messageSource, message, includeStubs })
     },
 
     getQueueCount() {
-        return fetchJson('/api/queue/count')
+        return fetchJson('/api/queue/queue-count')
     },
 
     getInfo() {
@@ -121,20 +121,20 @@ export const api = {
     /** @param {string} className */
     getStubSource(className) {
         const p = new URLSearchParams({ className })
-        return fetchJson(`/api/schema/stub-source?${p}`)
+        return fetchJson(`/api/flow/stub-source?${p}`)
     },
 
     /** @param {string} stubSource */
     getStubSources(stubSource) {
         console.log(stubSource)
         const p = new URLSearchParams({ stubSource })
-        return fetchJson(`/api/schema/stub-sources?${p}`)
+        return fetchJson(`/api/flow/stub-source-list?${p}`)
     },
 
     /** @param {string} stubHash */
     getStubSourceByHash(stubHash) {
         const p = new URLSearchParams({ stubHash })
-        return fetchJson(`/api/schema/stub-source?${p}`)
+        return fetchJson(`/api/flow/stub-source?${p}`)
     },
 
     /** @param {{ from?: string, to?: string, type?: string }} [opts] */
@@ -143,7 +143,7 @@ export const api = {
         if (from) p.set('from', from)
         if (to) p.set('to', to)
         if (type) p.set('type', type)
-        return fetchJson(`/api/flows/stats?${p}`)
+        return fetchJson(`/api/flow/flow-stats?${p}`)
     },
 
     /** @param {{ from?: string, to?: string }} [opts] */
@@ -151,17 +151,17 @@ export const api = {
         const p = new URLSearchParams()
         if (from) p.set('from', from)
         if (to) p.set('to', to)
-        return fetchJson(`/api/flows/types?${p}`)
+        return fetchJson(`/api/flow/flow-type-stats?${p}`)
     },
 
     getDevFlows() {
-        return fetchJson('/api/dev/flows')
+        return fetchJson('/api/dev/flow-list')
     },
 
     /** @param {string} className */
     getDevFlow(className) {
         const p = new URLSearchParams({ className })
-        return fetchJson(`/api/dev/flow?${p}`)
+        return fetchJson(`/api/dev/flow-source?${p}`)
     },
 
     /**
@@ -170,27 +170,27 @@ export const api = {
      * @param {object} message
      */
     runDevFlow(className, messageSource, message) {
-        return postJson('/api/dev/run', { className, messageSource, message })
+        return postJson('/api/dev/flow-run', { className, messageSource, message })
     },
 
     getSchedules() {
-        return fetchJson('/api/schedules')
+        return fetchJson('/api/schedule/schedule-list')
     },
 
     /** @param {string} className */
     getScheduleSource(className) {
         const p = new URLSearchParams({ className })
-        return fetchJson(`/api/schedule/source?${p}`)
+        return fetchJson(`/api/schedule/schedule-source?${p}`)
     },
 
     /** @param {string} className */
     runSchedule(className) {
-        return postJson('/api/schedule/run', { className })
+        return postJson('/api/schedule/flow-run', { className })
     },
 
     /** @returns {Promise<Array>} mock schema data */
     getSchemas() {
-        return fetchJson('/api/schemas')
+        return fetchJson('/api/flow/schema-list')
     },
 
     /**

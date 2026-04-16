@@ -226,7 +226,7 @@ async function analyzeFlow(apiKey, model, flowData, runtimeHash, phpUrl, phpHead
                 })
                 try {
                     const p = new URLSearchParams({ stubHash: block.input.stubHash })
-                    const srcRes = await fetch(`${phpUrl}/api/schema/stub-source?${p}`, { headers: phpHeaders })
+                    const srcRes = await fetch(`${phpUrl}/api/flow/stub-source?${p}`, { headers: phpHeaders })
                     const srcData = srcRes.ok ? await srcRes.json() : { error: `HTTP ${srcRes.status}` }
                     toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(srcData) })
                 } catch (err) {
@@ -568,8 +568,8 @@ const server = createServer(async (req, res) => {
 
             try {
                 const [schemasRes, messageSourcesRes] = await Promise.all([
-                    fetch(`${baseUrl}/api/schemas`, { headers }),
-                    fetch(`${baseUrl}/api/schema/message-sources`, { headers }),
+                    fetch(`${baseUrl}/api/flow/schema-list`, { headers }),
+                    fetch(`${baseUrl}/api/flow/message-source-list`, { headers }),
                 ])
 
                 if (schemasRes.status === 401) return json(res, { error: 'Authentifizierung fehlgeschlagen — Bearer Secret prüfen.' }, 401)
@@ -709,7 +709,7 @@ const server = createServer(async (req, res) => {
             send({ type: 'status', message: 'Flow-Daten werden geladen…' })
             const phpSecret = conn.encryptedSecret ? decryptSecret(conn.encryptedSecret) : null
             const phpHeaders = phpSecret ? { Authorization: `Bearer ${phpSecret}` } : {}
-            const flowRes = await fetch(`${conn.url}/api/flows/detail?hash=${encodeURIComponent(flowHash)}`, {
+            const flowRes = await fetch(`${conn.url}/api/flow/flow-details?hash=${encodeURIComponent(flowHash)}`, {
                 headers: phpHeaders,
             })
             if (!flowRes.ok) {
