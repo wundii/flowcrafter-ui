@@ -531,7 +531,7 @@ export class FcFlowDetail extends BaseElement {
             </h3>
             <fc-flow-graph
                 .flow=${f}
-                .runId=${this.selectedRunId}
+                .runId=${this._hoveredRunId ?? this.selectedRunId}
                 .runMessages=${graphRun?.messages ?? null}
                 .runExceptions=${graphRun?.exceptions ?? null}
                 .runResults=${graphRun?.results ?? null}
