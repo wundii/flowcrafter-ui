@@ -72,7 +72,7 @@ export class FcExceptionChart extends BaseElement {
         for (let i = DAYS - 1; i >= 0; i--) {
             const d = new Date(now)
             d.setDate(d.getDate() - i)
-            days.push({ date: dateKey(d), flow: 0, schedule: 0 })
+            days.push({ date: dateKey(d), flow: 0, schedule: 0, observer: 0 })
         }
         return days
     }
@@ -84,6 +84,7 @@ export class FcExceptionChart extends BaseElement {
             if (map[s.date]) {
                 map[s.date].flow = s.flow ?? 0
                 map[s.date].schedule = s.schedule ?? 0
+                map[s.date].observer = s.observer ?? 0
             }
         }
         return days
@@ -121,9 +122,10 @@ export class FcExceptionChart extends BaseElement {
         }
 
         const data = this._data
-        const max = Math.max(...data.map(d => Math.max(d.flow, d.schedule)), 1)
+        const max = Math.max(...data.map(d => Math.max(d.flow, d.schedule, d.observer)), 1)
         const totalFlow = data.reduce((s, d) => s + d.flow, 0)
         const totalSchedule = data.reduce((s, d) => s + d.schedule, 0)
+        const totalObserver = data.reduce((s, d) => s + d.observer, 0)
 
         const chartW = W - PAD_X - 8
         const chartH = H - PAD_TOP - PAD_BOT
@@ -139,16 +141,24 @@ export class FcExceptionChart extends BaseElement {
             y: PAD_TOP + chartH - (d.schedule / max) * chartH,
             ...d,
         }))
+        const observerCoords = data.map((d, i) => ({
+            x: PAD_X + i * step,
+            y: PAD_TOP + chartH - (d.observer / max) * chartH,
+            ...d,
+        }))
 
         const flowLine = flowCoords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
         const flowArea = `${flowLine} L${flowCoords.at(-1).x.toFixed(1)},${PAD_TOP + chartH} L${PAD_X},${PAD_TOP + chartH} Z`
         const scheduleLine = scheduleCoords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
         const scheduleArea = `${scheduleLine} L${scheduleCoords.at(-1).x.toFixed(1)},${PAD_TOP + chartH} L${PAD_X},${PAD_TOP + chartH} Z`
+        const observerLine = observerCoords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
+        const observerArea = `${observerLine} L${observerCoords.at(-1).x.toFixed(1)},${PAD_TOP + chartH} L${PAD_X},${PAD_TOP + chartH} Z`
 
         const yTicks = [0, Math.round(max / 2), max]
         const xLabels = flowCoords.filter((_, i) => i % 2 === 0 || i === DAYS - 1)
 
         const hasSchedule = totalSchedule > 0
+        const hasObserver = totalObserver > 0
 
         return html`
             <div class="fc-chart-wrap rounded-box border border-base-300 bg-base-200 p-4 relative">
@@ -172,6 +182,13 @@ export class FcExceptionChart extends BaseElement {
                             ></span>
                             Schedule (${totalSchedule})
                         </span>
+                        <span class="flex items-center gap-1.5 text-xs text-base-content/50">
+                            <span
+                                class="inline-block w-6 h-0 border-t-2 border-dotted flex-shrink-0"
+                                style="border-color:oklch(var(--in))"
+                            ></span>
+                            Observer (${totalObserver})
+                        </span>
                     </div>
                 </div>
 
@@ -185,6 +202,10 @@ export class FcExceptionChart extends BaseElement {
                             <stop offset="0%" class="[stop-color:oklch(var(--wa))]" stop-opacity="0.2" />
                             <stop offset="100%" class="[stop-color:oklch(var(--wa))]" stop-opacity="0" />
                         </linearGradient>
+                        <linearGradient id="observer-exception-area-grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" class="[stop-color:oklch(var(--in))]" stop-opacity="0.2" />
+                            <stop offset="100%" class="[stop-color:oklch(var(--in))]" stop-opacity="0" />
+                        </linearGradient>
                     </defs>
 
                     <!-- Y-axis grid + labels -->
@@ -197,6 +218,20 @@ export class FcExceptionChart extends BaseElement {
                                   class="fill-base-content/40" style="font-size:10px">${t}</text>
                         `
                     })}
+
+                    <!-- Observer area + line (dotted) -->
+                    ${hasObserver ? svg`<path d="${observerArea}" fill="url(#observer-exception-area-grad)" />` : ''}
+                    ${hasObserver
+                        ? svg`<path
+                        d="${observerLine}"
+                        fill="none"
+                        class="stroke-info"
+                        stroke-width="1.5"
+                        stroke-linejoin="round"
+                        stroke-linecap="round"
+                        stroke-dasharray="2 3"
+                    />`
+                        : ''}
 
                     <!-- Schedule area + line (behind flow, dashed) -->
                     <path d="${scheduleArea}" fill="url(#schedule-exception-area-grad)" />
@@ -247,6 +282,21 @@ export class FcExceptionChart extends BaseElement {
                               )
                         : ''}
 
+                    <!-- Observer data points -->
+                    ${hasObserver
+                        ? observerCoords
+                              .filter(c => c.observer > 0)
+                              .map(
+                                  c => svg`
+                            <g @mouseenter=${e => this._onPointEnter(e, c)} @mouseleave=${() => this._onPointLeave()} @click=${() => this._onPointClick(c.date)} style="cursor:pointer">
+                                <circle cx="${c.x}" cy="${c.y}" r="8" fill="transparent" stroke="none" />
+                                <circle cx="${c.x}" cy="${c.y}" r="2.5"
+                                        class="fill-info stroke-base-200" stroke-width="1" style="pointer-events:none" />
+                            </g>
+                        `
+                              )
+                        : ''}
+
                     <!-- X-axis labels -->
                     ${xLabels.map(
                         c => svg`
@@ -275,6 +325,11 @@ export class FcExceptionChart extends BaseElement {
                                       <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--wa))"></span>
                                       <span>Schedule</span>
                                       <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.schedule}</span>
+                                  </div>
+                                  <div class="flex items-center gap-2 text-base-content/60 mt-1">
+                                      <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--in))"></span>
+                                      <span>Observer</span>
+                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.observer}</span>
                                   </div>
                               </div>
                           </div>

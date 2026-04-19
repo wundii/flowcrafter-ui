@@ -167,6 +167,7 @@ export class FcExceptionList extends BaseElement {
             if (isNotFailed) {
                 items = items.filter(i => !(i.type === 'flow' && i.flowStatus === 'FAILED'))
                 items = items.filter(i => i.type !== 'schedule')
+                items = items.filter(i => i.type !== 'observer')
             }
             this._offset = (res.items ?? []).length
             this._hasMore = res.hasMore ?? false
@@ -199,6 +200,7 @@ export class FcExceptionList extends BaseElement {
             if (isNotFailed) {
                 newItems = newItems.filter(i => !(i.type === 'flow' && i.flowStatus === 'FAILED'))
                 newItems = newItems.filter(i => i.type !== 'schedule')
+                newItems = newItems.filter(i => i.type !== 'observer')
             }
             this._offset += (res.items ?? []).length
             this._hasMore = res.hasMore ?? false
@@ -282,6 +284,66 @@ export class FcExceptionList extends BaseElement {
                             >
                                 ⤢ ${ex.flowHash}
                             </button>
+                        </div>
+                        ${hasTrace
+                            ? html`
+                                  <button
+                                      class="btn btn-xs btn-ghost text-base-content/40 flex-shrink-0"
+                                      @click=${() => this._toggleRow(id)}
+                                  >
+                                      ${open ? '▲ Trace' : '▼ Trace'}
+                                  </button>
+                              `
+                            : ''}
+                    </div>
+                </div>
+                ${open && hasTrace
+                    ? html`
+                          <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
+                              <pre
+                                  class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
+                              >
+${ex.traceString}</pre
+                              >
+                          </div>
+                      `
+                    : ''}
+            </div>
+        `
+    }
+
+    _renderObserverItem(ex, idx) {
+        const id = ex.hash ?? 'o' + idx
+        const open = this.expanded.has(id)
+        const hasTrace = !!ex.traceString
+        return html`
+            <div class="rounded-box border border-info/25 bg-base-200 overflow-hidden">
+                <div class="px-4 py-3 flex flex-col gap-1.5">
+                    <!-- Row 1: FlowSource + Badge + Time -->
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="font-semibold text-sm text-base-content truncate" title="${ex.observerFlowSource}">
+                                ${shortClass(ex.observerFlowSource)}
+                            </span>
+                            <span class="badge badge-xs badge-info flex-shrink-0">Observer</span>
+                        </div>
+                        <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>
+                    </div>
+                    <!-- Row 2: Error message -->
+                    <div class="text-sm text-error leading-snug break-words">${ex.message}</div>
+                    <!-- Row 3: MessageSource + File + Trace toggle -->
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-baseline gap-3 min-w-0 text-xs text-base-content/50">
+                            <span class="font-mono flex-shrink-0" style="font-size:11px;" title="${ex.observerMessageSource}">
+                                ${shortClass(ex.observerMessageSource)}
+                            </span>
+                            ${ex.file
+                                ? html`
+                                      <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
+                                          ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
+                                      </span>
+                                  `
+                                : ''}
                         </div>
                         ${hasTrace
                             ? html`
@@ -470,7 +532,11 @@ ${ex.traceString}</pre
                       <!-- Exception cards -->
                       <div class="flex flex-col gap-2">
                           ${this._items.map((ex, idx) =>
-                              ex.type === 'schedule' ? this._renderScheduleItem(ex, idx) : this._renderFlowItem(ex, idx)
+                              ex.type === 'schedule'
+                                  ? this._renderScheduleItem(ex, idx)
+                                  : ex.type === 'observer'
+                                    ? this._renderObserverItem(ex, idx)
+                                    : this._renderFlowItem(ex, idx)
                           )}
                       </div>
 

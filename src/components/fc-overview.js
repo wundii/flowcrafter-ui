@@ -282,14 +282,20 @@ export class FcOverview extends BaseElement {
                           <div class="flex flex-col gap-1">
                               ${items.map(ex => {
                                   const isSchedule = ex.type === 'schedule'
-                                  const borderColor = isSchedule ? 'warning' : 'error'
-                                  const badgeClass = isSchedule ? 'badge-warning' : 'badge-error'
-                                  const name = isSchedule ? shortClass(ex.scheduleName) : shortClass(ex.stubSource)
+                                  const isObserver = ex.type === 'observer'
+                                  const borderColor = isSchedule ? 'warning' : isObserver ? 'info' : 'error'
+                                  const badgeClass = isSchedule ? 'badge-warning' : isObserver ? 'badge-info' : 'badge-error'
+                                  const badgeLabel = isSchedule ? 'Schedule' : isObserver ? 'Observer' : 'Flow'
+                                  const name = isSchedule
+                                      ? shortClass(ex.scheduleName)
+                                      : isObserver
+                                        ? shortClass(ex.observerFlowSource)
+                                        : shortClass(ex.stubSource)
                                   return html`
                                       <button
                                           class="flex items-start gap-2 text-left hover:bg-base-300/50 rounded-lg py-1.5 pl-2 pr-1 transition-colors w-full border-l-2 border-${borderColor}/40 cursor-pointer"
                                           @click=${() =>
-                                              isSchedule || !ex.flowHash
+                                              isSchedule || isObserver || !ex.flowHash
                                                   ? this._navigate('exceptions')
                                                   : this.dispatchEvent(
                                                         new CustomEvent('flow-selected', {
@@ -302,9 +308,7 @@ export class FcOverview extends BaseElement {
                                           <div class="min-w-0 flex-1">
                                               <div class="flex items-center gap-1.5 min-w-0">
                                                   <span class="text-[11px] font-semibold text-base-content truncate">${name}</span>
-                                                  <span class="badge badge-xs ${badgeClass} flex-shrink-0 opacity-70">
-                                                      ${isSchedule ? 'Schedule' : 'Flow'}
-                                                  </span>
+                                                  <span class="badge badge-xs ${badgeClass} flex-shrink-0 opacity-70"> ${badgeLabel} </span>
                                                   <span class="text-[10px] text-base-content/40 flex-shrink-0 ml-auto"
                                                       >${formatRelativeOrDate(ex.time)}</span
                                                   >
