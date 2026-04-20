@@ -20,11 +20,14 @@ function formatDate(iso) {
 export class FcFlowDetail extends BaseElement {
     static properties = {
         _analysis: { state: true },
+        _analysisConfirmClose: { state: true },
         _analysisError: { state: true },
         _analysisLoading: { state: true },
         _analysisModal: { state: true },
         _analysisModel: { state: true },
+        _analysisProvider: { state: true },
         _analysisSteps: { state: true },
+        _analysisUsage: { state: true },
         _dragOverRunId: { state: true },
         _hoveredRunId: { state: true },
         _rawModal: { state: true },
@@ -32,6 +35,8 @@ export class FcFlowDetail extends BaseElement {
         _refreshCountdown: { state: true },
         _toast: { state: true },
         aiConfigured: { type: Boolean },
+        aiModel: { type: String },
+        aiProvider: { type: String },
         compareRunId: { state: true },
         error: { state: true },
         flow: { state: true },
@@ -45,11 +50,14 @@ export class FcFlowDetail extends BaseElement {
     constructor() {
         super()
         this._analysis = null
+        this._analysisConfirmClose = false
         this._analysisError = null
         this._analysisLoading = false
         this._analysisModal = false
         this._analysisModel = null
+        this._analysisProvider = null
         this._analysisSteps = []
+        this._analysisUsage = null
         this._countdownInterval = null
         this._dragOverRunId = null
         this._hoveredRunId = null
@@ -60,6 +68,8 @@ export class FcFlowDetail extends BaseElement {
         this._toast = null
         this._toastTimer = null
         this.aiConfigured = false
+        this.aiModel = null
+        this.aiProvider = 'anthropic'
         this.compareRunId = null
         this.error = null
         this.flow = null
@@ -136,22 +146,30 @@ export class FcFlowDetail extends BaseElement {
         this.dispatchEvent(new CustomEvent('back', { bubbles: true, composed: true }))
     }
 
+    _cacheKey() {
+        return `fc_analysis_${this.hash}_${this.aiProvider ?? 'anthropic'}`
+    }
+
     _loadCachedAnalysis() {
         try {
-            const cached = sessionStorage.getItem(`fc_analysis_${this.hash}`)
+            const cached = sessionStorage.getItem(this._cacheKey())
             if (cached) {
                 const data = JSON.parse(cached)
                 this._analysis = data.analysis
-                this._analysisModel = data.model ?? null
                 this._analysisError = null
+                this._analysisModel = data.model ?? null
+                this._analysisProvider = data.provider ?? null
+                this._analysisUsage = data.usage ?? null
                 return
             }
         } catch {
             // ignore parse errors
         }
         this._analysis = null
-        this._analysisModel = null
         this._analysisError = null
+        this._analysisModel = null
+        this._analysisProvider = null
+        this._analysisUsage = null
     }
 
     _onAnalyze() {
@@ -164,27 +182,58 @@ export class FcFlowDetail extends BaseElement {
 
     async _runAnalysis() {
         this._analysis = null
+        this._analysisAbortController = new AbortController()
+        this._analysisAbortController?.abort()
         this._analysisError = null
-        this._analysisSteps = []
-        this._analysisModel = null
         this._analysisLoading = true
+        this._analysisModel = null
+        this._analysisProvider = null
+        this._analysisSteps = []
+        this._analysisUsage = null
         try {
-            const result = await api.analyzeFlow(this.hash, this.selectedRunId, event => {
-                this._analysisSteps = [...this._analysisSteps, event]
-            })
+            const result = await api.analyzeFlow(
+                this.hash,
+                this.selectedRunId,
+                event => {
+                    this._analysisSteps = [...this._analysisSteps, event]
+                },
+                this._analysisAbortController.signal
+            )
             this._analysis = result.analysis
             this._analysisModel = result.model ?? null
-            sessionStorage.setItem(`fc_analysis_${this.hash}`, JSON.stringify({ analysis: result.analysis, model: result.model }))
+            this._analysisProvider = result.provider ?? null
+            this._analysisUsage = result.usage ?? null
+            sessionStorage.setItem(
+                this._cacheKey(),
+                JSON.stringify({ analysis: result.analysis, model: result.model, provider: result.provider, usage: result.usage ?? null })
+            )
         } catch (err) {
-            this._analysisError = { message: err.message, detail: err.detail ?? null }
+            if (err.name !== 'AbortError') {
+                this._analysisError = { message: err.message, detail: err.detail ?? null }
+            }
         } finally {
             this._analysisLoading = false
+            this._analysisAbortController = null
         }
     }
 
     _closeAnalysisModal() {
+        this._analysisConfirmClose = false
         this.querySelector('#fc-analysis-modal')?.close()
         this._analysisModal = false
+    }
+
+    _maybeCloseAnalysisModal() {
+        if (this._analysisLoading) {
+            this._analysisConfirmClose = true
+            return
+        }
+        this._closeAnalysisModal()
+    }
+
+    _confirmAbortAnalysis() {
+        this._analysisAbortController?.abort()
+        this._closeAnalysisModal()
     }
 
     _onRunComplete(e) {
@@ -587,7 +636,12 @@ export class FcFlowDetail extends BaseElement {
                 id="fc-analysis-modal"
                 class="modal"
                 @close=${() => {
+                    this._analysisConfirmClose = false
                     this._analysisModal = false
+                }}
+                @cancel=${e => {
+                    e.preventDefault()
+                    this._maybeCloseAnalysisModal()
                 }}
             >
                 ${this._analysisModal
@@ -608,8 +662,19 @@ export class FcFlowDetail extends BaseElement {
                                               <h3 class="font-bold text-base leading-tight">AI-Analyse</h3>
                                               <span class="text-xs text-base-content/50"
                                                   >${this.flow ? shortClass(this.flow.flowSource) : ''}${this._analysisModel
-                                                      ? html` · <span class="text-base-content/40">${this._analysisModel}</span>`
-                                                      : ''}</span
+                                                      ? html` ·
+                                                            <span
+                                                                class="${this._analysisProvider === 'ollama'
+                                                                    ? 'text-info'
+                                                                    : 'text-base-content/40'}"
+                                                                >${this._analysisModel}</span
+                                                            >${this._analysisProvider === 'ollama'
+                                                                ? html` · <span class="text-info">Ollama</span>`
+                                                                : ''}`
+                                                      : html` ·
+                                                            <span class="text-base-content/30"
+                                                                >${this.aiProvider === 'ollama' ? 'Ollama' : 'Anthropic'}</span
+                                                            >`}</span
                                               >
                                           </div>
                                       </div>
@@ -628,12 +693,34 @@ export class FcFlowDetail extends BaseElement {
                                                   />
                                               </svg>
                                           </button>
-                                          <button class="btn btn-ghost btn-sm btn-square btn-circle" @click=${this._closeAnalysisModal}>
+                                          <button
+                                              class="btn btn-ghost btn-sm btn-square btn-circle"
+                                              @click=${this._maybeCloseAnalysisModal}
+                                          >
                                               ✕
                                           </button>
                                       </div>
                                   </div>
                               </div>
+
+                              <!-- Abbruch-Bestätigung -->
+                              ${this._analysisConfirmClose
+                                  ? html`
+                                        <div
+                                            class="flex items-center justify-between gap-3 px-5 py-3 bg-warning/10 border-b border-warning/30 flex-shrink-0"
+                                        >
+                                            <span class="text-sm text-warning">Analyse wirklich abbrechen?</span>
+                                            <div class="flex gap-2">
+                                                <button class="btn btn-ghost btn-xs" @click=${() => (this._analysisConfirmClose = false)}>
+                                                    Weiter
+                                                </button>
+                                                <button class="btn btn-warning btn-xs" @click=${this._confirmAbortAnalysis}>
+                                                    Abbrechen
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `
+                                  : ''}
 
                               <!-- Content -->
                               <div class="flex-1 overflow-y-auto px-5 py-4">
@@ -779,11 +866,25 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                                             `
                                           : ''}
                               </div>
+                              ${this._analysisUsage
+                                  ? html`
+                                        <div
+                                            class="flex items-center gap-3 px-5 py-2.5 border-t border-base-200 text-xs text-base-content/40 flex-shrink-0"
+                                        >
+                                            <span>Token-Verbrauch:</span>
+                                            <span
+                                                >↑ ${this._analysisUsage.inputTokens.toLocaleString('de-DE')} Eingabe · ↓
+                                                ${this._analysisUsage.outputTokens.toLocaleString('de-DE')} Ausgabe · ∑
+                                                ${(this._analysisUsage.inputTokens + this._analysisUsage.outputTokens).toLocaleString(
+                                                    'de-DE'
+                                                )}</span
+                                            >
+                                        </div>
+                                    `
+                                  : ''}
                           </div>
 
-                          <form method="dialog" class="modal-backdrop backdrop-blur-sm">
-                              <button>close</button>
-                          </form>
+                          <div class="modal-backdrop backdrop-blur-sm" @click=${this._maybeCloseAnalysisModal}></div>
                       `
                     : ''}
             </dialog>

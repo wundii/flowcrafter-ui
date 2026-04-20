@@ -23,6 +23,11 @@ import './fc-type-list.js'
 const TABS = ['overview', 'schemas', 'flows', 'exceptions', 'schedules', 'queues']
 const VERSION_MISMATCH_ACK = 'fc_version_mismatch_ack'
 const SEARCH_LIMIT = 5
+const ANTHROPIC_MODELS = [
+    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4', provider: 'anthropic' },
+    { id: 'claude-opus-4-20250514', label: 'Claude Opus 4', provider: 'anthropic' },
+    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', provider: 'anthropic' },
+]
 
 function workerAgeSecs(heartbeatIso) {
     return Math.floor((Date.now() - new Date(heartbeatIso).getTime()) / 1000)
@@ -48,10 +53,13 @@ function schedulerAgeColor(secs) {
 
 export class FcApp extends BaseElement {
     static properties = {
+        _aiAnthropicModels: { state: true },
         _aiConfigured: { state: true },
         _aiModal: { state: true },
         _aiModel: { state: true },
-        _aiModels: { state: true },
+        _aiOllamaModels: { state: true },
+        _aiOllamaUrl: { state: true },
+        _aiProvider: { state: true },
         _authed: { state: true },
         _checkingConnection: { state: true },
         _confirmResetConnection: { state: true },
@@ -79,10 +87,13 @@ export class FcApp extends BaseElement {
 
     constructor() {
         super()
+        this._aiAnthropicModels = ANTHROPIC_MODELS
         this._aiConfigured = false
         this._aiModal = null
         this._aiModel = null
-        this._aiModels = []
+        this._aiOllamaModels = []
+        this._aiOllamaUrl = 'http://localhost:11434'
+        this._aiProvider = 'anthropic'
         this._authed = false
         this._editingConnection = false
         this._excChartDate = null
@@ -136,14 +147,17 @@ export class FcApp extends BaseElement {
             const config = await api.getAiConfig()
             this._aiConfigured = config.configured
             this._aiModel = config.model ?? null
-            this._aiModels = config.models ?? []
+            this._aiAnthropicModels = config.anthropicModels ?? ANTHROPIC_MODELS
+            this._aiOllamaModels = config.provider === 'ollama' ? (config.models ?? []) : this._aiOllamaModels
+            this._aiProvider = config.provider ?? 'anthropic'
+            this._aiOllamaUrl = config.ollamaUrl ?? 'http://localhost:11434'
         } catch {
             this._aiConfigured = false
         }
     }
 
     _openAiModal() {
-        this._aiModal = { error: null, loading: false }
+        this._aiModal = { error: null, loading: false, provider: this._aiProvider }
         this.updateComplete.then(() => this.querySelector('#ai-config-modal')?.showModal())
     }
 
@@ -155,21 +169,27 @@ export class FcApp extends BaseElement {
     async _onSaveAiConfig(e) {
         e.preventDefault()
         const form = e.target
-        const apiKey = form.apiKey.value.trim()
+        const provider = this._aiModal.provider ?? 'anthropic'
         const model = form.model?.value ?? this._aiModel
-        if (!apiKey && !this._aiConfigured) {
+        const apiKey = form.apiKey?.value.trim() ?? ''
+        const ollamaUrl = form.ollamaUrl?.value.trim() ?? 'http://localhost:11434'
+
+        if (provider === 'anthropic' && !apiKey && !this._aiConfigured) {
             this._aiModal = { ...this._aiModal, error: 'API-Key darf nicht leer sein.' }
             return
         }
+
         this._aiModal = { ...this._aiModal, loading: true, error: null }
         try {
-            const res = await api.saveAiConfig(apiKey, model)
+            const res = await api.saveAiConfig(provider, apiKey, model, ollamaUrl)
             if (res.error) {
                 this._aiModal = { ...this._aiModal, loading: false, error: res.error }
                 return
             }
             this._aiConfigured = true
             this._aiModel = model
+            this._aiOllamaUrl = ollamaUrl
+            this._aiProvider = provider
             this._closeAiModal()
         } catch (err) {
             this._aiModal = { ...this._aiModal, loading: false, error: err.message }
@@ -179,6 +199,7 @@ export class FcApp extends BaseElement {
     async _onClearAiConfig() {
         await api.clearAiConfig()
         this._aiConfigured = false
+        this._aiProvider = 'anthropic'
     }
 
     disconnectedCallback() {
@@ -513,6 +534,8 @@ export class FcApp extends BaseElement {
                         .hash=${this.selectedFlowHash}
                         .initialRuntimeHash=${this.selectedRuntimeHash}
                         .aiConfigured=${this._aiConfigured}
+                        .aiModel=${this._aiModel}
+                        .aiProvider=${this._aiProvider}
                         @back=${this._onBackToList}
                     ></fc-flow-detail>
                 `
@@ -1178,7 +1201,9 @@ export class FcApp extends BaseElement {
                                               </div>
                                               <div>
                                                   <h3 class="font-bold text-base">AI-Einstellungen</h3>
-                                                  <span class="text-xs text-base-content/50">Anthropic Claude</span>
+                                                  <span class="text-xs text-base-content/50"
+                                                      >${this._aiModal.provider === 'ollama' ? 'Ollama (lokal)' : 'Anthropic Claude'}</span
+                                                  >
                                               </div>
                                           </div>
                                           <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${this._closeAiModal}>✕</button>
@@ -1186,49 +1211,60 @@ export class FcApp extends BaseElement {
                                   </div>
 
                                   <div class="px-6 pb-6 pt-4">
-                                      <!-- Provider info -->
-                                      <div class="rounded-lg bg-base-200 border border-base-300 px-3 py-2.5 mb-3">
-                                          <p class="text-xs text-base-content/60">
-                                              Die AI-Analyse nutzt Claude von Anthropic. Ein API-Key wird unter
-                                              <a
-                                                  href="https://console.anthropic.com/settings/keys"
-                                                  target="_blank"
-                                                  rel="noopener noreferrer"
-                                                  class="link link-primary"
-                                                  >console.anthropic.com</a
-                                              >
-                                              erstellt.
-                                          </p>
-                                      </div>
-                                      <!-- Claude Code Plugin hint -->
-                                      <div class="rounded-lg bg-base-200 border border-base-300 px-3 py-2.5 mb-4 flex items-start gap-2.5">
-                                          <svg
-                                              class="w-3.5 h-3.5 text-base-content/40 shrink-0 mt-0.5"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              stroke-width="2"
-                                              viewBox="0 0 24 24"
+                                      <!-- Provider tabs -->
+                                      <div class="flex gap-1 rounded-lg bg-base-200 p-1 mb-4">
+                                          <button
+                                              type="button"
+                                              class="flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${this._aiModal
+                                                  .provider !== 'ollama'
+                                                  ? 'bg-base-100 shadow text-base-content'
+                                                  : 'text-base-content/50 hover:text-base-content'}"
+                                              @click=${() => {
+                                                  this._aiModal = { ...this._aiModal, provider: 'anthropic', error: null }
+                                              }}
                                           >
-                                              <path
-                                                  stroke-linecap="round"
-                                                  stroke-linejoin="round"
-                                                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
-                                              />
-                                          </svg>
-                                          <p class="text-xs text-base-content/60">
-                                              Für die Entwicklung mit Claude Code gibt es das
-                                              <a
-                                                  href="https://github.com/wundii/flowcrafter-claude"
-                                                  target="_blank"
-                                                  rel="noopener noreferrer"
-                                                  class="link link-primary"
-                                                  >flowcrafter-claude</a
-                                              >
-                                              Plugin — generiert Flows, Stubs und Messages per Slash-Command direkt im Editor.
-                                          </p>
+                                              Anthropic Claude
+                                          </button>
+                                          <button
+                                              type="button"
+                                              class="flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${this._aiModal
+                                                  .provider === 'ollama'
+                                                  ? 'bg-base-100 shadow text-base-content'
+                                                  : 'text-base-content/50 hover:text-base-content'}"
+                                              @click=${async () => {
+                                                  this._aiModal = { ...this._aiModal, provider: 'ollama', error: null }
+                                                  await this._loadAiConfig()
+                                              }}
+                                          >
+                                              Ollama (lokal)
+                                          </button>
                                       </div>
 
-                                      ${this._aiConfigured
+                                      ${this._aiModal.provider === 'ollama'
+                                          ? html`
+                                                <div class="rounded-lg bg-base-200 border border-base-300 px-3 py-2.5 mb-3">
+                                                    <p class="text-xs text-base-content/60">
+                                                        Ollama läuft lokal auf deinem Server — kein API-Key nötig, keine Daten verlassen die
+                                                        Umgebung.
+                                                    </p>
+                                                </div>
+                                            `
+                                          : html`
+                                                <div class="rounded-lg bg-base-200 border border-base-300 px-3 py-2.5 mb-3">
+                                                    <p class="text-xs text-base-content/60">
+                                                        Die AI-Analyse nutzt Claude von Anthropic. Ein API-Key wird unter
+                                                        <a
+                                                            href="https://console.anthropic.com/settings/keys"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            class="link link-primary"
+                                                            >console.anthropic.com</a
+                                                        >
+                                                        erstellt.
+                                                    </p>
+                                                </div>
+                                            `}
+                                      ${this._aiConfigured && this._aiProvider === this._aiModal.provider
                                           ? html`
                                                 <div
                                                     class="flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 mb-4"
@@ -1246,13 +1282,53 @@ export class FcApp extends BaseElement {
                                                             d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                                                         />
                                                     </svg>
-                                                    <span class="text-xs text-success font-medium">API-Key ist hinterlegt</span>
+                                                    <span class="text-xs text-success font-medium"
+                                                        >${this._aiModal.provider === 'ollama'
+                                                            ? 'Ollama ist konfiguriert'
+                                                            : 'API-Key ist hinterlegt'}</span
+                                                    >
                                                 </div>
                                             `
                                           : ''}
 
                                       <form @submit=${this._onSaveAiConfig} class="flex flex-col gap-3">
-                                          ${this._aiModels.length > 0
+                                          ${this._aiModal.provider === 'ollama'
+                                              ? html`
+                                                    <div class="form-control">
+                                                        <label class="label py-1"
+                                                            ><span class="label-text text-xs font-medium">Ollama URL</span></label
+                                                        >
+                                                        <input
+                                                            type="url"
+                                                            name="ollamaUrl"
+                                                            class="input input-bordered input-sm font-mono w-full"
+                                                            placeholder="http://localhost:11434"
+                                                            .value=${this._aiOllamaUrl}
+                                                            ?disabled=${this._aiModal.loading}
+                                                        />
+                                                    </div>
+                                                `
+                                              : html`
+                                                    <div class="form-control">
+                                                        <label class="label py-1"
+                                                            ><span class="label-text text-xs font-medium"
+                                                                >${this._aiConfigured && this._aiProvider === 'anthropic'
+                                                                    ? 'Neuer API-Key'
+                                                                    : 'API-Key'}</span
+                                                            ></label
+                                                        >
+                                                        <input
+                                                            type="password"
+                                                            name="apiKey"
+                                                            class="input input-bordered input-sm font-mono w-full"
+                                                            placeholder="sk-ant-..."
+                                                            ?disabled=${this._aiModal.loading}
+                                                            ?required=${!(this._aiConfigured && this._aiProvider === 'anthropic')}
+                                                        />
+                                                    </div>
+                                                `}
+                                          ${((this._aiModal.provider === 'ollama' ? this._aiOllamaModels : this._aiAnthropicModels) ?? [])
+                                              .length > 0
                                               ? html`
                                                     <div class="form-control">
                                                         <label class="label py-1"
@@ -1263,7 +1339,10 @@ export class FcApp extends BaseElement {
                                                             class="select select-bordered select-sm w-full"
                                                             ?disabled=${this._aiModal.loading}
                                                         >
-                                                            ${this._aiModels.map(
+                                                            ${(this._aiModal.provider === 'ollama'
+                                                                ? this._aiOllamaModels
+                                                                : this._aiAnthropicModels
+                                                            ).map(
                                                                 m => html`
                                                                     <option value=${m.id} ?selected=${m.id === this._aiModel}>
                                                                         ${m.label}
@@ -1274,21 +1353,6 @@ export class FcApp extends BaseElement {
                                                     </div>
                                                 `
                                               : ''}
-                                          <div class="form-control">
-                                              <label class="label py-1"
-                                                  ><span class="label-text text-xs font-medium"
-                                                      >${this._aiConfigured ? 'Neuer API-Key' : 'API-Key'}</span
-                                                  ></label
-                                              >
-                                              <input
-                                                  type="password"
-                                                  name="apiKey"
-                                                  class="input input-bordered input-sm font-mono w-full"
-                                                  placeholder="sk-ant-..."
-                                                  ?disabled=${this._aiModal.loading}
-                                                  ?required=${!this._aiConfigured}
-                                              />
-                                          </div>
                                           ${this._aiModal.error
                                               ? html`
                                                     <div class="alert alert-error py-2 px-3 text-xs">
@@ -1296,8 +1360,8 @@ export class FcApp extends BaseElement {
                                                     </div>
                                                 `
                                               : ''}
-                                          <div class="flex items-center justify-between mt-16">
-                                              ${this._aiConfigured
+                                          <div class="flex items-center justify-between mt-4">
+                                              ${this._aiConfigured && this._aiProvider === this._aiModal.provider
                                                   ? html`<button
                                                         type="button"
                                                         class="btn btn-ghost btn-sm text-error"

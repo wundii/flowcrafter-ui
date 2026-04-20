@@ -5,14 +5,15 @@ import { scryptSync, randomBytes, timingSafeEqual, createHash, createCipheriv, c
 import { fileURLToPath } from 'node:url'
 import Anthropic from '@anthropic-ai/sdk'
 
-const PORT = Number(process.env.PORT ?? 3000)
 const APP_VERSION = existsSync('./VERSION') ? readFileSync('./VERSION', 'utf8').trim() : 'dev'
+const DIST = join(dirname(fileURLToPath(import.meta.url)), 'dist')
+const PORT = Number(process.env.PORT ?? 3000)
+
+const AI_FILE = './data/ai.json'
 const AUTH_FILE = './data/auth.json'
 const CONNECTION_FILE = './data/connection.json'
-const AI_FILE = './data/ai.json'
-const KEY_FILE = './data/.key'
 const DEV_IMPORT_FILE = './data/dev-import.json'
-const DIST = join(dirname(fileURLToPath(import.meta.url)), 'dist')
+const KEY_FILE = './data/.key'
 
 const MIME = {
     '.html': 'text/html',
@@ -83,28 +84,43 @@ function clearConnection() {
 }
 
 // ─── AI config store ─────────────────────────────────────────────────────────
-const AI_MODELS = [
-    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-    { id: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
-    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
+const AI_MODELS_ANTHROPIC = [
+    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4', provider: 'anthropic' },
+    { id: 'claude-opus-4-20250514', label: 'Claude Opus 4', provider: 'anthropic' },
+    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', provider: 'anthropic' },
 ]
 const DEFAULT_MODEL = 'claude-sonnet-4-20250514'
+const DEFAULT_OLLAMA_URL = 'http://localhost:11434'
 
 function loadAiConfig() {
-    if (!existsSync(AI_FILE)) return { provider: null, encryptedApiKey: null, model: null }
-    return JSON.parse(readFileSync(AI_FILE, 'utf8'))
+    if (!existsSync(AI_FILE)) return { provider: null, encryptedApiKey: null, model: null, ollamaUrl: null }
+    const cfg = JSON.parse(readFileSync(AI_FILE, 'utf8'))
+    cfg.ollamaUrl = cfg.ollamaUrl ?? null
+    return cfg
 }
 
-function saveAiConfig(provider, apiKey, model) {
+function saveAiConfig(provider, apiKey, model, ollamaUrl) {
     mkdirSync(dirname(AI_FILE), { recursive: true })
     const existing = loadAiConfig()
-    const validModel = AI_MODELS.some(m => m.id === model) ? model : DEFAULT_MODEL
     const encryptedApiKey = apiKey ? encryptSecret(apiKey) : existing.encryptedApiKey
-    writeFileSync(AI_FILE, JSON.stringify({ provider, encryptedApiKey, model: validModel }, null, 2))
+    writeFileSync(AI_FILE, JSON.stringify({ provider, encryptedApiKey, model, ollamaUrl: ollamaUrl ?? null }, null, 2))
 }
 
 function clearAiConfig() {
-    if (existsSync(AI_FILE)) writeFileSync(AI_FILE, JSON.stringify({ provider: null, encryptedApiKey: null, model: null }, null, 2))
+    if (existsSync(AI_FILE))
+        writeFileSync(AI_FILE, JSON.stringify({ provider: null, encryptedApiKey: null, model: null, ollamaUrl: null }, null, 2))
+}
+
+async function fetchOllamaModels(ollamaUrl) {
+    try {
+        const res = await fetch(`${ollamaUrl}/api/tags`, { signal: AbortSignal.timeout(3000) })
+        if (!res.ok) return { reachable: false, models: [] }
+        const data = await res.json()
+        const models = (data.models ?? []).map(m => ({ id: m.name, label: m.name, provider: 'ollama' }))
+        return { reachable: true, models }
+    } catch {
+        return { reachable: false, models: [] }
+    }
 }
 
 // ─── Dev import store ─────────────────────────────────────────────────────────
@@ -172,6 +188,7 @@ function buildUserPrompt(flowData, runtimeHash) {
     return prompt
 }
 
+// Anthropic format
 const ANALYSIS_TOOLS = [
     {
         name: 'get_stub_source',
@@ -194,25 +211,59 @@ const ANALYSIS_TOOLS = [
     },
 ]
 
+// OpenAI-compatible format (used by Ollama)
+const ANALYSIS_TOOLS_OPENAI = [
+    {
+        type: 'function',
+        function: {
+            name: 'get_stub_source',
+            description: ANALYSIS_TOOLS[0].description,
+            parameters: ANALYSIS_TOOLS[0].input_schema,
+        },
+    },
+]
+
 function shortClassName(fqn) {
     return fqn?.split('\\').pop() ?? fqn
 }
 
-async function analyzeFlow(apiKey, model, flowData, runtimeHash, phpUrl, phpHeaders, onProgress) {
+function extractJsonFromText(text) {
+    const clean = text
+        .replace(/```json?\n?/g, '')
+        .replace(/```\s*$/g, '')
+        .trim()
+    const match = clean.match(/\{[\s\S]*\}/)
+    if (!match) throw new Error('Keine gueltige JSON-Antwort vom AI-Modell erhalten.')
+    return JSON.parse(match[0])
+}
+
+async function fetchStubSource(stubHash, className, phpUrl, phpHeaders, onProgress, signal) {
+    onProgress({ type: 'tool_use', message: `Lade Quellcode: ${shortClassName(className ?? stubHash)}` })
+    try {
+        const p = new URLSearchParams({ stubHash })
+        const srcRes = await fetch(`${phpUrl}/api/flow/stub-source?${p}`, { headers: phpHeaders, signal })
+        return srcRes.ok ? await srcRes.json() : { error: `HTTP ${srcRes.status}` }
+    } catch (err) {
+        if (err.name === 'AbortError') throw err
+        return { error: err.message }
+    }
+}
+
+async function analyzeFlowAnthropic(apiKey, model, flowData, runtimeHash, phpUrl, phpHeaders, onProgress, signal) {
     const client = new Anthropic({ apiKey })
     const messages = [{ role: 'user', content: buildUserPrompt(flowData, runtimeHash) }]
+    const callAnthropic = msgs =>
+        client.messages.create(
+            { model, max_tokens: 4096, system: ANALYSIS_SYSTEM_PROMPT, tools: ANALYSIS_TOOLS, messages: msgs },
+            { signal }
+        )
 
     onProgress({ type: 'status', message: 'Flow-Daten werden analysiert…' })
 
-    let response = await client.messages.create({
-        model,
-        max_tokens: 4096,
-        system: ANALYSIS_SYSTEM_PROMPT,
-        tools: ANALYSIS_TOOLS,
-        messages,
-    })
+    let response = await callAnthropic(messages)
+    let inputTokens = response.usage?.input_tokens ?? 0
+    let outputTokens = response.usage?.output_tokens ?? 0
 
-    // Tool-use loop: let AI request stub source code if needed
     while (response.stop_reason === 'tool_use') {
         const toolBlocks = response.content.filter(b => b.type === 'tool_use')
         messages.push({ role: 'assistant', content: response.content })
@@ -220,50 +271,137 @@ async function analyzeFlow(apiKey, model, flowData, runtimeHash, phpUrl, phpHead
         const toolResults = []
         for (const block of toolBlocks) {
             if (block.name === 'get_stub_source') {
-                onProgress({
-                    type: 'tool_use',
-                    message: `Lade Quellcode: ${shortClassName(block.input.className ?? block.input.stubHash)}`,
-                })
-                try {
-                    const p = new URLSearchParams({ stubHash: block.input.stubHash })
-                    const srcRes = await fetch(`${phpUrl}/api/flow/stub-source?${p}`, { headers: phpHeaders })
-                    const srcData = srcRes.ok ? await srcRes.json() : { error: `HTTP ${srcRes.status}` }
-                    toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(srcData) })
-                } catch (err) {
-                    toolResults.push({
-                        type: 'tool_result',
-                        tool_use_id: block.id,
-                        content: JSON.stringify({ error: err.message }),
-                        is_error: true,
-                    })
-                }
+                const srcData = await fetchStubSource(block.input.stubHash, block.input.className, phpUrl, phpHeaders, onProgress, signal)
+                toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(srcData) })
             }
         }
 
         onProgress({ type: 'status', message: 'Analyse wird fortgesetzt…' })
         messages.push({ role: 'user', content: toolResults })
-        response = await client.messages.create({
-            model,
-            max_tokens: 4096,
-            system: ANALYSIS_SYSTEM_PROMPT,
-            tools: ANALYSIS_TOOLS,
-            messages,
-        })
+        response = await callAnthropic(messages)
+        inputTokens += response.usage?.input_tokens ?? 0
+        outputTokens += response.usage?.output_tokens ?? 0
     }
 
     const text = response.content
         .filter(b => b.type === 'text')
         .map(b => b.text)
         .join('')
-        .replace(/```json?\n?/g, '')
-        .replace(/```\s*$/g, '')
-        .trim()
+    return { analysis: extractJsonFromText(text), usage: { inputTokens, outputTokens } }
+}
 
-    // Extract JSON object even if surrounded by prose text
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('Keine gueltige JSON-Antwort vom AI-Modell erhalten.')
+async function ollamaUnloadModel(ollamaUrl, model) {
+    try {
+        await fetch(`${ollamaUrl}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model, keep_alive: 0 }),
+            signal: AbortSignal.timeout(3000),
+        })
+    } catch {
+        // best-effort
+    }
+}
 
-    return JSON.parse(jsonMatch[0])
+async function analyzeFlowOllama(ollamaUrl, model, flowData, runtimeHash, phpUrl, phpHeaders, onProgress, signal) {
+    const messages = [
+        { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
+        { role: 'user', content: buildUserPrompt(flowData, runtimeHash) },
+    ]
+
+    onProgress({ type: 'status', message: 'Flow-Daten werden analysiert…' })
+
+    const callOllama = async msgs => {
+        const res = await fetch(`${ollamaUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model,
+                messages: msgs,
+                tools: ANALYSIS_TOOLS_OPENAI,
+                stream: true,
+                stream_options: { include_usage: true },
+                options: { num_ctx: 32768 },
+            }),
+            signal,
+        })
+        if (!res.ok) {
+            const err = await res.text().catch(() => `HTTP ${res.status}`)
+            throw new Error(`Ollama: ${err}`)
+        }
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buf = ''
+        let content = ''
+        const toolCalls = []
+        let finishReason = null
+        let promptTokens = 0
+        let completionTokens = 0
+        outer: while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            buf += decoder.decode(value, { stream: true })
+            const lines = buf.split('\n')
+            buf = lines.pop()
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue
+                const data = line.slice(6).trim()
+                if (data === '[DONE]') break outer
+                const chunk = JSON.parse(data)
+                const delta = chunk.choices?.[0]?.delta
+                if (delta?.content) content += delta.content
+                for (const tc of delta?.tool_calls ?? []) {
+                    const i = tc.index ?? 0
+                    if (!toolCalls[i]) toolCalls[i] = { id: '', function: { name: '', arguments: '' } }
+                    if (tc.id) toolCalls[i].id = tc.id
+                    if (tc.function?.name) toolCalls[i].function.name += tc.function.name
+                    if (tc.function?.arguments) toolCalls[i].function.arguments += tc.function.arguments
+                }
+                if (chunk.choices?.[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason
+                if (chunk.usage) {
+                    promptTokens = chunk.usage.prompt_tokens ?? 0
+                    completionTokens = chunk.usage.completion_tokens ?? 0
+                    if (finishReason) break outer
+                }
+            }
+        }
+        return {
+            choices: [{ message: { content, tool_calls: toolCalls.length > 0 ? toolCalls : undefined }, finish_reason: finishReason }],
+            usage: { prompt_tokens: promptTokens, completion_tokens: completionTokens },
+        }
+    }
+
+    let response = await callOllama(messages)
+    let choice = response.choices?.[0]
+    let inputTokens = response.usage?.prompt_tokens ?? 0
+    let outputTokens = response.usage?.completion_tokens ?? 0
+
+    while (choice?.finish_reason === 'tool_calls') {
+        const toolCalls = choice.message.tool_calls ?? []
+        messages.push({ role: 'assistant', content: choice.message.content ?? null, tool_calls: toolCalls })
+
+        for (const call of toolCalls) {
+            const args = JSON.parse(call.function.arguments ?? '{}')
+            const srcData = await fetchStubSource(args.stubHash, args.className, phpUrl, phpHeaders, onProgress, signal)
+            messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(srcData) })
+        }
+
+        onProgress({ type: 'status', message: 'Analyse wird fortgesetzt…' })
+        response = await callOllama(messages)
+        choice = response.choices?.[0]
+        inputTokens += response.usage?.prompt_tokens ?? 0
+        outputTokens += response.usage?.completion_tokens ?? 0
+    }
+
+    const text = choice?.message?.content ?? ''
+    return { analysis: extractJsonFromText(text), usage: { inputTokens, outputTokens } }
+}
+
+async function analyzeFlow(provider, apiKey, ollamaUrl, model, flowData, runtimeHash, phpUrl, phpHeaders, onProgress, signal) {
+    if (provider === 'ollama') {
+        return analyzeFlowOllama(ollamaUrl, model, flowData, runtimeHash, phpUrl, phpHeaders, onProgress, signal)
+    }
+    return analyzeFlowAnthropic(apiKey, model, flowData, runtimeHash, phpUrl, phpHeaders, onProgress, signal)
 }
 
 // ─── Crypto ───────────────────────────────────────────────────────────────────
@@ -500,17 +638,47 @@ const server = createServer(async (req, res) => {
 
         if (method === 'GET') {
             const config = loadAiConfig()
+            const isOllama = config.provider === 'ollama'
+            const ollamaUrl = config.ollamaUrl ?? DEFAULT_OLLAMA_URL
+            const ollamaResult = isOllama ? await fetchOllamaModels(ollamaUrl) : null
+            const models = isOllama ? ollamaResult.models : AI_MODELS_ANTHROPIC
+            const configured = isOllama ? !!config.ollamaUrl : !!config.encryptedApiKey
             return json(res, {
-                configured: !!config.encryptedApiKey,
-                provider: config.provider ?? '',
+                configured,
+                provider: config.provider ?? 'anthropic',
                 model: config.model ?? DEFAULT_MODEL,
-                models: AI_MODELS,
+                models,
+                anthropicModels: AI_MODELS_ANTHROPIC,
+                ollamaUrl,
             })
         }
 
         if (method === 'POST') {
-            const { apiKey, provider, model } = await readBody(req)
-            const selectedModel = AI_MODELS.some(m => m.id === model) ? model : DEFAULT_MODEL
+            const { apiKey, provider, model, ollamaUrl } = await readBody(req)
+            const resolvedProvider = provider || 'anthropic'
+
+            if (resolvedProvider === 'ollama') {
+                const url = (ollamaUrl || DEFAULT_OLLAMA_URL).replace(/\/$/, '')
+                const { reachable, models } = await fetchOllamaModels(url)
+                if (!reachable) {
+                    return json(res, { error: `Ollama nicht erreichbar unter ${url}. Bitte URL prüfen.` }, 400)
+                }
+                if (models.length === 0) {
+                    return json(
+                        res,
+                        {
+                            error: `Ollama ist erreichbar, aber es sind keine Modelle installiert. Bitte zuerst ein Modell laden (z.B. "ollama pull qwen2.5-coder:7b").`,
+                        },
+                        400
+                    )
+                }
+                const selectedModel = models.some(m => m.id === model) ? model : models[0].id
+                saveAiConfig('ollama', null, selectedModel, url)
+                return json(res, { ok: true })
+            }
+
+            // Anthropic
+            const selectedModel = AI_MODELS_ANTHROPIC.some(m => m.id === model) ? model : DEFAULT_MODEL
             if (apiKey) {
                 try {
                     const client = new Anthropic({ apiKey })
@@ -524,7 +692,7 @@ const server = createServer(async (req, res) => {
                     return json(res, { error: msg }, 400)
                 }
             }
-            saveAiConfig(provider || 'anthropic', apiKey, selectedModel)
+            saveAiConfig('anthropic', apiKey, selectedModel, null)
             return json(res, { ok: true })
         }
 
@@ -689,7 +857,9 @@ const server = createServer(async (req, res) => {
         if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
 
         const aiConfig = loadAiConfig()
-        if (!aiConfig.encryptedApiKey) return json(res, { error: 'AI nicht konfiguriert.' }, 503)
+        const aiProvider = aiConfig.provider ?? 'anthropic'
+        const isConfigured = aiProvider === 'ollama' ? !!aiConfig.ollamaUrl : !!aiConfig.encryptedApiKey
+        if (!isConfigured) return json(res, { error: 'AI nicht konfiguriert.' }, 503)
 
         const conn = loadConnection()
         if (!conn.url) return json(res, { error: 'Keine FlowCrafter-Verbindung konfiguriert.' }, 503)
@@ -705,12 +875,22 @@ const server = createServer(async (req, res) => {
 
         const send = data => res.write(JSON.stringify(data) + '\n')
 
+        const abort = new AbortController()
+        const ollamaUrl = aiConfig.ollamaUrl ?? DEFAULT_OLLAMA_URL
+        const aiModel = aiConfig.model ?? DEFAULT_MODEL
+        let analysisCompleted = false
+        res.on('close', () => {
+            abort.abort()
+            if (aiProvider === 'ollama' && !analysisCompleted) ollamaUnloadModel(ollamaUrl, aiModel)
+        })
+
         try {
             send({ type: 'status', message: 'Flow-Daten werden geladen…' })
             const phpSecret = conn.encryptedSecret ? decryptSecret(conn.encryptedSecret) : null
             const phpHeaders = phpSecret ? { Authorization: `Bearer ${phpSecret}` } : {}
             const flowRes = await fetch(`${conn.url}/api/flow/flow-details?hash=${encodeURIComponent(flowHash)}`, {
                 headers: phpHeaders,
+                signal: abort.signal,
             })
             if (!flowRes.ok) {
                 send({ type: 'error', error: `FlowCrafter API: HTTP ${flowRes.status}` })
@@ -718,18 +898,31 @@ const server = createServer(async (req, res) => {
             }
             const flowData = await flowRes.json()
 
-            const apiKey = decryptSecret(aiConfig.encryptedApiKey)
-            const aiModel = aiConfig.model ?? DEFAULT_MODEL
-            const analysis = await analyzeFlow(apiKey, aiModel, flowData, runtimeHash, conn.url, phpHeaders, send)
+            const apiKey = aiProvider === 'anthropic' && aiConfig.encryptedApiKey ? decryptSecret(aiConfig.encryptedApiKey) : null
+            const { analysis, usage } = await analyzeFlow(
+                aiProvider,
+                apiKey,
+                ollamaUrl,
+                aiModel,
+                flowData,
+                runtimeHash,
+                conn.url,
+                phpHeaders,
+                send,
+                abort.signal
+            )
 
-            send({ type: 'result', analysis, model: aiModel, timestamp: new Date().toISOString() })
+            analysisCompleted = true
+            send({ type: 'result', analysis, model: aiModel, provider: aiProvider, usage, timestamp: new Date().toISOString() })
         } catch (err) {
-            console.error('Analyze error:', err)
-            const detail = {}
-            if (err.status) detail.status = err.status
-            if (err.error) detail.body = err.error
-            const message = err.error?.error?.message ?? err.message ?? 'Analyse fehlgeschlagen.'
-            send({ type: 'error', error: message, detail: Object.keys(detail).length > 0 ? detail : undefined })
+            if (err.name !== 'AbortError') {
+                console.error('Analyze error:', err)
+                const detail = {}
+                if (err.status) detail.status = err.status
+                if (err.error) detail.body = err.error
+                const message = err.error?.error?.message ?? err.message ?? 'Analyse fehlgeschlagen.'
+                send({ type: 'error', error: message, detail: Object.keys(detail).length > 0 ? detail : undefined })
+            }
         }
         return res.end()
     }

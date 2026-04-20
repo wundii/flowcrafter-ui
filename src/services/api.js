@@ -198,7 +198,7 @@ export const api = {
      * @param {string} [runtimeHash]
      * @param {(event: object) => void} [onProgress]
      */
-    async analyzeFlow(flowHash, runtimeHash = null, onProgress = () => {}) {
+    async analyzeFlow(flowHash, runtimeHash = null, onProgress = () => {}, signal = null) {
         const token = sessionStorage.getItem('fc_token') ?? ''
         const res = await fetch('/api/analyze', {
             method: 'POST',
@@ -207,6 +207,7 @@ export const api = {
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
             body: JSON.stringify({ flowHash, runtimeHash }),
+            ...(signal ? { signal } : {}),
         })
 
         const reader = res.body.getReader()
@@ -257,8 +258,13 @@ export const api = {
         }).then(res => res.json())
     },
 
-    /** @param {string} apiKey @param {string} model */
-    saveAiConfig(apiKey, model) {
+    /**
+     * @param {string} provider
+     * @param {string} apiKey
+     * @param {string} model
+     * @param {string} [ollamaUrl]
+     */
+    saveAiConfig(provider, apiKey, model, ollamaUrl) {
         const token = sessionStorage.getItem('fc_token') ?? ''
         return fetch('/api/ai-config', {
             method: 'POST',
@@ -266,7 +272,7 @@ export const api = {
                 'Content-Type': 'application/json',
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
-            body: JSON.stringify({ apiKey, model }),
+            body: JSON.stringify({ provider, apiKey, model, ollamaUrl }),
         }).then(res => res.json())
     },
 

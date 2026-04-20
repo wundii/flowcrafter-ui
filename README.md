@@ -146,9 +146,90 @@ Pfade werden normalisiert (`/api/auth/*`, `/api/fc/*`, `/static`), um die Label-
 
 ## KI-Analyse
 
-Die optionale KI-Analyse nutzt die Anthropic API, um Flows automatisch zu bewerten:
+Die optionale KI-Analyse bewertet Flows automatisch und liefert kategorisierte Findings (Fehler, Warnungen, Performance, Info). Zwei Anbieter stehen zur Wahl:
 
-- **Konfiguration** über die UI (API-Key + Modellauswahl) — gespeichert als AES-256-GCM-verschlüsselte Datei auf dem Server
-- **Unterstützte Modelle:** Claude Sonnet 4, Claude Opus 4, Claude Haiku 4.5
-- **Analyse-Ablauf:** Flow-Daten werden an Claude gesendet; Claude kann per Tool-Use PHP-Stub-Sourcecode nachladen und liefert strukturierte Findings (Fehler, Warnungen, Performance, Info) mit Schweregrad zurück
-- **Ergebnisse** werden im Flow-Detail als kategorisierte Karten mit betroffenen Stubs angezeigt
+| Anbieter         | Kosten     | Datenschutz            | Einrichtung          |
+| ---------------- | ---------- | ---------------------- | -------------------- |
+| Anthropic Claude | API-Kosten | Daten verlassen Server | API-Key erforderlich |
+| Ollama (lokal)   | kostenlos  | Daten bleiben lokal    | Docker-Container     |
+
+### Anthropic Claude
+
+1. API-Key unter [console.anthropic.com](https://console.anthropic.com) erstellen
+2. In der UI: **AI-Einstellungen → Anthropic Claude → API-Key eingeben → Speichern**
+3. Unterstützte Modelle: Claude Sonnet 4, Claude Opus 4, Claude Haiku 4.5
+
+### Ollama (lokal, empfohlen für Docker-Setups)
+
+Ollama ermöglicht lokale KI-Analyse ohne API-Kosten. Der einfachste Weg ist ein Docker-Container im selben Netzwerk wie das FlowCrafter UI.
+
+#### 1. Ollama-Container starten
+
+In der `docker-compose.yml` des Projekts, das auch den FlowCrafter-UI-Container enthält:
+
+```yaml
+services:
+  ollama:
+    image: ollama/ollama:latest # AMD GPU (ROCm): ollama/ollama:rocm
+    container_name: 'ollama'
+    restart: unless-stopped
+    ports:
+      - '11434:11434'
+    volumes:
+      - ollama_data:/root/.ollama
+
+volumes:
+  ollama_data:
+```
+
+Für **AMD-GPUs** (ROCm) stattdessen `ollama/ollama:rocm` verwenden und GPU-Geräte einbinden:
+
+```yaml
+image: ollama/ollama:rocm
+devices:
+  - /dev/kfd
+  - /dev/dri
+group_add:
+  - video
+  - render
+```
+
+Container starten:
+
+```bash
+docker compose up -d ollama
+```
+
+#### 2. Modell laden
+
+```bash
+# Empfohlen: gutes Verhältnis Qualität/Größe (~9 GB)
+docker exec ollama ollama pull qwen2.5-coder:14b
+
+# Kleiner: für Systeme mit wenig RAM (~5 GB)
+docker exec ollama ollama pull qwen2.5-coder:7b
+
+# Minimal: sehr schnell, einfache Analysen (~1 GB)
+docker exec ollama ollama pull qwen2.5-coder:1.5b
+```
+
+Der Download kann je nach Internetgeschwindigkeit einige Minuten dauern. Modelle werden im Volume `ollama_data` dauerhaft gespeichert.
+
+#### 3. In der UI konfigurieren
+
+In der UI: **AI-Einstellungen → Ollama (lokal) → URL eingeben → Speichern**
+
+| Szenario                               | URL                                   |
+| -------------------------------------- | ------------------------------------- |
+| Ollama im selben Docker-Netzwerk       | `http://ollama:11434`                 |
+| Ollama nativ auf dem Host (Linux)      | `http://host.docker.internal:11434` ¹ |
+| Ollama nativ, direkter Netzwerkzugriff | `http://<host-ip>:11434`              |
+
+¹ Setzt `extra_hosts: ["host.docker.internal:host-gateway"]` im FlowCrafter-UI-Container voraus, und Ollama muss auf `0.0.0.0` binden (`OLLAMA_HOST=0.0.0.0:11434`).
+
+#### Analyse-Ablauf
+
+1. Flow-Daten und (optional) ein spezifischer Run werden an das Modell gesendet
+2. Das Modell kann per Tool-Use PHP-Stub-Sourcecode aus dem FlowCrafter-Backend nachladen
+3. Ergebnis: strukturierte Findings mit Kategorie, Schweregrad und betroffenem Stub
+4. Token-Verbrauch wird im Ergebnis-Modal angezeigt (Input · Output · Gesamt)
