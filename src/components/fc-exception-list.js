@@ -5,10 +5,18 @@ import { renderApiError } from '../utils/error.js'
 
 const PAGE_SIZE = 20
 const LOAD_MORE_COOLDOWN = 500
+const GROUP_WINDOW_MS = 15 * 60 * 1000
 
 const STATUS_OPTIONS = [
     { value: 'FAILED', label: 'Failed' },
     { value: 'NOT_FAILED', label: 'Verarbeitet' },
+]
+
+const TYPE_OPTIONS = [
+    { value: 'ALL', label: 'Alle Typen' },
+    { value: 'flow', label: 'Flow' },
+    { value: 'schedule', label: 'Schedule' },
+    { value: 'observer', label: 'Observer' },
 ]
 
 const STATUS_COLORS = {
@@ -46,16 +54,32 @@ function formatDate(iso) {
     })
 }
 
+function buildFingerprint(ex) {
+    const fileLine = `${ex.file ?? ''}:${ex.line ?? ''}`
+    switch (ex.type) {
+        case 'flow':
+            return `flow|${ex.message}|${ex.stubSource ?? ''}|${fileLine}`
+        case 'schedule':
+            return `schedule|${ex.message}|${ex.scheduleName ?? ''}|${ex.scheduleExpression ?? ''}`
+        case 'observer':
+            return `observer|${ex.message}|${ex.observerFlowSource ?? ''}|${ex.observerMessageSource ?? ''}`
+        default:
+            return `${ex.type}|${ex.message}`
+    }
+}
+
 export class FcExceptionList extends BaseElement {
     static properties = {
         _dateFrom: { state: true },
         _dateTo: { state: true },
+        _expandedGroups: { state: true },
         _hasMore: { state: true },
         _items: { state: true },
         _loadingMore: { state: true },
         _offset: { state: true },
         _statusFilter: { state: true },
         _total: { state: true },
+        _typeFilter: { state: true },
         dateFrom: { type: String },
         dateTo: { type: String },
         error: { state: true },
@@ -67,7 +91,9 @@ export class FcExceptionList extends BaseElement {
         super()
         this._dateFrom = ''
         this._dateTo = ''
+        this._expandedGroups = new Set()
         this._statusFilter = 'FAILED'
+        this._typeFilter = 'ALL'
         this.dateFrom = null
         this.dateTo = null
         this._hasMore = false
@@ -212,12 +238,83 @@ export class FcExceptionList extends BaseElement {
             this._lastLoadMore = Date.now()
             this._loadingMore = false
         }
+        await this.updateComplete
+        if (this._hasMore && this._isSentinelVisible()) {
+            setTimeout(() => this._loadMore(), LOAD_MORE_COOLDOWN)
+        }
+    }
+
+    _isSentinelVisible() {
+        const sentinel = this.querySelector('#exception-scroll-sentinel')
+        if (!sentinel) return false
+        const rect = sentinel.getBoundingClientRect()
+        const viewportH = window.innerHeight || document.documentElement.clientHeight
+        return rect.top <= viewportH + 200
     }
 
     _toggleRow(id) {
         const next = new Set(this.expanded)
         next.has(id) ? next.delete(id) : next.add(id)
         this.expanded = next
+    }
+
+    _toggleGroup(fp) {
+        const next = new Set(this._expandedGroups)
+        next.has(fp) ? next.delete(fp) : next.add(fp)
+        this._expandedGroups = next
+    }
+
+    _buildDisplayItems() {
+        let items = this._items
+        if (this._typeFilter !== 'ALL') {
+            items = items.filter(ex => ex.type === this._typeFilter)
+        }
+
+        const openGroups = new Map()
+        const result = []
+        let groupSeq = 0
+        for (const ex of items) {
+            const fp = buildFingerprint(ex)
+            const exTime = new Date(ex.time).getTime()
+            const open = openGroups.get(fp)
+            if (open) {
+                const gap = new Date(open._lastTime).getTime() - exTime
+                if (gap <= GROUP_WINDOW_MS) {
+                    open._count += 1
+                    open._members.push(ex)
+                    open._lastTime = ex.time
+                    continue
+                }
+            }
+            const group = {
+                ...ex,
+                _count: 1,
+                _firstTime: ex.time,
+                _lastTime: ex.time,
+                _members: [ex],
+                _fingerprint: `${fp}#${groupSeq++}`,
+            }
+            openGroups.set(fp, group)
+            result.push(group)
+        }
+        return result
+    }
+
+    _renderItem(ex, idx) {
+        if (ex.type === 'schedule') return this._renderScheduleItem(ex, idx)
+        if (ex.type === 'observer') return this._renderObserverItem(ex, idx)
+        return this._renderFlowItem(ex, idx)
+    }
+
+    _renderWithGroup(ex, idx) {
+        const header = this._renderItem(ex, idx)
+        if (!(ex._count > 1 && this._expandedGroups.has(ex._fingerprint))) return header
+        return html`
+            ${header}
+            <div class="ml-4 flex flex-col gap-2 border-l-2 border-base-300 pl-3">
+                ${ex._members.map((m, mi) => this._renderItem(m, `${idx}-${mi}`))}
+            </div>
+        `
     }
 
     _navigateToFlow(hash) {
@@ -240,9 +337,40 @@ export class FcExceptionList extends BaseElement {
         this._load()
     }
 
+    _renderRowAction(ex, id, hasTrace, open) {
+        if (ex._count > 1) {
+            const groupOpen = this._expandedGroups.has(ex._fingerprint)
+            return html`
+                <button class="btn btn-xs btn-ghost text-base-content/40 flex-shrink-0" @click=${() => this._toggleGroup(ex._fingerprint)}>
+                    ${groupOpen ? '▲' : '▼'} Alle (${ex._count})
+                </button>
+            `
+        }
+        if (hasTrace) {
+            return html`
+                <button class="btn btn-xs btn-ghost text-base-content/40 flex-shrink-0" @click=${() => this._toggleRow(id)}>
+                    ${open ? '▲ Trace' : '▼ Trace'}
+                </button>
+            `
+        }
+        return ''
+    }
+
+    _renderTimeDisplay(ex) {
+        if (ex._count > 1) {
+            return html`
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <span class="badge badge-xs badge-neutral">${ex._count}×</span>
+                    <span class="text-xs text-base-content/50">${formatDate(ex._lastTime)} – ${formatDate(ex._firstTime)}</span>
+                </div>
+            `
+        }
+        return html`<span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>`
+    }
+
     _renderFlowItem(ex, idx) {
         const id = ex.hash ?? idx
-        const open = this.expanded.has(id)
+        const open = ex._count > 1 ? false : this.expanded.has(id)
         const hasTrace = !!ex.traceString
         return html`
             <div class="rounded-box border border-error/25 bg-base-200 overflow-hidden">
@@ -259,7 +387,7 @@ export class FcExceptionList extends BaseElement {
                                   >`
                                 : ''}
                         </div>
-                        <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>
+                        ${this._renderTimeDisplay(ex)}
                     </div>
                     <!-- Row 2: Error message -->
                     <div class="text-sm text-error leading-snug break-words">${ex.message}</div>
@@ -285,16 +413,7 @@ export class FcExceptionList extends BaseElement {
                                 ⤢ ${ex.flowHash}
                             </button>
                         </div>
-                        ${hasTrace
-                            ? html`
-                                  <button
-                                      class="btn btn-xs btn-ghost text-base-content/40 flex-shrink-0"
-                                      @click=${() => this._toggleRow(id)}
-                                  >
-                                      ${open ? '▲ Trace' : '▼ Trace'}
-                                  </button>
-                              `
-                            : ''}
+                        ${this._renderRowAction(ex, id, hasTrace, open)}
                     </div>
                 </div>
                 ${open && hasTrace
@@ -314,7 +433,7 @@ ${ex.traceString}</pre
 
     _renderObserverItem(ex, idx) {
         const id = ex.hash ?? 'o' + idx
-        const open = this.expanded.has(id)
+        const open = ex._count > 1 ? false : this.expanded.has(id)
         const hasTrace = !!ex.traceString
         return html`
             <div class="rounded-box border border-info/25 bg-base-200 overflow-hidden">
@@ -327,7 +446,7 @@ ${ex.traceString}</pre
                             </span>
                             <span class="badge badge-xs badge-info flex-shrink-0">Observer</span>
                         </div>
-                        <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>
+                        ${this._renderTimeDisplay(ex)}
                     </div>
                     <!-- Row 2: Error message -->
                     <div class="text-sm text-error leading-snug break-words">${ex.message}</div>
@@ -345,16 +464,7 @@ ${ex.traceString}</pre
                                   `
                                 : ''}
                         </div>
-                        ${hasTrace
-                            ? html`
-                                  <button
-                                      class="btn btn-xs btn-ghost text-base-content/40 flex-shrink-0"
-                                      @click=${() => this._toggleRow(id)}
-                                  >
-                                      ${open ? '▲ Trace' : '▼ Trace'}
-                                  </button>
-                              `
-                            : ''}
+                        ${this._renderRowAction(ex, id, hasTrace, open)}
                     </div>
                 </div>
                 ${open && hasTrace
@@ -374,7 +484,7 @@ ${ex.traceString}</pre
 
     _renderScheduleItem(ex, idx) {
         const id = ex.hash ?? 's' + idx
-        const open = this.expanded.has(id)
+        const open = ex._count > 1 ? false : this.expanded.has(id)
         const hasTrace = !!ex.traceString
         return html`
             <div class="rounded-box border border-warning/25 bg-base-200 overflow-hidden">
@@ -387,7 +497,7 @@ ${ex.traceString}</pre
                             </span>
                             <span class="badge badge-xs badge-warning flex-shrink-0">Schedule</span>
                         </div>
-                        <span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>
+                        ${this._renderTimeDisplay(ex)}
                     </div>
                     <!-- Row 2: Error message -->
                     <div class="text-sm text-error leading-snug break-words">${ex.message}</div>
@@ -403,16 +513,7 @@ ${ex.traceString}</pre
                                   `
                                 : ''}
                         </div>
-                        ${hasTrace
-                            ? html`
-                                  <button
-                                      class="btn btn-xs btn-ghost text-base-content/40 flex-shrink-0"
-                                      @click=${() => this._toggleRow(id)}
-                                  >
-                                      ${open ? '▲ Trace' : '▼ Trace'}
-                                  </button>
-                              `
-                            : ''}
+                        ${this._renderRowAction(ex, id, hasTrace, open)}
                     </div>
                 </div>
                 ${open && hasTrace
@@ -440,7 +541,10 @@ ${ex.traceString}</pre
 
         if (this.error) return renderApiError(this.error, { compact: true, retry: this._load })
 
-        const isEmpty = this._items.length === 0
+        const displayItems = this._buildDisplayItems()
+        const isEmpty = displayItems.length === 0
+        const groupCount = displayItems.length
+        const loadedCount = displayItems.reduce((s, g) => s + (g._count || 1), 0)
 
         return html`
             <!-- Toolbar -->
@@ -457,6 +561,19 @@ ${ex.traceString}</pre
                     >
                         ${STATUS_OPTIONS.map(
                             o => html`<option value=${o.value} ?selected=${this._statusFilter === o.value}>${o.label}</option>`
+                        )}
+                    </select>
+                    <select
+                        class="select select-sm select-bordered text-xs w-auto"
+                        .value=${this._typeFilter}
+                        @change=${e => {
+                            this._typeFilter = e.target.value
+                            this._expandedGroups = new Set()
+                            this.expanded = new Set()
+                        }}
+                    >
+                        ${TYPE_OPTIONS.map(
+                            o => html`<option value=${o.value} ?selected=${this._typeFilter === o.value}>${o.label}</option>`
                         )}
                     </select>
                     <div class="join">
@@ -501,8 +618,8 @@ ${ex.traceString}</pre
                     ${isEmpty
                         ? ''
                         : html`<span class="text-sm text-base-content/60">
-                              ${this._items.length}
-                              ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
+                              ${groupCount} ${groupCount === 1 ? 'Gruppe' : 'Gruppen'}
+                              <span class="text-base-content/40">· ${loadedCount} ${loadedCount === 1 ? 'Exception' : 'Exceptions'}</span>
                           </span>`}
                     <button
                         class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
@@ -530,15 +647,7 @@ ${ex.traceString}</pre
                   </div>`
                 : html`
                       <!-- Exception cards -->
-                      <div class="flex flex-col gap-2">
-                          ${this._items.map((ex, idx) =>
-                              ex.type === 'schedule'
-                                  ? this._renderScheduleItem(ex, idx)
-                                  : ex.type === 'observer'
-                                    ? this._renderObserverItem(ex, idx)
-                                    : this._renderFlowItem(ex, idx)
-                          )}
-                      </div>
+                      <div class="flex flex-col gap-2">${displayItems.map((ex, idx) => this._renderWithGroup(ex, idx))}</div>
 
                       ${this._loadingMore
                           ? html`<div class="flex justify-center py-4">
