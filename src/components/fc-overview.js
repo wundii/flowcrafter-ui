@@ -2,28 +2,10 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
+import { skeletonOverview } from '../utils/skeleton.js'
+import { timeEl } from '../utils/time.js'
 import './fc-exception-chart.js'
 import './fc-flow-chart.js'
-
-function formatDateTime(iso) {
-    if (!iso) return ''
-    const d = new Date(iso)
-    const date = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
-    const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-    return `${date} ${time}`
-}
-
-function formatRelativeOrDate(iso) {
-    if (!iso) return ''
-    const diffMs = Date.now() - new Date(iso).getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    if (diffMs < 86400000) {
-        if (diffMins < 1) return 'gerade eben'
-        if (diffMins < 60) return `vor ${diffMins} Min.`
-        return `vor ${Math.floor(diffMins / 60)} Std.`
-    }
-    return formatDateTime(iso)
-}
 
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
@@ -248,7 +230,7 @@ export class FcOverview extends BaseElement {
                                                   <span class="text-[11px] font-semibold text-base-content truncate">${name}</span>
                                                   <span class="badge badge-xs badge-warning flex-shrink-0 opacity-70">${badgeText}</span>
                                                   <span class="text-[10px] text-base-content/40 flex-shrink-0 ml-auto"
-                                                      >${formatRelativeOrDate(flow.lastTerm)}</span
+                                                      >${timeEl(flow.lastTerm)}</span
                                                   >
                                               </div>
                                               <div class="text-[10px] text-base-content/40 truncate mt-0.5">${flow.flowType}</div>
@@ -310,7 +292,7 @@ export class FcOverview extends BaseElement {
                                                   <span class="text-[11px] font-semibold text-base-content truncate">${name}</span>
                                                   <span class="badge badge-xs ${badgeClass} flex-shrink-0 opacity-70"> ${badgeLabel} </span>
                                                   <span class="text-[10px] text-base-content/40 flex-shrink-0 ml-auto"
-                                                      >${formatRelativeOrDate(ex.time)}</span
+                                                      >${timeEl(ex.time)}</span
                                                   >
                                               </div>
                                               <div class="text-[10px] text-base-content/40 truncate mt-0.5">${ex.message}</div>
@@ -326,11 +308,7 @@ export class FcOverview extends BaseElement {
 
     render() {
         if (this._loading) {
-            return html`
-                <div class="flex justify-center py-16">
-                    <span class="loading loading-spinner loading-lg"></span>
-                </div>
-            `
+            return skeletonOverview()
         }
 
         if (this._error) {

@@ -2,12 +2,9 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
-
-function formatDate(iso) {
-    if (!iso) return '–'
-    const d = new Date(iso)
-    return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + d.toLocaleTimeString('de-DE')
-}
+import { skeletonTypeGrid } from '../utils/skeleton.js'
+import { timeEl } from '../utils/time.js'
+import './fc-tooltip.js'
 
 export class FcTypeList extends BaseElement {
     static properties = {
@@ -120,7 +117,9 @@ export class FcTypeList extends BaseElement {
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="font-bold text-sm leading-tight truncate" title="${schema.prefix}">${schema.prefix}</div>
-                            <div class="text-xs text-base-content/35 mt-1 font-mono">${formatDate(schema.lastTime)}</div>
+                            <div class="text-xs text-base-content/35 mt-1 font-mono">
+                                ${schema.lastTime ? timeEl(schema.lastTime) : '–'}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -238,46 +237,51 @@ export class FcTypeList extends BaseElement {
                           `}
                 </div>
                 <div class="flex items-center gap-1">
-                    <button
-                        class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
-                        title=${this._sortAsc ? 'A → Z' : 'Z → A'}
-                        @click=${() => (this._sortAsc = !this._sortAsc)}
-                    >
-                        <svg
-                            class="w-3.5 h-3.5 transition-transform ${this._sortAsc ? '' : 'rotate-180'}"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            viewBox="0 0 24 24"
-                        >
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9M3 12h5m4 0l4-4m0 0l4 4m-4-4v12" />
-                        </svg>
-                    </button>
-                    <button
-                        class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
-                        title="Neu laden"
-                        @click=${this._load}
-                    >
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                        </svg>
-                    </button>
+                    <fc-tooltip
+                        position="bottom"
+                        text=${this._sortAsc ? 'A → Z' : 'Z → A'}
+                        .content=${html`
+                            <button
+                                class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
+                                @click=${() => (this._sortAsc = !this._sortAsc)}
+                            >
+                                <svg
+                                    class="w-3.5 h-3.5 transition-transform ${this._sortAsc ? '' : 'rotate-180'}"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9M3 12h5m4 0l4-4m0 0l4 4m-4-4v12" />
+                                </svg>
+                            </button>
+                        `}
+                    ></fc-tooltip>
+                    <fc-tooltip
+                        position="bottom"
+                        text="Neu laden"
+                        .content=${html`
+                            <button
+                                class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
+                                @click=${() => this._load()}
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                </svg>
+                            </button>
+                        `}
+                    ></fc-tooltip>
                 </div>
             </div>
         `
     }
 
     render() {
-        if (this.loading)
-            return html`
-                <div class="flex justify-center py-16">
-                    <span class="loading loading-spinner loading-lg"></span>
-                </div>
-            `
+        if (this.loading) return skeletonTypeGrid()
 
         if (this.error) return renderApiError(this.error, { compact: true, retry: this._load })
 

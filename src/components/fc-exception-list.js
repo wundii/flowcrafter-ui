@@ -2,6 +2,9 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
+import { skeletonExceptionList } from '../utils/skeleton.js'
+import { timeEl } from '../utils/time.js'
+import './fc-tooltip.js'
 
 const PAGE_SIZE = 20
 const LOAD_MORE_COOLDOWN = 500
@@ -37,21 +40,6 @@ function formatTzOffset(date) {
 
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
-}
-
-function formatDate(iso) {
-    if (!iso) return ''
-    const diffMs = Date.now() - new Date(iso).getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    if (diffMs < 86400000) {
-        if (diffMins < 1) return 'gerade eben'
-        if (diffMins < 60) return `vor ${diffMins} Min.`
-        return `vor ${Math.floor(diffMins / 60)} Std.`
-    }
-    return new Date(iso).toLocaleString('de-DE', {
-        dateStyle: 'short',
-        timeStyle: 'medium',
-    })
 }
 
 function buildFingerprint(ex) {
@@ -361,11 +349,11 @@ export class FcExceptionList extends BaseElement {
             return html`
                 <div class="flex items-center gap-1.5 flex-shrink-0">
                     <span class="badge badge-xs badge-neutral">${ex._count}×</span>
-                    <span class="text-xs text-base-content/50">${formatDate(ex._lastTime)} – ${formatDate(ex._firstTime)}</span>
+                    <span class="text-xs text-base-content/50">${timeEl(ex._lastTime)} – ${timeEl(ex._firstTime)}</span>
                 </div>
             `
         }
-        return html`<span class="text-xs text-base-content/50 flex-shrink-0">${formatDate(ex.time)}</span>`
+        return html`<span class="text-xs text-base-content/50 flex-shrink-0">${timeEl(ex.time)}</span>`
     }
 
     _renderFlowItem(ex, idx) {
@@ -401,17 +389,21 @@ export class FcExceptionList extends BaseElement {
                                       </span>
                                   `
                                 : ''}
-                            <button
-                                class="font-mono text-primary/70 hover:text-primary flex-shrink-0"
-                                style="font-size:11px;"
-                                title="Flow ${ex.flowHash} öffnen"
-                                @click=${e => {
-                                    e.stopPropagation()
-                                    this._navigateToFlow(ex.flowHash)
-                                }}
-                            >
-                                ⤢ ${ex.flowHash}
-                            </button>
+                            <fc-tooltip
+                                text="Flow ${ex.flowHash} öffnen"
+                                .content=${html`
+                                    <button
+                                        class="font-mono text-primary/70 hover:text-primary flex-shrink-0"
+                                        style="font-size:11px;"
+                                        @click=${e => {
+                                            e.stopPropagation()
+                                            this._navigateToFlow(ex.flowHash)
+                                        }}
+                                    >
+                                        ⤢ ${ex.flowHash}
+                                    </button>
+                                `}
+                            ></fc-tooltip>
                         </div>
                         ${this._renderRowAction(ex, id, hasTrace, open)}
                     </div>
@@ -532,12 +524,7 @@ ${ex.traceString}</pre
     }
 
     render() {
-        if (this.loading)
-            return html`
-                <div class="flex justify-center py-16">
-                    <span class="loading loading-spinner loading-lg"></span>
-                </div>
-            `
+        if (this.loading) return skeletonExceptionList()
 
         if (this.error) return renderApiError(this.error, { compact: true, retry: this._load })
 
@@ -621,19 +608,24 @@ ${ex.traceString}</pre
                               ${groupCount} ${groupCount === 1 ? 'Gruppe' : 'Gruppen'}
                               <span class="text-base-content/40">· ${loadedCount} ${loadedCount === 1 ? 'Exception' : 'Exceptions'}</span>
                           </span>`}
-                    <button
-                        class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
-                        title="Neu laden"
-                        @click=${this._load}
-                    >
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                        </svg>
-                    </button>
+                    <fc-tooltip
+                        position="bottom"
+                        text="Neu laden"
+                        .content=${html`
+                            <button
+                                class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
+                                @click=${() => this._load()}
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                </svg>
+                            </button>
+                        `}
+                    ></fc-tooltip>
                 </div>
             </div>
 

@@ -4,6 +4,7 @@ import { api } from '../services/api.js'
 import { auth } from '../services/auth.js'
 import { connection } from '../services/connection.js'
 import { logoIcon } from '../assets/logo.js'
+import { router } from '../utils/router.js'
 import { theme } from '../services/theme.js'
 import './fc-exception-chart.js'
 import './fc-exception-list.js'
@@ -19,6 +20,7 @@ import './fc-schedule-list.js'
 import './fc-schema-list.js'
 import './fc-service-setup.js'
 import './fc-type-list.js'
+import './fc-tooltip.js'
 
 const TABS = ['overview', 'schemas', 'flows', 'exceptions', 'schedules', 'queues']
 const VERSION_MISMATCH_ACK = 'fc_version_mismatch_ack'
@@ -112,10 +114,32 @@ export class FcApp extends BaseElement {
         this._versionPatchDiffers = false
         this._serviceReady = false
         this._toolboxOpen = false
-        this.activeTab = 'overview'
-        this.selectedFlowHash = null
-        this.selectedPrefix = null
-        this.selectedRuntimeHash = null
+        const initial = router.parse()
+        this.activeTab = initial.tab
+        this.selectedFlowHash = initial.flowHash
+        this.selectedPrefix = initial.prefix
+        this.selectedRuntimeHash = initial.runtimeHash
+        this._syncingFromUrl = false
+    }
+
+    _routeState() {
+        return {
+            tab: this.activeTab,
+            prefix: this.selectedPrefix,
+            flowHash: this.selectedFlowHash,
+            runtimeHash: this.selectedRuntimeHash,
+        }
+    }
+
+    _applyRoute(next) {
+        this._syncingFromUrl = true
+        this.activeTab = next.tab
+        this.selectedPrefix = next.prefix
+        this.selectedFlowHash = next.flowHash
+        this.selectedRuntimeHash = next.runtimeHash
+        this.updateComplete.then(() => {
+            this._syncingFromUrl = false
+        })
     }
 
     async connectedCallback() {
@@ -126,6 +150,8 @@ export class FcApp extends BaseElement {
             }
         }
         document.addEventListener('click', this._onDocClick)
+        this._unsubscribeRouter = router.subscribe(state => this._applyRoute(state))
+        router.navigate(this._routeState(), { replace: true })
         if (auth.isAuthenticated()) {
             const s = await auth.status()
             this._authed = s.authenticated
@@ -206,9 +232,16 @@ export class FcApp extends BaseElement {
         super.disconnectedCallback()
         this._stopInfoPolling()
         document.removeEventListener('click', this._onDocClick)
+        this._unsubscribeRouter?.()
     }
 
     updated(changed) {
+        if (!this._syncingFromUrl) {
+            const routeKeys = ['activeTab', 'selectedPrefix', 'selectedFlowHash', 'selectedRuntimeHash']
+            if (routeKeys.some(k => changed.has(k))) {
+                router.navigate(this._routeState())
+            }
+        }
         if (changed.has('_serverOffline')) {
             const dialog = this.querySelector('#server-offline-modal')
             if (!dialog) return
@@ -895,82 +928,101 @@ export class FcApp extends BaseElement {
                         </div>
 
                         <!-- Theme toggle -->
-                        <label
-                            class="swap swap-rotate btn btn-ghost btn-sm btn-circle"
-                            title="${this._isDark ? 'Light Mode' : 'Dark Mode'}"
-                        >
-                            <input type="checkbox" .checked=${!this._isDark} @change=${this._onToggleTheme} />
-                            <!-- Sun (light mode icon) -->
-                            <svg class="swap-on w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                                <path
-                                    d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"
-                                />
-                            </svg>
-                            <!-- Moon (dark mode icon) -->
-                            <svg class="swap-off w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                                <path
-                                    d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z"
-                                />
-                            </svg>
-                        </label>
+                        <fc-tooltip
+                            position="bottom"
+                            text="${this._isDark ? 'Light Mode' : 'Dark Mode'}"
+                            .content=${html`
+                                <label class="swap swap-rotate btn btn-ghost btn-sm btn-circle">
+                                    <input type="checkbox" .checked=${!this._isDark} @change=${() => this._onToggleTheme()} />
+                                    <!-- Sun (light mode icon) -->
+                                    <svg class="swap-on w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                                        <path
+                                            d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"
+                                        />
+                                    </svg>
+                                    <!-- Moon (dark mode icon) -->
+                                    <svg class="swap-off w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                                        <path
+                                            d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z"
+                                        />
+                                    </svg>
+                                </label>
+                            `}
+                        ></fc-tooltip>
 
                         <!-- AI config -->
-                        <button
-                            class="hidden sm:flex btn btn-ghost btn-sm btn-circle"
-                            title="AI-Analyse konfigurieren"
-                            @click=${this._openAiModal}
-                        >
-                            <svg
-                                class="w-4 h-4 ${this._aiConfigured ? 'text-success' : 'text-base-content/50'}"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
-                                />
-                            </svg>
-                        </button>
+                        <fc-tooltip
+                            position="bottom"
+                            text="AI-Analyse konfigurieren"
+                            .content=${html`
+                                <button class="hidden sm:flex btn btn-ghost btn-sm btn-circle" @click=${() => this._openAiModal()}>
+                                    <svg
+                                        class="w-4 h-4 ${this._aiConfigured ? 'text-success' : 'text-base-content/50'}"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
+                                        />
+                                    </svg>
+                                </button>
+                            `}
+                        ></fc-tooltip>
 
                         <!-- Edit connection -->
-                        <button
-                            class="hidden sm:flex btn btn-ghost btn-sm btn-circle"
-                            title="Verbindung bearbeiten"
-                            @click=${this._onEditConnection}
-                        >
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"
-                                />
-                            </svg>
-                        </button>
+                        <fc-tooltip
+                            position="bottom"
+                            text="Verbindung bearbeiten"
+                            .content=${html`
+                                <button class="hidden sm:flex btn btn-ghost btn-sm btn-circle" @click=${() => this._onEditConnection()}>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"
+                                        />
+                                    </svg>
+                                </button>
+                            `}
+                        ></fc-tooltip>
 
                         <!-- Change password -->
-                        <button class="hidden sm:flex btn btn-ghost btn-sm btn-circle" title="Passwort ändern" @click=${this._openPwModal}>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"
-                                />
-                            </svg>
-                        </button>
+                        <fc-tooltip
+                            position="bottom"
+                            text="Passwort ändern"
+                            .content=${html`
+                                <button class="hidden sm:flex btn btn-ghost btn-sm btn-circle" @click=${() => this._openPwModal()}>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"
+                                        />
+                                    </svg>
+                                </button>
+                            `}
+                        ></fc-tooltip>
 
                         <!-- Logout -->
-                        <button class="btn btn-ghost btn-sm btn-circle" title="Abmelden" @click=${this._onLogout}>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"
-                                />
-                            </svg>
-                        </button>
+                        <fc-tooltip
+                            position="bottom"
+                            text="Abmelden"
+                            .content=${html`
+                                <button class="btn btn-ghost btn-sm btn-circle" @click=${() => this._onLogout()}>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"
+                                        />
+                                    </svg>
+                                </button>
+                            `}
+                        ></fc-tooltip>
                     </div>
                 </div>
 

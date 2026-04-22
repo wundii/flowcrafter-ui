@@ -2,6 +2,8 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
+import { skeletonQueueList } from '../utils/skeleton.js'
+import './fc-tooltip.js'
 
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
@@ -57,12 +59,7 @@ export class FcQueueList extends BaseElement {
     }
 
     render() {
-        if (this._loading)
-            return html`
-                <div class="flex justify-center py-16">
-                    <span class="loading loading-spinner loading-lg"></span>
-                </div>
-            `
+        if (this._loading) return skeletonQueueList()
 
         if (this._error) return renderApiError(this._error, { compact: true, retry: this._load })
 
@@ -74,19 +71,24 @@ export class FcQueueList extends BaseElement {
                 <span class="text-sm text-base-content/60">
                     ${isEmpty ? '' : html`<span class="font-semibold">${this._queues.length}</span> Einträge in der Queue`}
                 </span>
-                <button
-                    class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
-                    title="Neu laden"
-                    @click=${this._load}
-                >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                    </svg>
-                </button>
+                <fc-tooltip
+                    position="bottom"
+                    text="Neu laden"
+                    .content=${html`
+                        <button
+                            class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
+                            @click=${() => this._load()}
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                />
+                            </svg>
+                        </button>
+                    `}
+                ></fc-tooltip>
             </div>
 
             ${isEmpty
@@ -122,13 +124,17 @@ export class FcQueueList extends BaseElement {
                                           <div class="flex flex-col items-end justify-between gap-2 flex-shrink-0">
                                               ${item.flowHash
                                                   ? html`
-                                                        <button
-                                                            class="btn btn-xs btn-ghost font-mono text-primary/70 hover:text-primary"
-                                                            title="Flow ${item.flowHash} öffnen"
-                                                            @click=${() => this._navigateToFlow(item.flowHash)}
-                                                        >
-                                                            ⤢ ${item.flowHash.slice(0, 10)}…
-                                                        </button>
+                                                        <fc-tooltip
+                                                            text="Flow ${item.flowHash} öffnen"
+                                                            .content=${html`
+                                                                <button
+                                                                    class="btn btn-xs btn-ghost font-mono text-primary/70 hover:text-primary"
+                                                                    @click=${() => this._navigateToFlow(item.flowHash)}
+                                                                >
+                                                                    ⤢ ${item.flowHash.slice(0, 10)}…
+                                                                </button>
+                                                            `}
+                                                        ></fc-tooltip>
                                                     `
                                                   : ''}
                                               ${hasMessage

@@ -1,20 +1,18 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
-import { renderApiError } from '../utils/error.js'
-import { formatDuration } from '../utils/duration.js'
-import { buildRuns } from '../services/runs.js'
 import { buildRunDiff } from '../services/run-diff.js'
+import { buildRuns } from '../services/runs.js'
+import { formatAbsolute } from '../utils/time.js'
+import { formatDuration } from '../utils/duration.js'
+import { renderApiError } from '../utils/error.js'
+import { skeletonFlowDetail } from '../utils/skeleton.js'
 import './fc-flow-graph.js'
 import './fc-json-editor.js'
+import './fc-tooltip.js'
 
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
-}
-
-function formatDate(iso) {
-    if (!iso) return '—'
-    return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' })
 }
 
 export class FcFlowDetail extends BaseElement {
@@ -182,8 +180,8 @@ export class FcFlowDetail extends BaseElement {
 
     async _runAnalysis() {
         this._analysis = null
-        this._analysisAbortController = new AbortController()
         this._analysisAbortController?.abort()
+        this._analysisAbortController = new AbortController()
         this._analysisError = null
         this._analysisLoading = true
         this._analysisModel = null
@@ -271,6 +269,15 @@ export class FcFlowDetail extends BaseElement {
         }
     }
 
+    async _onShare() {
+        try {
+            await navigator.clipboard.writeText(window.location.href)
+            this._showToast('Link kopiert', 'success')
+        } catch {
+            this._showToast('Kopieren fehlgeschlagen', 'error')
+        }
+    }
+
     _showToast(message, type = 'success') {
         clearTimeout(this._toastTimer)
         this._toast = { message, type }
@@ -326,58 +333,107 @@ export class FcFlowDetail extends BaseElement {
                     <div class="ml-auto flex items-center gap-2">
                         ${this.flow
                             ? html`
-                                  <button
-                                      class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
-                                      title="${this.aiConfigured ? 'AI-Analyse starten' : 'AI nicht konfiguriert'}"
-                                      ?disabled=${!this.aiConfigured || this._analysisLoading}
-                                      @click=${this._onAnalyze}
-                                  >
-                                      ${this._analysisLoading
-                                          ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                          : html`<svg
-                                                class="w-3.5 h-3.5"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
-                                                />
-                                            </svg>`}
-                                  </button>
-                                  <button
-                                      class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
-                                      title="Raw JSON anzeigen"
-                                      @click=${() => {
-                                          this._rawModal = true
-                                          this.updateComplete.then(() => this.querySelector('#fc-raw-modal')?.showModal())
-                                      }}
-                                  >
-                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                          <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4-4 4M7 8l-4 4 4 4M14 4l-4 16" />
-                                      </svg>
-                                  </button>
+                                  <fc-tooltip
+                                      position="bottom"
+                                      text=${this.aiConfigured ? 'AI-Analyse starten' : 'AI nicht konfiguriert'}
+                                      .content=${html`
+                                          <button
+                                              class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
+                                              ?disabled=${!this.aiConfigured || this._analysisLoading}
+                                              @click=${() => this._onAnalyze()}
+                                          >
+                                              ${this._analysisLoading
+                                                  ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                                  : html`<svg
+                                                        class="w-3.5 h-3.5"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="2"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
+                                                        />
+                                                    </svg>`}
+                                          </button>
+                                      `}
+                                  ></fc-tooltip>
+                                  <fc-tooltip
+                                      position="bottom"
+                                      text="Link kopieren"
+                                      .content=${html`
+                                          <button
+                                              class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
+                                              @click=${() => this._onShare()}
+                                          >
+                                              <svg
+                                                  class="w-3.5 h-3.5"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"
+                                                  />
+                                              </svg>
+                                          </button>
+                                      `}
+                                  ></fc-tooltip>
+                                  <fc-tooltip
+                                      position="bottom"
+                                      text="Raw JSON anzeigen"
+                                      .content=${html`
+                                          <button
+                                              class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
+                                              @click=${() => {
+                                                  this._rawModal = true
+                                                  this.updateComplete.then(() => this.querySelector('#fc-raw-modal')?.showModal())
+                                              }}
+                                          >
+                                              <svg
+                                                  class="w-3.5 h-3.5"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M17 8l4 4-4 4M7 8l-4 4 4 4M14 4l-4 16"
+                                                  />
+                                              </svg>
+                                          </button>
+                                      `}
+                                  ></fc-tooltip>
                               `
                             : ''}
-                        <button
-                            class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
-                            title="Neu laden"
-                            @click=${async () => {
-                                await this._load(true)
-                                this._scrollToSelected()
-                            }}
-                        >
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                />
-                            </svg>
-                        </button>
+                        <fc-tooltip
+                            position="bottom"
+                            text="Neu laden"
+                            .content=${html`
+                                <button
+                                    class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
+                                    @click=${async () => {
+                                        await this._load(true)
+                                        this._scrollToSelected()
+                                    }}
+                                >
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                        />
+                                    </svg>
+                                </button>
+                            `}
+                        ></fc-tooltip>
                     </div>
                 </div>
 
@@ -430,22 +486,26 @@ export class FcFlowDetail extends BaseElement {
                                               </div>
                                           </div>
                                           <div class="flex items-center gap-2">
-                                              <button
-                                                  class="btn btn-ghost btn-sm"
-                                                  title="JSON kopieren"
-                                                  @click=${() => navigator.clipboard.writeText(JSON.stringify(this.flow, null, 2))}
-                                              >
-                                                  <svg
-                                                      class="w-4 h-4"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      stroke-width="2"
-                                                      viewBox="0 0 24 24"
-                                                  >
-                                                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
-                                                  </svg>
-                                              </button>
+                                              <fc-tooltip
+                                                  text="JSON kopieren"
+                                                  .content=${html`
+                                                      <button
+                                                          class="btn btn-ghost btn-sm"
+                                                          @click=${() => navigator.clipboard.writeText(JSON.stringify(this.flow, null, 2))}
+                                                      >
+                                                          <svg
+                                                              class="w-4 h-4"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              stroke-width="2"
+                                                              viewBox="0 0 24 24"
+                                                          >
+                                                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                                          </svg>
+                                                      </button>
+                                                  `}
+                                              ></fc-tooltip>
                                               <button
                                                   class="btn btn-ghost btn-sm btn-square btn-circle"
                                                   @click=${() => this.querySelector('#fc-raw-modal')?.close()}
@@ -476,13 +536,7 @@ export class FcFlowDetail extends BaseElement {
 
                 <!-- Analysis Modal -->
                 ${this._renderAnalysisModal()}
-                ${this.loading
-                    ? html`<div class="flex justify-center py-16">
-                          <span class="loading loading-spinner loading-lg"></span>
-                      </div>`
-                    : this.error
-                      ? renderApiError(this.error)
-                      : this._renderDetail()}
+                ${this.loading ? skeletonFlowDetail() : this.error ? renderApiError(this.error) : this._renderDetail()}
             </div>
         `
     }
@@ -526,7 +580,7 @@ export class FcFlowDetail extends BaseElement {
                         </div>
                         <div class="flex flex-col gap-1">
                             <span class="text-[10px] uppercase tracking-wider text-base-content/40 font-semibold">Erstellt</span>
-                            <span class="text-sm">${formatDate(f.time)}</span>
+                            <span class="text-sm">${formatAbsolute(f.time)}</span>
                         </div>
                         <div class="flex flex-col gap-1">
                             <span class="text-[10px] uppercase tracking-wider text-base-content/40 font-semibold">Status</span>
@@ -550,16 +604,20 @@ export class FcFlowDetail extends BaseElement {
                     </div>
                     <div class="mt-2 pt-2 border-t border-base-content/5 flex items-center gap-1.5">
                         <span class="text-xs font-mono text-base-content/35 truncate">${f.flowHash}</span>
-                        <button
-                            class="btn btn-ghost btn-xs px-1 text-base-content/25 hover:text-base-content/70"
-                            title="Hash kopieren"
-                            @click=${() => navigator.clipboard.writeText(f.flowHash)}
-                        >
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
-                            </svg>
-                        </button>
+                        <fc-tooltip
+                            text="Hash kopieren"
+                            .content=${html`
+                                <button
+                                    class="btn btn-ghost btn-xs px-1 text-base-content/25 hover:text-base-content/70"
+                                    @click=${() => navigator.clipboard.writeText(f.flowHash)}
+                                >
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                    </svg>
+                                </button>
+                            `}
+                        ></fc-tooltip>
                     </div>
                 </div>
             </div>
@@ -679,20 +737,30 @@ export class FcFlowDetail extends BaseElement {
                                           </div>
                                       </div>
                                       <div class="flex items-center gap-1">
-                                          <button
-                                              class="btn btn-ghost btn-sm btn-square btn-circle"
-                                              title="Neu analysieren"
-                                              ?disabled=${this._analysisLoading}
-                                              @click=${this._runAnalysis}
-                                          >
-                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                  <path
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round"
-                                                      d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M21.015 4.356v4.992"
-                                                  />
-                                              </svg>
-                                          </button>
+                                          <fc-tooltip
+                                              text="Neu analysieren"
+                                              .content=${html`
+                                                  <button
+                                                      class="btn btn-ghost btn-sm btn-square btn-circle"
+                                                      ?disabled=${this._analysisLoading}
+                                                      @click=${() => this._runAnalysis()}
+                                                  >
+                                                      <svg
+                                                          class="w-4 h-4"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M21.015 4.356v4.992"
+                                                          />
+                                                      </svg>
+                                                  </button>
+                                              `}
+                                          ></fc-tooltip>
                                           <button
                                               class="btn btn-ghost btn-sm btn-square btn-circle"
                                               @click=${this._maybeCloseAnalysisModal}
@@ -1388,21 +1456,25 @@ ${JSON.stringify(v, null, 2)}</pre
                                     </span>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    <span class="text-xs text-base-content/40 font-mono">${formatDate(run.time)}</span>
+                                    <span class="text-xs text-base-content/40 font-mono">${formatAbsolute(run.time)}</span>
                                     <span class="text-xs text-base-content/30 font-mono">(${formatDuration(run.duration)})</span>
-                                    <button
-                                        class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
-                                        title="Runtime-Hash kopieren"
-                                        @click=${e => {
-                                            e.stopPropagation()
-                                            navigator.clipboard.writeText(run.runId)
-                                        }}
-                                    >
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
-                                        </svg>
-                                    </button>
+                                    <fc-tooltip
+                                        text="Runtime-Hash kopieren"
+                                        .content=${html`
+                                            <button
+                                                class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
+                                                @click=${e => {
+                                                    e.stopPropagation()
+                                                    navigator.clipboard.writeText(run.runId)
+                                                }}
+                                            >
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                                </svg>
+                                            </button>
+                                        `}
+                                    ></fc-tooltip>
                                 </div>
                             </div>
                         `

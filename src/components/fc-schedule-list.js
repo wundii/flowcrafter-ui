@@ -2,7 +2,9 @@ import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
+import { skeletonScheduleGrid } from '../utils/skeleton.js'
 import './fc-source-viewer.js'
+import './fc-tooltip.js'
 
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
@@ -237,20 +239,24 @@ export class FcScheduleList extends BaseElement {
 
                 <!-- Footer -->
                 <div class="px-4 py-2 border-t border-base-300/50 flex justify-end gap-1">
-                    <button
-                        class="btn btn-xs btn-ghost text-base-content/40 hover:text-success gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
-                        title=${inactive ? 'Schedule ist inaktiv' : 'Schedule manuell starten'}
-                        @click=${() => this._askRun(item.className, item.name)}
-                    >
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
-                            />
-                        </svg>
-                        Start
-                    </button>
+                    <fc-tooltip
+                        text=${inactive ? 'Schedule ist inaktiv' : 'Schedule manuell starten'}
+                        .content=${html`
+                            <button
+                                class="btn btn-xs btn-ghost text-base-content/40 hover:text-success gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
+                                @click=${() => this._askRun(item.className, item.name)}
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+                                    />
+                                </svg>
+                                Start
+                            </button>
+                        `}
+                    ></fc-tooltip>
                     <button
                         class="btn btn-xs btn-ghost ${inactive
                             ? 'text-base-content/20 hover:text-primary/40'
@@ -351,19 +357,24 @@ export class FcScheduleList extends BaseElement {
                     <span class="text-sm text-base-content/60">
                         ${isEmpty ? '' : html`<span class="font-semibold">${this._schedules.length}</span> Schedule(s)`}
                     </span>
-                    <button
-                        class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
-                        title="Neu laden"
-                        @click=${this._load}
-                    >
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                        </svg>
-                    </button>
+                    <fc-tooltip
+                        position="bottom"
+                        text="Neu laden"
+                        .content=${html`
+                            <button
+                                class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
+                                @click=${() => this._load()}
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                </svg>
+                            </button>
+                        `}
+                    ></fc-tooltip>
                 </div>
             </div>
 
@@ -424,12 +435,7 @@ export class FcScheduleList extends BaseElement {
     }
 
     render() {
-        if (this._loading)
-            return html`
-                <div class="flex justify-center py-16">
-                    <span class="loading loading-spinner loading-lg"></span>
-                </div>
-            `
+        if (this._loading) return skeletonScheduleGrid()
 
         if (this._error) return renderApiError(this._error, { compact: true, retry: this._load })
 

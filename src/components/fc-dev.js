@@ -9,6 +9,7 @@ import './fc-flow-graph.js'
 import './fc-info-box.js'
 import './fc-json-editor.js'
 import './fc-source-viewer.js'
+import './fc-tooltip.js'
 
 const devModeTooltipContent = () => html`
     <div class="space-y-1.5 text-xs text-base-content/70">
@@ -615,25 +616,48 @@ export class FcDev extends BaseElement {
                     ${sortedGroups.length > 0
                         ? html`
                               <div class="flex items-center gap-0.5 shrink-0">
-                                  <button
-                                      class="btn btn-ghost btn-xs btn-circle"
-                                      title="Alle aufklappen"
-                                      @click=${() => (this._collapsedGroups = new Set())}
-                                  >
-                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                      </svg>
-                                  </button>
-                                  <button
-                                      class="btn btn-ghost btn-xs btn-circle"
-                                      title="Alle zuklappen"
-                                      @click=${() =>
-                                          (this._collapsedGroups = new Set([...sortedGroups.map(([name]) => name), '__ungrouped__']))}
-                                  >
-                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                          <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
-                                      </svg>
-                                  </button>
+                                  <fc-tooltip
+                                      text="Alle aufklappen"
+                                      .content=${html`
+                                          <button
+                                              class="btn btn-ghost btn-xs btn-circle"
+                                              @click=${() => (this._collapsedGroups = new Set())}
+                                          >
+                                              <svg
+                                                  class="w-3.5 h-3.5"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                              </svg>
+                                          </button>
+                                      `}
+                                  ></fc-tooltip>
+                                  <fc-tooltip
+                                      text="Alle zuklappen"
+                                      .content=${html`
+                                          <button
+                                              class="btn btn-ghost btn-xs btn-circle"
+                                              @click=${() =>
+                                                  (this._collapsedGroups = new Set([
+                                                      ...sortedGroups.map(([name]) => name),
+                                                      '__ungrouped__',
+                                                  ]))}
+                                          >
+                                              <svg
+                                                  class="w-3.5 h-3.5"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                              </svg>
+                                          </button>
+                                      `}
+                                  ></fc-tooltip>
                               </div>
                           `
                         : ''}
@@ -1070,46 +1094,60 @@ export class FcDev extends BaseElement {
                                                 ${durLabel ? html`<span class="text-base-content/40 font-mono">${durLabel}</span>` : ''}
                                             </div>
                                             <div class="flex items-center gap-1">
-                                                <button
-                                                    class="btn btn-ghost btn-xs btn-circle"
-                                                    title="Raw JSON"
-                                                    @click=${() => {
-                                                        this._devRawModal = true
-                                                        this.updateComplete.then(() => this.querySelector('#fc-dev-raw-modal')?.showModal())
-                                                    }}
-                                                >
-                                                    <svg
-                                                        class="w-3.5 h-3.5"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        stroke-width="2"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path
-                                                            stroke-linecap="round"
-                                                            stroke-linejoin="round"
-                                                            d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
-                                                        />
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    class="btn btn-ghost btn-xs btn-circle"
-                                                    title="Schema-Ansicht"
-                                                    @click=${() => {
-                                                        this._lastRunFlow = null
-                                                        this._lastRunMemory = null
-                                                    }}
-                                                >
-                                                    <svg
-                                                        class="w-3.5 h-3.5"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        stroke-width="2"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                </button>
+                                                <fc-tooltip
+                                                    text="Raw JSON"
+                                                    .content=${html`
+                                                        <button
+                                                            class="btn btn-ghost btn-xs btn-circle"
+                                                            @click=${() => {
+                                                                this._devRawModal = true
+                                                                this.updateComplete.then(() =>
+                                                                    this.querySelector('#fc-dev-raw-modal')?.showModal()
+                                                                )
+                                                            }}
+                                                        >
+                                                            <svg
+                                                                class="w-3.5 h-3.5"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                stroke-width="2"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    stroke-linecap="round"
+                                                                    stroke-linejoin="round"
+                                                                    d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
+                                                                />
+                                                            </svg>
+                                                        </button>
+                                                    `}
+                                                ></fc-tooltip>
+                                                <fc-tooltip
+                                                    text="Schema-Ansicht"
+                                                    .content=${html`
+                                                        <button
+                                                            class="btn btn-ghost btn-xs btn-circle"
+                                                            @click=${() => {
+                                                                this._lastRunFlow = null
+                                                                this._lastRunMemory = null
+                                                            }}
+                                                        >
+                                                            <svg
+                                                                class="w-3.5 h-3.5"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                stroke-width="2"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    stroke-linecap="round"
+                                                                    stroke-linejoin="round"
+                                                                    d="M6 18L18 6M6 6l12 12"
+                                                                />
+                                                            </svg>
+                                                        </button>
+                                                    `}
+                                                ></fc-tooltip>
                                             </div>
                                         </div>
                                     `
@@ -1248,38 +1286,58 @@ export class FcDev extends BaseElement {
                             ${this._flows.length} lokale Flow${this._flows.length !== 1 ? 's' : ''}
                         </span>
                         <div class="flex items-center gap-0.5">
-                            <button
-                                class="btn btn-xs gap-1 ${this._devImport ? 'btn-success btn-outline' : 'btn-ghost text-base-content/50'}"
-                                title="${this._devImport
-                                    ? `Schema Import aktiv\n${this._devImport.sourceUrl}\n${new Date(this._devImport.importedAt).toLocaleString('de-DE')}\n${this._devImport.schemaCount} Schemas · ${this._devImport.messageSourceCount ?? 0} Message Sources`
-                                    : 'Schema Import'}"
-                                @click=${() => this.querySelector('#fc-dev-import-modal')?.showModal()}
-                            >
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
-                                    />
-                                </svg>
-                                <span class="text-[10px]">Schema Import</span>
-                            </button>
-                            <button
-                                class="btn btn-xs btn-ghost btn-circle"
-                                title="Neu laden"
-                                @click=${async () => {
-                                    await this._load()
-                                    if (this._selected) this._selectFlow(this._selected)
-                                }}
-                            >
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                    />
-                                </svg>
-                            </button>
+                            <fc-tooltip
+                                position="bottom"
+                                .text=${this._devImport
+                                    ? html`<div class="text-left">
+                                          <div>Schema Import aktiv</div>
+                                          <div class="font-mono">${this._devImport.sourceUrl}</div>
+                                          <div>${new Date(this._devImport.importedAt).toLocaleString('de-DE')}</div>
+                                          <div>
+                                              ${this._devImport.schemaCount} Schemas · ${this._devImport.messageSourceCount ?? 0} Message
+                                              Sources
+                                          </div>
+                                      </div>`
+                                    : 'Schema Import'}
+                                .content=${html`
+                                    <button
+                                        class="btn btn-xs gap-1 ${this._devImport
+                                            ? 'btn-success btn-outline'
+                                            : 'btn-ghost text-base-content/50'}"
+                                        @click=${() => this.querySelector('#fc-dev-import-modal')?.showModal()}
+                                    >
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
+                                            />
+                                        </svg>
+                                        <span class="text-[10px]">Schema Import</span>
+                                    </button>
+                                `}
+                            ></fc-tooltip>
+                            <fc-tooltip
+                                position="bottom"
+                                text="Neu laden"
+                                .content=${html`
+                                    <button
+                                        class="btn btn-xs btn-ghost btn-circle"
+                                        @click=${async () => {
+                                            await this._load()
+                                            if (this._selected) this._selectFlow(this._selected)
+                                        }}
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                            />
+                                        </svg>
+                                    </button>
+                                `}
+                            ></fc-tooltip>
                         </div>
                     </div>
                     <!-- Sidebar content -->
@@ -1344,28 +1402,32 @@ export class FcDev extends BaseElement {
                                             ${shortClass(this._initMessageClass(this._detail?.schema))}
                                         </div>
                                     </div>
-                                    <button
-                                        class="btn btn-xs btn-ghost btn-circle shrink-0"
-                                        title="Init-Message neu laden"
-                                        ?disabled=${this._runModalLoading}
-                                        @click=${() => this._loadRunModalData()}
-                                    >
-                                        ${this._runModalLoading
-                                            ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                            : html`<svg
-                                                  class="w-3.5 h-3.5"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  stroke-width="2"
-                                                  viewBox="0 0 24 24"
-                                              >
-                                                  <path
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round"
-                                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                                  />
-                                              </svg>`}
-                                    </button>
+                                    <fc-tooltip
+                                        text="Init-Message neu laden"
+                                        .content=${html`
+                                            <button
+                                                class="btn btn-xs btn-ghost btn-circle shrink-0"
+                                                ?disabled=${this._runModalLoading}
+                                                @click=${() => this._loadRunModalData()}
+                                            >
+                                                ${this._runModalLoading
+                                                    ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                                    : html`<svg
+                                                          class="w-3.5 h-3.5"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                                          />
+                                                      </svg>`}
+                                            </button>
+                                        `}
+                                    ></fc-tooltip>
                                 </div>
                             </div>
                             <!-- Property list -->
@@ -1426,48 +1488,56 @@ export class FcDev extends BaseElement {
                                                   >${shortClass(this._initMessageClass(this._detail?.schema))}</span
                                               >
                                               <div class="flex items-center gap-0.5 ml-auto">
-                                                  <button
-                                                      class="btn btn-xs btn-ghost btn-circle"
-                                                      title="Inhalt kopieren"
-                                                      @click=${() => navigator.clipboard.writeText(this._runPayload)}
-                                                  >
-                                                      <svg
-                                                          class="w-3.5 h-3.5"
-                                                          fill="none"
-                                                          stroke="currentColor"
-                                                          stroke-width="2"
-                                                          viewBox="0 0 24 24"
-                                                      >
-                                                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
-                                                      </svg>
-                                                  </button>
-                                                  <button
-                                                      class="btn btn-xs btn-ghost btn-circle"
-                                                      title="Aus Zwischenablage einfügen"
-                                                      @click=${async () => {
-                                                          try {
-                                                              const text = await navigator.clipboard.readText()
-                                                              this._runPayload = text
-                                                          } catch {
-                                                              // Clipboard-Zugriff verweigert
-                                                          }
-                                                      }}
-                                                  >
-                                                      <svg
-                                                          class="w-3.5 h-3.5"
-                                                          fill="none"
-                                                          stroke="currentColor"
-                                                          stroke-width="2"
-                                                          viewBox="0 0 24 24"
-                                                      >
-                                                          <path
-                                                              stroke-linecap="round"
-                                                              stroke-linejoin="round"
-                                                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                                                          />
-                                                      </svg>
-                                                  </button>
+                                                  <fc-tooltip
+                                                      text="Inhalt kopieren"
+                                                      .content=${html`
+                                                          <button
+                                                              class="btn btn-xs btn-ghost btn-circle"
+                                                              @click=${() => navigator.clipboard.writeText(this._runPayload)}
+                                                          >
+                                                              <svg
+                                                                  class="w-3.5 h-3.5"
+                                                                  fill="none"
+                                                                  stroke="currentColor"
+                                                                  stroke-width="2"
+                                                                  viewBox="0 0 24 24"
+                                                              >
+                                                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                                              </svg>
+                                                          </button>
+                                                      `}
+                                                  ></fc-tooltip>
+                                                  <fc-tooltip
+                                                      text="Aus Zwischenablage einfügen"
+                                                      .content=${html`
+                                                          <button
+                                                              class="btn btn-xs btn-ghost btn-circle"
+                                                              @click=${async () => {
+                                                                  try {
+                                                                      const text = await navigator.clipboard.readText()
+                                                                      this._runPayload = text
+                                                                  } catch {
+                                                                      // Clipboard-Zugriff verweigert
+                                                                  }
+                                                              }}
+                                                          >
+                                                              <svg
+                                                                  class="w-3.5 h-3.5"
+                                                                  fill="none"
+                                                                  stroke="currentColor"
+                                                                  stroke-width="2"
+                                                                  viewBox="0 0 24 24"
+                                                              >
+                                                                  <path
+                                                                      stroke-linecap="round"
+                                                                      stroke-linejoin="round"
+                                                                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                                                                  />
+                                                              </svg>
+                                                          </button>
+                                                      `}
+                                                  ></fc-tooltip>
                                               </div>
                                           </div>
                                           <fc-json-editor
@@ -1810,16 +1880,27 @@ export class FcDev extends BaseElement {
                                           </div>
                                       </div>
                                       <div class="flex items-center gap-2">
-                                          <button
-                                              class="btn btn-ghost btn-sm"
-                                              title="JSON kopieren"
-                                              @click=${() => navigator.clipboard.writeText(JSON.stringify(this._lastRunFlow, null, 2))}
-                                          >
-                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
-                                              </svg>
-                                          </button>
+                                          <fc-tooltip
+                                              text="JSON kopieren"
+                                              .content=${html`
+                                                  <button
+                                                      class="btn btn-ghost btn-sm"
+                                                      @click=${() =>
+                                                          navigator.clipboard.writeText(JSON.stringify(this._lastRunFlow, null, 2))}
+                                                  >
+                                                      <svg
+                                                          class="w-4 h-4"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                                      </svg>
+                                                  </button>
+                                              `}
+                                          ></fc-tooltip>
                                           <button
                                               class="btn btn-ghost btn-sm btn-square btn-circle"
                                               @click=${() => this.querySelector('#fc-dev-raw-modal')?.close()}

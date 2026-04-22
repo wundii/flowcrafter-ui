@@ -1,8 +1,10 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
+import { timeEl } from '../utils/time.js'
 import './fc-flow-graph.js'
 import './fc-source-viewer.js'
+import './fc-tooltip.js'
 
 function shortName(fqcn) {
     return fqcn.split('\\').pop()
@@ -12,11 +14,6 @@ function namespacePart(fqcn) {
     const parts = fqcn.split('\\')
     if (parts.length <= 1) return ''
     return parts.slice(0, -1).join('\\') + '\\'
-}
-
-function formatDate(iso) {
-    if (!iso) return '—'
-    return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' })
 }
 
 const ENUM_BADGE = { init: 'badge-info', stub: 'badge-success' }
@@ -296,36 +293,50 @@ export class FcSchemaList extends BaseElement {
                             >${filtered.length} / ${this._flows.length}</span
                         >
                         <div class="flex items-center gap-1">
-                            <button
-                                class="btn btn-sm btn-ghost btn-circle border border-base-content/20 hover:border-base-content/40"
-                                title=${this._sortAsc ? 'A → Z' : 'Z → A'}
-                                @click=${() => {
-                                    this._sortAsc = !this._sortAsc
-                                }}
-                            >
-                                <svg
-                                    class="w-3.5 h-3.5 transition-transform ${this._sortAsc ? '' : 'rotate-180'}"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9M3 12h5m4 0l4-4m0 0l4 4m-4-4v12" />
-                                </svg>
-                            </button>
-                            <button
-                                class="btn btn-sm btn-ghost btn-circle border border-base-content/20 hover:border-base-content/40"
-                                title="Neu laden"
-                                @click=${this._load}
-                            >
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                    />
-                                </svg>
-                            </button>
+                            <fc-tooltip
+                                position="bottom"
+                                text=${this._sortAsc ? 'A → Z' : 'Z → A'}
+                                .content=${html`
+                                    <button
+                                        class="btn btn-sm btn-ghost btn-circle border border-base-content/20 hover:border-base-content/40"
+                                        @click=${() => {
+                                            this._sortAsc = !this._sortAsc
+                                        }}
+                                    >
+                                        <svg
+                                            class="w-3.5 h-3.5 transition-transform ${this._sortAsc ? '' : 'rotate-180'}"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M3 4h13M3 8h9M3 12h5m4 0l4-4m0 0l4 4m-4-4v12"
+                                            />
+                                        </svg>
+                                    </button>
+                                `}
+                            ></fc-tooltip>
+                            <fc-tooltip
+                                position="bottom"
+                                text="Neu laden"
+                                .content=${html`
+                                    <button
+                                        class="btn btn-sm btn-ghost btn-circle border border-base-content/20 hover:border-base-content/40"
+                                        @click=${() => this._load()}
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                            />
+                                        </svg>
+                                    </button>
+                                `}
+                            ></fc-tooltip>
                         </div>
                     </div>
                 </div>
@@ -434,19 +445,29 @@ export class FcSchemaList extends BaseElement {
                                 </div>
                                 <div class="flex items-center gap-1">
                                     ${(this._selectedVersion?.source ?? this._stubSourceFallback) !== null
-                                        ? html`<button
-                                              class="btn btn-sm btn-ghost btn-square btn-circle text-base-content/30 hover:text-base-content/70"
-                                              title="Quellcode kopieren"
-                                              @click=${() =>
-                                                  navigator.clipboard.writeText(
-                                                      this._selectedVersion?.source ?? this._stubSourceFallback ?? ''
-                                                  )}
-                                          >
-                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
-                                              </svg>
-                                          </button>`
+                                        ? html`<fc-tooltip
+                                              text="Quellcode kopieren"
+                                              .content=${html`
+                                                  <button
+                                                      class="btn btn-sm btn-ghost btn-square btn-circle text-base-content/30 hover:text-base-content/70"
+                                                      @click=${() =>
+                                                          navigator.clipboard.writeText(
+                                                              this._selectedVersion?.source ?? this._stubSourceFallback ?? ''
+                                                          )}
+                                                  >
+                                                      <svg
+                                                          class="w-4 h-4"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                                      </svg>
+                                                  </button>
+                                              `}
+                                          ></fc-tooltip>`
                                         : ''}
                                     <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${() => this._closeSourceModal()}>
                                         ✕
@@ -486,7 +507,9 @@ export class FcSchemaList extends BaseElement {
                                                                     >archiviert</span
                                                                 >`}
                                                       </div>
-                                                      <div class="text-xs text-base-content/40 font-mono">${formatDate(v.time)}</div>
+                                                      <div class="text-xs text-base-content/40 font-mono">
+                                                          ${v.time ? timeEl(v.time) : '—'}
+                                                      </div>
                                                   </div>
                                               `
                                           })}
