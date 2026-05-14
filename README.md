@@ -36,7 +36,7 @@ Das UI kommuniziert mit **zwei Backends**:
 | Backend         | Port           | Zweck                                                                                                                                   |
 | --------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Node.js-Server  | `3000`         | Auth, Verbindungskonfiguration, KI-Analyse — im Dev via Vite-Proxy auf `/api/auth`, `/api/connection`, `/api/ai-config`, `/api/analyze` |
-| FlowCrafter-API | konfigurierbar | Flow-Daten, Exceptions, Queues, Schemas, Stub-Sourcen — URL wird im Node-Backend gespeichert                                            |
+| FlowCrafter-API | konfigurierbar | Flow-Daten, Exceptions, Queues, Schemas, Step-Sourcen — URL wird im Node-Backend gespeichert                                            |
 
 **Auth-Flow:**
 
@@ -230,6 +230,6 @@ In der UI: **AI-Einstellungen → Ollama (lokal) → URL eingeben → Speichern*
 #### Analyse-Ablauf
 
 1. Flow-Daten und (optional) ein spezifischer Run werden an das Modell gesendet
-2. Das Modell kann per Tool-Use PHP-Stub-Sourcecode aus dem FlowCrafter-Backend nachladen
-3. Ergebnis: strukturierte Findings mit Kategorie, Schweregrad und betroffenem Stub
+2. Das Modell kann per Tool-Use PHP-Step-Sourcecode aus dem FlowCrafter-Backend nachladen
+3. Ergebnis: strukturierte Findings mit Kategorie, Schweregrad und betroffenem Step
 4. Token-Verbrauch wird im Ergebnis-Modal angezeigt (Input · Output · Gesamt)

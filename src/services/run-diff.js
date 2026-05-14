@@ -1,10 +1,10 @@
 const short = fqn => fqn?.split('\\').pop() ?? fqn
 
-function getStubStatus(src, messages, exceptions, results) {
-    if (exceptions.some(e => e.stubSource === src)) return 'error'
-    const stubResults = results.filter(r => r.stubSource === src)
-    if (stubResults.length > 0 && stubResults.some(r => r.result === false)) return 'rejected'
-    const msgs = messages.filter(m => m.stubSource === src)
+function getStepStatus(src, messages, exceptions, results) {
+    if (exceptions.some(e => e.stepSource === src)) return 'error'
+    const stepResults = results.filter(r => r.stepSource === src)
+    if (stepResults.length > 0 && stepResults.some(r => r.result === false)) return 'rejected'
+    const msgs = messages.filter(m => m.stepSource === src)
     if (msgs.some(m => m.messageType === 'finish')) return 'success'
     if (msgs.some(m => m.messageType === 'process')) return 'running'
     if (msgs.some(m => m.messageType === 'wait')) return 'waiting'
@@ -43,23 +43,23 @@ export function diffJson(objA, objB) {
     return flattenDiff(objA, objB)
 }
 
-export function buildRunDiff(runA, runB, stubs) {
-    if (!runA || !runB || !stubs?.length) return []
+export function buildRunDiff(runA, runB, steps) {
+    if (!runA || !runB || !steps?.length) return []
 
-    return stubs.map(stub => {
-        const src = stub.source
-        const statusA = getStubStatus(src, runA.messages, runA.exceptions, runA.results)
-        const statusB = getStubStatus(src, runB.messages, runB.exceptions, runB.results)
+    return steps.map(step => {
+        const src = step.source
+        const statusA = getStepStatus(src, runA.messages, runA.exceptions, runA.results)
+        const statusB = getStepStatus(src, runB.messages, runB.exceptions, runB.results)
 
-        const msgSourcesA = [...new Set(runA.messages.filter(m => m.stubSource === src).map(m => m.messageSource))]
-        const msgSourcesB = [...new Set(runB.messages.filter(m => m.stubSource === src).map(m => m.messageSource))]
+        const msgSourcesA = [...new Set(runA.messages.filter(m => m.stepSource === src).map(m => m.messageSource))]
+        const msgSourcesB = [...new Set(runB.messages.filter(m => m.stepSource === src).map(m => m.messageSource))]
         const allMsgSources = [...new Set([...msgSourcesA, ...msgSourcesB])]
 
-        const incomingTypes = new Set(stub.messages ?? [])
+        const incomingTypes = new Set(step.messages ?? [])
 
         const messageDiffs = allMsgSources.map(msgSource => {
-            const msgA = runA.messages.find(m => m.stubSource === src && m.messageSource === msgSource)
-            const msgB = runB.messages.find(m => m.stubSource === src && m.messageSource === msgSource)
+            const msgA = runA.messages.find(m => m.stepSource === src && m.messageSource === msgSource)
+            const msgB = runB.messages.find(m => m.stepSource === src && m.messageSource === msgSource)
             return {
                 messageSource: msgSource,
                 shortName: short(msgSource),
@@ -71,11 +71,11 @@ export function buildRunDiff(runA, runB, stubs) {
             }
         })
 
-        const excsA = runA.exceptions.filter(e => e.stubSource === src)
-        const excsB = runB.exceptions.filter(e => e.stubSource === src)
+        const excsA = runA.exceptions.filter(e => e.stepSource === src)
+        const excsB = runB.exceptions.filter(e => e.stepSource === src)
 
-        const resultA = runA.results.find(r => r.stubSource === src)
-        const resultB = runB.results.find(r => r.stubSource === src)
+        const resultA = runA.results.find(r => r.stepSource === src)
+        const resultB = runB.results.find(r => r.stepSource === src)
 
         const hasChanges =
             statusA !== statusB ||

@@ -89,10 +89,10 @@ export const api = {
      * @param {string} flowHash
      * @param {string} messageSource  fully-qualified class name
      * @param {object} message        plain object (will be sent as JSON)
-     * @param {string[]} [includeStubs]  stub sources to include (empty = all)
+     * @param {string[]} [includeSteps]  step sources to include (empty = all)
      */
-    runFlow(flowHash, messageSource, message, includeStubs = []) {
-        return postJson('/api/flow/flow-run', { flowHash, messageSource, message, includeStubs })
+    runFlow(flowHash, messageSource, message, includeSteps = []) {
+        return postJson('/api/flow/flow-run', { flowHash, messageSource, message, includeSteps })
     },
 
     /** @param {{ sort?: 'asc'|'desc' }} [opts] */
@@ -101,8 +101,8 @@ export const api = {
         return fetchJson(`/api/queue/queue-list?${p}`)
     },
 
-    queueFlow(flowHash, messageSource, message, includeStubs = []) {
-        return postJson('/api/queue/enqueue', { flowHash, messageSource, message, includeStubs })
+    queueFlow(flowHash, messageSource, message, includeSteps = []) {
+        return postJson('/api/queue/enqueue', { flowHash, messageSource, message, includeSteps })
     },
 
     getQueueCount() {
@@ -119,22 +119,22 @@ export const api = {
     },
 
     /** @param {string} className */
-    getStubSource(className) {
+    getStepSource(className) {
         const p = new URLSearchParams({ className })
-        return fetchJson(`/api/flow/stub-source?${p}`)
+        return fetchJson(`/api/flow/step-source?${p}`)
     },
 
-    /** @param {string} stubSource */
-    getStubSources(stubSource) {
-        console.log(stubSource)
-        const p = new URLSearchParams({ stubSource })
-        return fetchJson(`/api/flow/stub-source-list?${p}`)
+    /** @param {string} stepSource */
+    getStepSources(stepSource) {
+        console.log(stepSource)
+        const p = new URLSearchParams({ stepSource })
+        return fetchJson(`/api/flow/step-source-list?${p}`)
     },
 
-    /** @param {string} stubHash */
-    getStubSourceByHash(stubHash) {
-        const p = new URLSearchParams({ stubHash })
-        return fetchJson(`/api/flow/stub-source?${p}`)
+    /** @param {string} stepHash */
+    getStepSourceByHash(stepHash) {
+        const p = new URLSearchParams({ stepHash })
+        return fetchJson(`/api/flow/step-source?${p}`)
     },
 
     /** @param {{ from?: string, to?: string, type?: string }} [opts] */

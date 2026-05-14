@@ -61,6 +61,17 @@ export class FcTooltip extends BaseElement {
         this._hideBubble()
     }
 
+    updated(changed) {
+        if (changed.has('text') && this._bubble) {
+            if (!this.text) {
+                this._hideBubble()
+            } else {
+                litRender(this.text, this._bubble)
+                this._clampToViewport()
+            }
+        }
+    }
+
     _bubbleClasses() {
         const base =
             'fixed z-[9999] px-2 py-1 rounded bg-base-300/95 backdrop-blur-sm text-base-content border border-base-content/10 text-xs whitespace-nowrap shadow-lg pointer-events-none'

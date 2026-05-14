@@ -16,7 +16,7 @@ function namespacePart(fqcn) {
     return parts.slice(0, -1).join('\\') + '\\'
 }
 
-const ENUM_BADGE = { init: 'badge-info', stub: 'badge-success' }
+const ENUM_BADGE = { init: 'badge-info', step: 'badge-success' }
 
 export class FcSchemaList extends BaseElement {
     static properties = {
@@ -25,16 +25,16 @@ export class FcSchemaList extends BaseElement {
         _graphFlow: { state: true },
         _graphFlowLabel: { state: true },
 
-        _hoveredStub: { state: true },
+        _hoveredStep: { state: true },
         _popupX: { state: true },
         _popupY: { state: true },
-        _selectedStub: { state: true },
+        _selectedStep: { state: true },
         _selectedVersionIdx: { state: true },
         _sortAsc: { state: true },
-        _stubSourceCurrent: { state: true },
-        _stubSourceError: { state: true },
-        _stubSourceFallback: { state: true },
-        _stubVersions: { state: true },
+        _stepSourceCurrent: { state: true },
+        _stepSourceError: { state: true },
+        _stepSourceFallback: { state: true },
+        _stepVersions: { state: true },
     }
 
     constructor() {
@@ -43,17 +43,17 @@ export class FcSchemaList extends BaseElement {
         this._flows = []
         this._graphFlow = null
         this._graphFlowLabel = null
-        this._hoveredStub = null
+        this._hoveredStep = null
         this._popupX = 0
         this._popupY = 0
-        this._selectedStub = null
+        this._selectedStep = null
         this._selectedVersionIdx = null
         this._sortAsc = true
-        this._stubSourceCurrent = true
-        this._stubSourceError = null
-        this._stubSourceFallback = null
-        this._stubUsageMap = new Map()
-        this._stubVersions = []
+        this._stepSourceCurrent = true
+        this._stepSourceError = null
+        this._stepSourceFallback = null
+        this._stepUsageMap = new Map()
+        this._stepVersions = []
     }
 
     async connectedCallback() {
@@ -67,25 +67,25 @@ export class FcSchemaList extends BaseElement {
     }
 
     _processSchemas(schemas) {
-        const stubUsage = new Map()
+        const stepUsage = new Map()
 
-        // Collect stubs per schema
+        // Collect steps per schema
         const raw = schemas.map(schema => {
-            const stubs = schema.stubs.map(s => ({
+            const steps = schema.steps.map(s => ({
                 source: s.source,
                 messageEnum: s.messageEnum,
                 messages: s.messages ?? [],
                 returnTypes: s.returnTypes ?? [],
             }))
-            for (const s of stubs) {
-                if (!stubUsage.has(s.source)) stubUsage.set(s.source, new Set())
-                stubUsage.get(s.source).add(schema.type)
+            for (const s of steps) {
+                if (!stepUsage.has(s.source)) stepUsage.set(s.source, new Set())
+                stepUsage.get(s.source).add(schema.type)
             }
-            return { type: schema.type, stubs }
+            return { type: schema.type, steps }
         })
 
-        this._flows = raw.map(entry => ({ label: entry.type, stubs: entry.stubs }))
-        this._stubUsageMap = stubUsage
+        this._flows = raw.map(entry => ({ label: entry.type, steps: entry.steps }))
+        this._stepUsageMap = stepUsage
     }
 
     _sortedFlows() {
@@ -98,60 +98,60 @@ export class FcSchemaList extends BaseElement {
         const q = this._filter.toLowerCase()
         if (!q) return sorted
 
-        return sorted.filter(f => f.label.toLowerCase().includes(q) || f.stubs.some(s => shortName(s.source).toLowerCase().includes(q)))
+        return sorted.filter(f => f.label.toLowerCase().includes(q) || f.steps.some(s => shortName(s.source).toLowerCase().includes(q)))
     }
 
-    _onStubClick(e, stub) {
+    _onStepClick(e, step) {
         e.stopPropagation()
-        this._filter = shortName(stub.source)
+        this._filter = shortName(step.source)
     }
 
-    async _openSourceModal(stub) {
-        this._hoveredStub = null
-        this._selectedStub = stub
+    async _openSourceModal(step) {
+        this._hoveredStep = null
+        this._selectedStep = step
         this._selectedVersionIdx = null
-        this._stubSourceCurrent = true
-        this._stubSourceError = null
-        this._stubSourceFallback = null
-        this._stubVersions = []
+        this._stepSourceCurrent = true
+        this._stepSourceError = null
+        this._stepSourceFallback = null
+        this._stepVersions = []
         try {
-            console.log(stub.source)
-            const versions = await api.getStubSources(stub.source)
+            console.log(step.source)
+            const versions = await api.getStepSources(step.source)
             if (versions.length > 0) {
-                this._stubVersions = versions
+                this._stepVersions = versions
                 const currentIdx = versions.findIndex(v => v.current === true)
                 this._selectedVersionIdx = currentIdx !== -1 ? currentIdx : 0
             } else {
-                const data = await api.getStubSource(stub.source)
-                this._stubSourceFallback = data.source ?? ''
-                this._stubSourceCurrent = data.current !== false
+                const data = await api.getStepSource(step.source)
+                this._stepSourceFallback = data.source ?? ''
+                this._stepSourceCurrent = data.current !== false
             }
             await this.updateComplete
-            this.renderRoot.querySelector('#stub-source-modal')?.showModal()
+            this.renderRoot.querySelector('#step-source-modal')?.showModal()
         } catch (err) {
             if (err.message.includes('404')) {
-                this._stubSourceError = `${stub.source} ist nicht mehr verfügbar.`
+                this._stepSourceError = `${step.source} ist nicht mehr verfügbar.`
             } else {
-                this._stubSourceError = err.message
+                this._stepSourceError = err.message
             }
             await this.updateComplete
-            this.renderRoot.querySelector('#stub-source-modal')?.showModal()
+            this.renderRoot.querySelector('#step-source-modal')?.showModal()
         }
     }
 
     get _selectedVersion() {
-        if (this._selectedVersionIdx === null || this._selectedVersionIdx === undefined || !this._stubVersions.length) return null
-        return this._stubVersions[this._selectedVersionIdx] ?? null
+        if (this._selectedVersionIdx === null || this._selectedVersionIdx === undefined || !this._stepVersions.length) return null
+        return this._stepVersions[this._selectedVersionIdx] ?? null
     }
 
     _closeSourceModal() {
-        this.renderRoot.querySelector('#stub-source-modal')?.close()
+        this.renderRoot.querySelector('#step-source-modal')?.close()
     }
 
     _openGraphModal(flow) {
         this._graphFlowLabel = flow.label
         this._graphFlow = {
-            flowSchema: { stubs: flow.stubs },
+            flowSchema: { steps: flow.steps },
             flowMessages: [],
             flowExceptions: [],
         }
@@ -166,34 +166,34 @@ export class FcSchemaList extends BaseElement {
         this._graphFlowLabel = null
     }
 
-    _onStubEnter(e, stub) {
+    _onStepEnter(e, step) {
         clearTimeout(this._hoverTimer)
-        this._hoveredStub = stub
+        this._hoveredStep = step
         this._popupX = e.clientX
         this._popupY = e.clientY
     }
 
-    _onStubLeave() {
-        this._hoverTimer = setTimeout(() => (this._hoveredStub = null), 150)
+    _onStepLeave() {
+        this._hoverTimer = setTimeout(() => (this._hoveredStep = null), 150)
     }
 
     _onPopupEnter() {
         clearTimeout(this._hoverTimer)
     }
 
-    _renderStubBadge(stub) {
-        const name = shortName(stub.source)
-        const css = ENUM_BADGE[stub.messageEnum] ?? 'badge-ghost'
-        const usage = this._stubUsageMap.get(stub.source)
+    _renderStepBadge(step) {
+        const name = shortName(step.source)
+        const css = ENUM_BADGE[step.messageEnum] ?? 'badge-ghost'
+        const usage = this._stepUsageMap.get(step.source)
         const shared = usage && usage.size > 1
 
         return html`
             <button
                 class="badge badge-sm ${css} ${shared ? 'badge-outline' : ''} cursor-pointer hover:brightness-125 transition-all gap-1"
                 title=${shared ? `Wird in ${usage.size} Flows verwendet` : ''}
-                @mouseenter=${e => this._onStubEnter(e, stub)}
-                @mouseleave=${() => this._onStubLeave()}
-                @click=${e => this._onStubClick(e, stub)}
+                @mouseenter=${e => this._onStepEnter(e, step)}
+                @mouseleave=${() => this._onStepLeave()}
+                @click=${e => this._onStepClick(e, step)}
             >
                 ${name}
                 ${shared
@@ -216,10 +216,10 @@ export class FcSchemaList extends BaseElement {
     }
 
     _renderPopup() {
-        if (!this._hoveredStub) return ''
-        const stub = this._hoveredStub
-        const name = shortName(stub.source)
-        const usage = this._stubUsageMap.get(stub.source)
+        if (!this._hoveredStep) return ''
+        const step = this._hoveredStep
+        const name = shortName(step.source)
+        const usage = this._stepUsageMap.get(step.source)
         const shared = usage && usage.size > 1
 
         return html`
@@ -227,28 +227,28 @@ export class FcSchemaList extends BaseElement {
                 class="fixed z-[9999] w-72 rounded-box border border-base-300 bg-base-100 shadow-lg p-4"
                 style="left:${this._popupX}px; top:${this._popupY + 12}px;"
                 @mouseenter=${() => this._onPopupEnter()}
-                @mouseleave=${() => this._onStubLeave()}
+                @mouseleave=${() => this._onStepLeave()}
             >
                 <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box flex items-center justify-between">
                     <span class="text-xs font-semibold text-base-content/50 uppercase tracking-wider">${name}</span>
                 </div>
-                ${stub.messages.length || stub.returnTypes.length
+                ${step.messages.length || step.returnTypes.length
                     ? html`<div class="bg-base-100 -mx-4 px-4 py-3 flex flex-col gap-2.5">
-                          ${stub.messages.length
+                          ${step.messages.length
                               ? html`<div>
                                     <span class="text-xs text-base-content/50">Input Messages</span>
                                     <div class="flex flex-col gap-1 mt-1">
-                                        ${stub.messages.map(
+                                        ${step.messages.map(
                                             m => html`<span class="font-mono text-xs text-base-content/60 break-all">${shortName(m)}</span>`
                                         )}
                                     </div>
                                 </div>`
                               : ''}
-                          ${stub.returnTypes.length
+                          ${step.returnTypes.length
                               ? html`<div>
                                     <span class="text-xs text-base-content/50">Output Messages</span>
                                     <div class="flex flex-col gap-1 mt-1">
-                                        ${stub.returnTypes.map(
+                                        ${step.returnTypes.map(
                                             r => html`<span class="font-mono text-xs text-base-content/60 break-all">${shortName(r)}</span>`
                                         )}
                                     </div>
@@ -341,14 +341,14 @@ export class FcSchemaList extends BaseElement {
                     </div>
                 </div>
 
-                ${this._stubSourceError && !this.renderRoot.querySelector('#stub-source-modal[open]')
+                ${this._stepSourceError && !this.renderRoot.querySelector('#step-source-modal[open]')
                     ? html`
                           <div class="alert alert-error alert-sm mb-3">
-                              <span class="text-sm">${this._stubSourceError}</span>
+                              <span class="text-sm">${this._stepSourceError}</span>
                               <button
                                   class="btn btn-sm btn-ghost"
                                   @click=${() => {
-                                      this._stubSourceError = null
+                                      this._stepSourceError = null
                                   }}
                               >
                                   ✕
@@ -372,9 +372,9 @@ export class FcSchemaList extends BaseElement {
                               </div>
                           `
                         : filtered.map(f => {
-                              const initStubs = f.stubs.filter(s => s.messageEnum === 'init')
-                              const otherStubs = f.stubs.filter(s => s.messageEnum !== 'init')
-                              const hasBoth = initStubs.length > 0 && otherStubs.length > 0
+                              const initSteps = f.steps.filter(s => s.messageEnum === 'init')
+                              const otherSteps = f.steps.filter(s => s.messageEnum !== 'init')
+                              const hasBoth = initSteps.length > 0 && otherSteps.length > 0
                               return html`
                                   <div
                                       class="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-4 py-3 rounded-box border border-base-300 bg-base-200 hover:bg-base-100 hover:border-base-content/25 transition-all cursor-pointer"
@@ -391,11 +391,11 @@ export class FcSchemaList extends BaseElement {
                                           </div>
                                       </div>
                                       <div class="flex flex-wrap items-center gap-1 flex-1 min-w-0">
-                                          ${initStubs.map(s => this._renderStubBadge(s))}
+                                          ${initSteps.map(s => this._renderStepBadge(s))}
                                           ${hasBoth
                                               ? html`<span class="w-px h-3.5 bg-base-content/20 self-center mx-0.5 rounded-full"></span>`
                                               : ''}
-                                          ${otherStubs.map(s => this._renderStubBadge(s))}
+                                          ${otherSteps.map(s => this._renderStepBadge(s))}
                                       </div>
                                       <svg
                                           class="w-3.5 h-3.5 text-base-content/25 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block"
@@ -411,7 +411,7 @@ export class FcSchemaList extends BaseElement {
                           })}
                 </div>
 
-                <dialog id="stub-source-modal" class="modal">
+                <dialog id="step-source-modal" class="modal">
                     <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
                         <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0">
                             <div class="flex items-center justify-between">
@@ -433,9 +433,9 @@ export class FcSchemaList extends BaseElement {
                                     </div>
                                     <div>
                                         <h3 class="font-bold text-base leading-tight font-mono truncate">
-                                            ${this._selectedStub?.source ?? ''}
+                                            ${this._selectedStep?.source ?? ''}
                                         </h3>
-                                        ${this._stubSourceFallback !== null && this._stubSourceCurrent === false
+                                        ${this._stepSourceFallback !== null && this._stepSourceCurrent === false
                                             ? html`<span
                                                   class="badge badge-outline border-base-content/40 text-base-content/60 badge-sm mt-1"
                                                   >archiviert</span
@@ -444,7 +444,7 @@ export class FcSchemaList extends BaseElement {
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    ${(this._selectedVersion?.source ?? this._stubSourceFallback) !== null
+                                    ${(this._selectedVersion?.source ?? this._stepSourceFallback) !== null
                                         ? html`<fc-tooltip
                                               text="Quellcode kopieren"
                                               .content=${html`
@@ -452,7 +452,7 @@ export class FcSchemaList extends BaseElement {
                                                       class="btn btn-sm btn-ghost btn-square btn-circle text-base-content/30 hover:text-base-content/70"
                                                       @click=${() =>
                                                           navigator.clipboard.writeText(
-                                                              this._selectedVersion?.source ?? this._stubSourceFallback ?? ''
+                                                              this._selectedVersion?.source ?? this._stepSourceFallback ?? ''
                                                           )}
                                                   >
                                                       <svg
@@ -476,11 +476,11 @@ export class FcSchemaList extends BaseElement {
                             </div>
                         </div>
 
-                        ${this._stubVersions.length > 0
+                        ${this._stepVersions.length > 0
                             ? html`
                                   <div class="px-4 py-3 border-b border-base-300">
                                       <div class="flex gap-2 overflow-x-auto pb-1">
-                                          ${this._stubVersions.map((v, i) => {
+                                          ${this._stepVersions.map((v, i) => {
                                               const selected = i === this._selectedVersionIdx
                                               return html`
                                                   <div
@@ -517,7 +517,7 @@ export class FcSchemaList extends BaseElement {
                                   </div>
                               `
                             : ''}
-                        ${this._stubSourceFallback !== null
+                        ${this._stepSourceFallback !== null
                             ? html`<div class="px-4 py-2 border-b border-base-300 text-xs text-base-content/50">
                                   Keine Versionierung verfügbar
                               </div>`
@@ -526,10 +526,10 @@ export class FcSchemaList extends BaseElement {
                         <div class="flex-1 overflow-hidden">
                             ${this._selectedVersion !== null && this._selectedVersion?.source !== undefined
                                 ? html`<fc-source-viewer class="block h-full" .value=${this._selectedVersion.source}></fc-source-viewer>`
-                                : this._stubSourceFallback !== null
-                                  ? html`<fc-source-viewer class="block h-full" .value=${this._stubSourceFallback}></fc-source-viewer>`
-                                  : this._stubSourceError
-                                    ? html`<div class="p-4 text-error text-sm">${this._stubSourceError}</div>`
+                                : this._stepSourceFallback !== null
+                                  ? html`<fc-source-viewer class="block h-full" .value=${this._stepSourceFallback}></fc-source-viewer>`
+                                  : this._stepSourceError
+                                    ? html`<div class="p-4 text-error text-sm">${this._stepSourceError}</div>`
                                     : html`<div class="p-4 text-base-content/40 text-sm">Loading...</div>`}
                         </div>
                     </div>

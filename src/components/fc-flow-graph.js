@@ -19,40 +19,40 @@ const ROW_GAP = 12
 const PAD_X = 36
 const PAD_Y = 32
 const LONG_EDGE_AREA = 40 // extra canvas space at top for arced long edges
-const TIMING_ROW_H = 16 // height of the per-stub timing row shown below the header
+const TIMING_ROW_H = 16 // height of the per-step timing row shown below the header
 
 // ─── Node sizing ──────────────────────────────────────────────────────────────
-function nodeHeight(stub, withTimingRow = false) {
+function nodeHeight(step, withTimingRow = false) {
     return (
         HEADER_H +
         (withTimingRow ? TIMING_ROW_H : 0) +
         PORT_PAD_V * 2 +
-        Math.max(stub.messages.length, stub.returnTypes.length, 1) * PORT_ROW_H
+        Math.max(step.messages.length, step.returnTypes.length, 1) * PORT_ROW_H
     )
 }
 
-function portAreaH(stub) {
-    return Math.max(stub.messages.length, stub.returnTypes.length, 1) * PORT_ROW_H
+function portAreaH(step) {
+    return Math.max(step.messages.length, step.returnTypes.length, 1) * PORT_ROW_H
 }
 
-function inputPortY(stub, i, withTimingRow = false) {
-    const n = stub.messages.length || 1
-    const slotH = portAreaH(stub) / n
+function inputPortY(step, i, withTimingRow = false) {
+    const n = step.messages.length || 1
+    const slotH = portAreaH(step) / n
     return HEADER_H + (withTimingRow ? TIMING_ROW_H : 0) + PORT_PAD_V + i * slotH + slotH / 2
 }
 
-function outputPortY(stub, j, withTimingRow = false) {
-    const n = stub.returnTypes.length || 1
-    const slotH = portAreaH(stub) / n
+function outputPortY(step, j, withTimingRow = false) {
+    const n = step.returnTypes.length || 1
+    const slotH = portAreaH(step) / n
     return HEADER_H + (withTimingRow ? TIMING_ROW_H : 0) + PORT_PAD_V + j * slotH + slotH / 2
 }
 
 // ─── Status ───────────────────────────────────────────────────────────────────
 function getNodeStatus(src, flowMessages, flowExceptions, flowResults) {
-    if (flowExceptions.some(e => e.stubSource === src)) return 'error'
-    const stubResults = flowResults.filter(r => r.stubSource === src)
-    if (stubResults.length > 0 && stubResults.some(r => r.result === false)) return 'rejected'
-    const msgs = flowMessages.filter(m => m.stubSource === src)
+    if (flowExceptions.some(e => e.stepSource === src)) return 'error'
+    const stepResults = flowResults.filter(r => r.stepSource === src)
+    if (stepResults.length > 0 && stepResults.some(r => r.result === false)) return 'rejected'
+    const msgs = flowMessages.filter(m => m.stepSource === src)
     if (msgs.some(m => m.messageType === 'finish')) return 'success'
     if (msgs.some(m => m.messageType === 'process')) return 'running'
     if (msgs.some(m => m.messageType === 'wait')) return 'waiting'
@@ -78,14 +78,14 @@ const DIFF_STATUS = {
 const MSG_COLOR = { finish: '#22c55e', process: '#3b82f6', wait: '#eab308' }
 
 // ─── Graph layout ─────────────────────────────────────────────────────────────
-function buildLayout(stubs, withTimingRow = false) {
-    const stubMap = Object.fromEntries(stubs.map(s => [s.source, s]))
-    const adjList = Object.fromEntries(stubs.map(s => [s.source, []]))
+function buildLayout(steps, withTimingRow = false) {
+    const stepMap = Object.fromEntries(steps.map(s => [s.source, s]))
+    const adjList = Object.fromEntries(steps.map(s => [s.source, []]))
     const edges = []
 
-    for (const from of stubs) {
+    for (const from of steps) {
         from.returnTypes.forEach((rt, outIdx) => {
-            for (const to of stubs) {
+            for (const to of steps) {
                 if (to.source === from.source) continue
                 const inIdx = to.messages.indexOf(rt)
                 if (inIdx >= 0) {
@@ -102,18 +102,18 @@ function buildLayout(stubs, withTimingRow = false) {
         })
     }
 
-    // Longest-path column assignment via BFS from init stub
+    // Longest-path column assignment via BFS from init step
     const col = {}
-    const initStub = stubs.find(s => s.messageEnum === 'init')
-    if (initStub) {
-        const queue = [[initStub.source, 0]]
+    const initStep = steps.find(s => s.messageEnum === 'init')
+    if (initStep) {
+        const queue = [[initStep.source, 0]]
         while (queue.length) {
             const [src, c] = queue.shift()
             col[src] = Math.max(col[src] ?? 0, c)
             for (const next of adjList[src]) queue.push([next, c + 1])
         }
     }
-    for (const s of stubs) {
+    for (const s of steps) {
         if (!(s.source in col)) col[s.source] = 0
     }
 
@@ -133,13 +133,13 @@ function buildLayout(stubs, withTimingRow = false) {
         let y = PAD_Y + topOffset
         for (const src of byCol[c] ?? []) {
             positions[src] = { x: PAD_X + c * (NODE_W + COL_GAP), y }
-            y += nodeHeight(stubMap[src], withTimingRow) + ROW_GAP
+            y += nodeHeight(stepMap[src], withTimingRow) + ROW_GAP
         }
         svgH = Math.max(svgH, y - ROW_GAP + PAD_Y)
     }
     const svgW = PAD_X * 2 + numCols * NODE_W + (numCols - 1) * COL_GAP
 
-    return { edges, positions, svgW, svgH, stubMap, colOf: col, topOffset }
+    return { edges, positions, svgW, svgH, stepMap, colOf: col, topOffset }
 }
 
 // ─── Theme colors ─────────────────────────────────────────────────────────────
@@ -156,8 +156,8 @@ function getThemeColors() {
 function buildSvgString(
     edges,
     positions,
-    stubs,
-    stubMap,
+    steps,
+    stepMap,
     flowMessages,
     flowExceptions,
     flowResults,
@@ -205,9 +205,9 @@ function buildSvgString(
             tp = positions[e.to]
         if (!fp || !tp) continue
         const x1 = fp.x + NODE_W,
-            y1 = fp.y + outputPortY(stubMap[e.from], e.outIdx, withTimingRow)
+            y1 = fp.y + outputPortY(stepMap[e.from], e.outIdx, withTimingRow)
         const x2 = tp.x,
-            y2 = tp.y + inputPortY(stubMap[e.to], e.inIdx, withTimingRow)
+            y2 = tp.y + inputPortY(stepMap[e.to], e.inIdx, withTimingRow)
         const colSpan = (colOf[e.to] ?? 0) - (colOf[e.from] ?? 0)
         const isLong = colSpan > 1
         const d = isLong ? bezierLong(x1, y1, x2, y2) : bezierNormal(x1, y1, x2, y2)
@@ -228,15 +228,15 @@ function buildSvgString(
         }
     }
 
-    for (const stub of stubs) {
-        const pos = positions[stub.source]
-        const col = colorOf(stub.source)
-        for (let i = 0; i < stub.messages.length; i++) {
-            parts.push(`<circle cx="${pos.x}" cy="${pos.y + inputPortY(stub, i, withTimingRow)}"
+    for (const step of steps) {
+        const pos = positions[step.source]
+        const col = colorOf(step.source)
+        for (let i = 0; i < step.messages.length; i++) {
+            parts.push(`<circle cx="${pos.x}" cy="${pos.y + inputPortY(step, i, withTimingRow)}"
         r="${PORT_R}" fill="${esc(bg2Color)}" stroke="${esc(col)}" stroke-width="2"/>`)
         }
-        for (let j = 0; j < stub.returnTypes.length; j++) {
-            parts.push(`<circle cx="${pos.x + NODE_W}" cy="${pos.y + outputPortY(stub, j, withTimingRow)}"
+        for (let j = 0; j < step.returnTypes.length; j++) {
+            parts.push(`<circle cx="${pos.x + NODE_W}" cy="${pos.y + outputPortY(step, j, withTimingRow)}"
         r="${PORT_R}" fill="${esc(bg2Color)}" stroke="${esc(col)}" stroke-width="2"/>`)
         }
     }
@@ -272,15 +272,15 @@ export class FcFlowGraph extends BaseElement {
     static properties = {
         _diffTooltip: { state: true }, // { x, y, source, diff } | null
         _excTooltip: { state: true }, // { x, y, exc } | null
-        _modalMsg: { state: true }, // { stubSource, messageClass, payload, valid }
+        _modalMsg: { state: true }, // { stepSource, messageClass, payload, valid }
         _observerRunning: { state: true },
         _sendError: { state: true },
         _sending: { state: true },
-        _stubSelection: { state: true }, // { stubs: [{source, checked}], queued: bool } | null
-        _stubSource: { state: true },
-        _stubSourceCurrent: { state: true },
-        _stubSourceError: { state: true },
-        _stubSourceName: { state: true },
+        _stepSelection: { state: true }, // { steps: [{source, checked}], queued: bool } | null
+        _stepSource: { state: true },
+        _stepSourceCurrent: { state: true },
+        _stepSourceError: { state: true },
+        _stepSourceName: { state: true },
         _tooltip: { state: true }, // { x, y, label, data } | null
         flow: { type: Object },
         messageSchemas: { type: Object }, // { [fqClassName]: { [propName]: typeString } } — optional, only passed from devtool
@@ -290,8 +290,8 @@ export class FcFlowGraph extends BaseElement {
         runId: { type: String },
         runMessages: { type: Array }, // overrides flow.flowMessages for a specific run
         runResults: { type: Array }, // overrides flow.flowResults for a specific run
-        selectedStub: { state: true },
-        stubDiff: { type: Object }, // { [source]: { status: 'added'|'changed'|'unchanged', changes: {messages:{added,removed},returnTypes:{added,removed}} } }
+        selectedStep: { state: true },
+        stepDiff: { type: Object }, // { [source]: { status: 'added'|'changed'|'unchanged', changes: {messages:{added,removed},returnTypes:{added,removed}} } }
     }
 
     constructor() {
@@ -304,11 +304,11 @@ export class FcFlowGraph extends BaseElement {
         this._observerRunning = false
         this._sendError = null
         this._sending = false
-        this._stubSelection = null
-        this._stubSource = null
-        this._stubSourceCurrent = true
-        this._stubSourceError = null
-        this._stubSourceName = null
+        this._stepSelection = null
+        this._stepSource = null
+        this._stepSourceCurrent = true
+        this._stepSourceError = null
+        this._stepSourceName = null
         this._tooltip = null
         this.flow = null
         this.priorRuns = null
@@ -317,8 +317,8 @@ export class FcFlowGraph extends BaseElement {
         this.runId = null
         this.runMessages = null
         this.runResults = null
-        this.selectedStub = null
-        this.stubDiff = null
+        this.selectedStep = null
+        this.stepDiff = null
         injectAnimation()
     }
 
@@ -348,9 +348,9 @@ export class FcFlowGraph extends BaseElement {
         clearTimeout(this._tooltipTimer)
     }
 
-    _openModal(stubSource, messageClass, msgData) {
+    _openModal(stepSource, messageClass, msgData) {
         this._modalMsg = {
-            stubSource,
+            stepSource,
             messageClass,
             payload: msgData?.message !== null && msgData?.message !== undefined ? JSON.stringify(msgData.message, null, 2) : '{}',
             valid: true,
@@ -363,72 +363,72 @@ export class FcFlowGraph extends BaseElement {
                 this._observerRunning = false
             })
         this.updateComplete.then(() => {
-            this.querySelector('#fc-stub-input-modal')?.showModal()
+            this.querySelector('#fc-step-input-modal')?.showModal()
         })
     }
 
     _closeModal() {
-        this.querySelector('#fc-stub-input-modal')?.close()
+        this.querySelector('#fc-step-input-modal')?.close()
         this._modalMsg = null
         this._sendError = null
     }
 
-    async _openSourceModal(stubSource, stubHash) {
+    async _openSourceModal(stepSource, stepHash) {
         if (this.readonly) {
-            this.dispatchEvent(new CustomEvent('source-requested', { detail: { source: stubSource }, bubbles: true, composed: true }))
+            this.dispatchEvent(new CustomEvent('source-requested', { detail: { source: stepSource }, bubbles: true, composed: true }))
             return
         }
-        this._stubSource = null
-        this._stubSourceCurrent = true
-        this._stubSourceError = null
-        this._stubSourceName = stubSource
+        this._stepSource = null
+        this._stepSourceCurrent = true
+        this._stepSourceError = null
+        this._stepSourceName = stepSource
         try {
-            const data = stubHash ? await api.getStubSourceByHash(stubHash) : await api.getStubSource(stubSource)
-            this._stubSource = data.source ?? ''
-            this._stubSourceCurrent = data.current !== false
+            const data = stepHash ? await api.getStepSourceByHash(stepHash) : await api.getStepSource(stepSource)
+            this._stepSource = data.source ?? ''
+            this._stepSourceCurrent = data.current !== false
             this.updateComplete.then(() => {
-                this.querySelector('#fc-stub-source-modal')?.showModal()
+                this.querySelector('#fc-step-source-modal')?.showModal()
             })
         } catch (err) {
             if (err.message.includes('404')) {
-                this._stubSourceError = `${stubSource} ist nicht mehr verfügbar.`
+                this._stepSourceError = `${stepSource} ist nicht mehr verfügbar.`
             } else {
-                this._stubSourceError = err
+                this._stepSourceError = err
             }
             this.updateComplete.then(() => {
-                this.querySelector('#fc-stub-source-modal')?.showModal()
+                this.querySelector('#fc-step-source-modal')?.showModal()
             })
         }
     }
 
     _closeSourceModal() {
-        this.querySelector('#fc-stub-source-modal')?.close()
-        this._stubSource = null
-        this._stubSourceCurrent = true
-        this._stubSourceError = null
-        this._stubSourceName = null
+        this.querySelector('#fc-step-source-modal')?.close()
+        this._stepSource = null
+        this._stepSourceCurrent = true
+        this._stepSourceError = null
+        this._stepSourceName = null
     }
 
     _onEditorChange(e) {
         this._modalMsg = { ...this._modalMsg, payload: e.detail.value, valid: e.detail.valid }
     }
 
-    _getStubsForMessageSource(messageClass) {
-        const stubs = this.flow?.flowSchema?.stubs ?? []
-        return stubs.filter(s => s.messages.includes(messageClass))
+    _getStepsForMessageSource(messageClass) {
+        const steps = this.flow?.flowSchema?.steps ?? []
+        return steps.filter(s => s.messages.includes(messageClass))
     }
 
     async _onSend(queued = false) {
         if (!this._modalMsg?.valid || this._sending) return
 
-        const targetStubs = this._getStubsForMessageSource(this._modalMsg.messageClass)
-        if (targetStubs.length > 1) {
-            this._stubSelection = {
-                stubs: targetStubs.map(s => ({ source: s.source, checked: true })),
+        const targetSteps = this._getStepsForMessageSource(this._modalMsg.messageClass)
+        if (targetSteps.length > 1) {
+            this._stepSelection = {
+                steps: targetSteps.map(s => ({ source: s.source, checked: true })),
                 queued,
             }
             this.updateComplete.then(() => {
-                this.querySelector('#fc-stub-selection-modal')?.showModal()
+                this.querySelector('#fc-step-selection-modal')?.showModal()
             })
             return
         }
@@ -436,16 +436,16 @@ export class FcFlowGraph extends BaseElement {
         await this._executeSend(queued)
     }
 
-    async _executeSend(queued = false, includeStubs = []) {
+    async _executeSend(queued = false, includeSteps = []) {
         this._sending = true
         this._sendError = null
         try {
             const message = JSON.parse(this._modalMsg.payload)
             let runtimeHash = null
             if (queued) {
-                await api.queueFlow(this.flow.flowHash, this._modalMsg.messageClass, message, includeStubs)
+                await api.queueFlow(this.flow.flowHash, this._modalMsg.messageClass, message, includeSteps)
             } else {
-                const result = await api.runFlow(this.flow.flowHash, this._modalMsg.messageClass, message, includeStubs)
+                const result = await api.runFlow(this.flow.flowHash, this._modalMsg.messageClass, message, includeSteps)
                 runtimeHash = result?.runtimeHash ?? null
             }
             this._closeModal()
@@ -463,64 +463,64 @@ export class FcFlowGraph extends BaseElement {
         }
     }
 
-    _toggleStubSelection(index) {
-        const stubs = [...this._stubSelection.stubs]
-        stubs[index] = { ...stubs[index], checked: !stubs[index].checked }
-        this._stubSelection = { ...this._stubSelection, stubs }
+    _toggleStepSelection(index) {
+        const steps = [...this._stepSelection.steps]
+        steps[index] = { ...steps[index], checked: !steps[index].checked }
+        this._stepSelection = { ...this._stepSelection, steps }
     }
 
-    _closeStubSelection() {
-        this.querySelector('#fc-stub-selection-modal')?.close()
-        this._stubSelection = null
+    _closeStepSelection() {
+        this.querySelector('#fc-step-selection-modal')?.close()
+        this._stepSelection = null
     }
 
-    async _confirmStubSelection() {
-        const { queued, stubs } = this._stubSelection
-        const includeStubs = stubs.filter(s => s.checked).map(s => s.source)
-        this._closeStubSelection()
-        await this._executeSend(queued, includeStubs)
+    async _confirmStepSelection() {
+        const { queued, steps } = this._stepSelection
+        const includeSteps = steps.filter(s => s.checked).map(s => s.source)
+        this._closeStepSelection()
+        await this._executeSend(queued, includeSteps)
     }
 
     render() {
-        if (!this.flow?.flowSchema?.stubs?.length) return html``
+        if (!this.flow?.flowSchema?.steps?.length) return html``
 
-        const { stubs } = this.flow.flowSchema
+        const { steps } = this.flow.flowSchema
         const flowMessages = this.runMessages ?? this.flow.flowMessages ?? []
         const flowExceptions = this.runExceptions ?? this.flow.flowExceptions ?? []
         const flowResults = this.runResults ?? this.flow.flowResults ?? []
 
-        // Stub timing: read pre-computed timings from the run's flowStubTimings array
+        // Step timing: read pre-computed timings from the run's flowStepTimings array
         const currentRun = this.runId !== null ? ((this.flow?.flowRuns ?? []).find(r => r.flowRuntimeHash === this.runId) ?? null) : null
-        const hasTimings = Array.isArray(currentRun?.flowStubTimings) && currentRun.flowStubTimings.length > 0
-        const stubTimingsMap = {}
+        const hasTimings = Array.isArray(currentRun?.flowStepTimings) && currentRun.flowStepTimings.length > 0
+        const stepTimingsMap = {}
         if (hasTimings) {
-            for (const timing of currentRun.flowStubTimings) {
-                stubTimingsMap[timing.stubSource] = timing
+            for (const timing of currentRun.flowStepTimings) {
+                stepTimingsMap[timing.stepSource] = timing
             }
         }
 
-        const { edges, positions, svgW, svgH, stubMap, colOf, topOffset } = buildLayout(stubs, hasTimings)
+        const { edges, positions, svgW, svgH, stepMap, colOf, topOffset } = buildLayout(steps, hasTimings)
 
         const statusOf = src => getNodeStatus(src, flowMessages, flowExceptions, flowResults)
         const styleOf = src => {
-            if (this.stubDiff?.[src]) return DIFF_STATUS[this.stubDiff[src].status] ?? STATUS[statusOf(src)]
+            if (this.stepDiff?.[src]) return DIFF_STATUS[this.stepDiff[src].status] ?? STATUS[statusOf(src)]
             return STATUS[statusOf(src)]
         }
-        const msgsOf = src => flowMessages.filter(m => m.stubSource === src)
-        const excsOf = src => flowExceptions.filter(e => e.stubSource === src)
-        const ressOf = src => flowResults.filter(r => r.stubSource === src)
+        const msgsOf = src => flowMessages.filter(m => m.stepSource === src)
+        const excsOf = src => flowExceptions.filter(e => e.stepSource === src)
+        const ressOf = src => flowResults.filter(r => r.stepSource === src)
         const outgoingOf = rt => flowMessages.find(m => m.messageSource === rt)
 
-        // Accumulated label + color: for stubs without activity in the current run,
-        // show the label and color from the most recent prior run that had activity for that stub.
+        // Accumulated label + color: for steps without activity in the current run,
+        // show the label and color from the most recent prior run that had activity for that step.
         const accIndicatorOf = src => {
             if (this.priorRuns?.length) {
                 for (let i = this.priorRuns.length - 1; i >= 0; i--) {
                     const run = this.priorRuns[i]
                     const hasActivity =
-                        run.messages.some(m => m.stubSource === src) ||
-                        run.exceptions.some(e => e.stubSource === src) ||
-                        run.results.some(r => r.stubSource === src)
+                        run.messages.some(m => m.stepSource === src) ||
+                        run.exceptions.some(e => e.stepSource === src) ||
+                        run.results.some(r => r.stepSource === src)
                     if (hasActivity) return STATUS[getNodeStatus(src, run.messages, run.exceptions, run.results)]
                 }
             }
@@ -531,8 +531,8 @@ export class FcFlowGraph extends BaseElement {
         const svgContent = buildSvgString(
             edges,
             positions,
-            stubs,
-            stubMap,
+            steps,
+            stepMap,
             flowMessages,
             flowExceptions,
             flowResults,
@@ -543,10 +543,10 @@ export class FcFlowGraph extends BaseElement {
             hasTimings
         )
 
-        const selStub = this.selectedStub ? stubMap[this.selectedStub] : null
-        const selMsgs = this.selectedStub ? msgsOf(this.selectedStub) : []
-        const selExcs = this.selectedStub ? excsOf(this.selectedStub) : []
-        const selRess = this.selectedStub ? ressOf(this.selectedStub) : []
+        const selStep = this.selectedStep ? stepMap[this.selectedStep] : null
+        const selMsgs = this.selectedStep ? msgsOf(this.selectedStep) : []
+        const selExcs = this.selectedStep ? excsOf(this.selectedStep) : []
+        const selRess = this.selectedStep ? ressOf(this.selectedStep) : []
 
         const primitiveTypes = new Set(['string', 'int', 'float', 'bool', 'array', 'mixed', 'null', 'void', 'never', 'object'])
         const typeColor = type => {
@@ -587,20 +587,20 @@ export class FcFlowGraph extends BaseElement {
                 <!-- ── Graph canvas ── -->
                 <div class="rounded-box border border-base-300 overflow-auto bg-base-200">
                     <div style="position:relative; width:${svgW}px; height:${svgH}px; min-width:100%;">
-                        ${stubs.map(stub => {
-                            const pos = positions[stub.source]
-                            const st = styleOf(stub.source)
-                            const msgs = msgsOf(stub.source)
-                            const excs = excsOf(stub.source)
-                            const ress = ressOf(stub.source)
-                            const selected = this.selectedStub === stub.source
-                            const nh = nodeHeight(stub, hasTimings)
-                            const maxPorts = Math.max(stub.messages.length, stub.returnTypes.length, 1)
+                        ${steps.map(step => {
+                            const pos = positions[step.source]
+                            const st = styleOf(step.source)
+                            const msgs = msgsOf(step.source)
+                            const excs = excsOf(step.source)
+                            const ress = ressOf(step.source)
+                            const selected = this.selectedStep === step.source
+                            const nh = nodeHeight(step, hasTimings)
+                            const maxPorts = Math.max(step.messages.length, step.returnTypes.length, 1)
 
                             return html`
                                 <div
                                     class="fc-node"
-                                    @click=${() => (this.selectedStub = selected ? null : stub.source)}
+                                    @click=${() => (this.selectedStep = selected ? null : step.source)}
                                     style="
                      position:absolute; left:${pos.x}px; top:${pos.y}px;
                      width:${NODE_W}px; height:${nh}px;
@@ -623,26 +623,26 @@ export class FcFlowGraph extends BaseElement {
                                             this._diffTooltip = {
                                                 x: elRect.left,
                                                 y: elRect.bottom + 6,
-                                                source: stub.source,
-                                                diff: this.stubDiff?.[stub.source] ?? null,
+                                                source: step.source,
+                                                diff: this.stepDiff?.[step.source] ?? null,
                                             }
                                         }}
                                         @mouseleave=${() => {
                                             this._diffTooltipTimer = setTimeout(() => (this._diffTooltip = null), 150)
                                         }}
                                     >
-                                        <span style="font-size:12px; color:${accIndicatorOf(stub.source).color}; flex-shrink:0;"
-                                            >${accIndicatorOf(stub.source).label}</span
+                                        <span style="font-size:12px; color:${accIndicatorOf(step.source).color}; flex-shrink:0;"
+                                            >${accIndicatorOf(step.source).label}</span
                                         >
                                         <span
                                             style="font-weight:700; font-size:11px; color:var(--color-base-content); flex:1;
                                overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
-                                            >${short(stub.source)}</span
+                                            >${short(step.source)}</span
                                         >
                                         <span
                                             style="font-size:8px; color:oklch(from var(--color-base-content) l c h / 0.4); text-transform:uppercase;
                                letter-spacing:.06em; flex-shrink:0;"
-                                            >${stub.messageEnum}</span
+                                            >${step.messageEnum}</span
                                         >
                                     </div>
 
@@ -658,8 +658,8 @@ export class FcFlowGraph extends BaseElement {
                                                       style="font-size:9px; font-family:monospace; color:${st.color};
                                       font-weight:600; width:44px; text-align:center; flex-shrink:0; opacity:0.8;"
                                                   >
-                                                      ${stubTimingsMap[stub.source]
-                                                          ? formatDuration(stubTimingsMap[stub.source].duration)
+                                                      ${stepTimingsMap[step.source]
+                                                          ? formatDuration(stepTimingsMap[step.source].duration)
                                                           : '—'}
                                                   </span>
                                                   <div style="flex:1; height:1px; background:${st.color}33;"></div>
@@ -670,9 +670,9 @@ export class FcFlowGraph extends BaseElement {
                                     <!-- Port rows -->
                                     <div style="padding:${PORT_PAD_V}px 0;">
                                         ${Array.from({ length: maxPorts }, (_, i) => {
-                                            const inMsg = stub.messages[i]
-                                            const outRt = stub.returnTypes[i]
-                                            const slotH = portAreaH(stub) / maxPorts
+                                            const inMsg = step.messages[i]
+                                            const outRt = step.returnTypes[i]
+                                            const slotH = portAreaH(step) / maxPorts
                                             const inData = inMsg ? msgs.find(m => m.messageSource === inMsg) : null
                                             const outData = outRt ? outgoingOf(outRt) : null
                                             const inColor = inData ? (MSG_COLOR[inData.messageType] ?? '#9ca3af') : '#4b5563'
@@ -876,7 +876,7 @@ export class FcFlowGraph extends BaseElement {
                                           <div class="space-y-1.5 text-xs text-base-content/70">
                                               <div class="flex gap-2">
                                                   <span class="text-success shrink-0">✓</span>
-                                                  <span>Stub entspricht dem gespeicherten Schema</span>
+                                                  <span>Step entspricht dem gespeicherten Schema</span>
                                               </div>
                                               <div class="flex gap-2">
                                                   <span class="text-success shrink-0">✓</span>
@@ -1088,20 +1088,20 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                     : ''}
 
                 <!-- ── Detail panel ── -->
-                ${selStub
+                ${selStep
                     ? html`
                           <div class="mt-3 rounded-box border border-base-300 bg-base-200">
                               <div class="p-4 border-b border-base-300 flex items-center justify-between">
                                   <div>
-                                      <span class="font-semibold text-sm">${short(selStub.source)}</span>
-                                      <span class="font-mono text-xs text-base-content/40 ml-2 mr-2">${selStub.source}</span>
+                                      <span class="font-semibold text-sm">${short(selStep.source)}</span>
+                                      <span class="font-mono text-xs text-base-content/40 ml-2 mr-2">${selStep.source}</span>
                                       ${(() => {
                                           const firstMsg = selMsgs[0]
-                                          const stubHash = firstMsg?.stubHash
+                                          const stepHash = firstMsg?.stepHash
                                           return html`<button
                                               class="btn btn-xs btn-outline btn-info"
-                                              title="Stub Source anzeigen"
-                                              @click=${() => this._openSourceModal(selStub.source, stubHash)}
+                                              title="Step Source anzeigen"
+                                              @click=${() => this._openSourceModal(selStep.source, stepHash)}
                                           >
                                               <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                   <path
@@ -1115,7 +1115,7 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                       })()}
                                   </div>
                                   <div class="flex items-center gap-1">
-                                      <button class="btn btn-xs btn-ghost" @click=${() => (this.selectedStub = null)}>✕</button>
+                                      <button class="btn btn-xs btn-ghost" @click=${() => (this.selectedStep = null)}>✕</button>
                                   </div>
                               </div>
 
@@ -1124,9 +1124,9 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                       <div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3">
                                           ↓ Eingehende Messages
                                       </div>
-                                      ${selStub.messages.length === 0
+                                      ${selStep.messages.length === 0
                                           ? html`<p class="text-xs text-base-content/30 italic">keine</p>`
-                                          : selStub.messages.map(msgClass => {
+                                          : selStep.messages.map(msgClass => {
                                                 const received = selMsgs.filter(m => m.messageSource === msgClass)
                                                 return html`
                                                     <div class="mb-3">
@@ -1138,7 +1138,7 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                                                 ? html`<button
                                                                       class="btn btn-xs btn-outline btn-primary"
                                                                       title="Message-Input editieren"
-                                                                      @click=${() => this._openModal(selStub.source, msgClass, received[0])}
+                                                                      @click=${() => this._openModal(selStep.source, msgClass, received[0])}
                                                                   >
                                                                       <svg
                                                                           class="w-3.5 h-3.5"
@@ -1292,11 +1292,11 @@ ${ex.traceString}</pre
                                                   <div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3">
                                                       ↑ Ausgehende Messages
                                                   </div>
-                                                  ${selStub.returnTypes.length === 0
+                                                  ${selStep.returnTypes.length === 0
                                                       ? html`<p class="text-xs text-base-content/30 italic">
-                                                            Terminal-Stub (keine Ausgabe)
+                                                            Terminal-Step (keine Ausgabe)
                                                         </p>`
-                                                      : selStub.returnTypes.map(rt => {
+                                                      : selStep.returnTypes.map(rt => {
                                                             const outData = outgoingOf(rt)
                                                             return html`
                                                                 <div class="mb-3">
@@ -1371,8 +1371,8 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                       `
                     : ''}
 
-                <!-- ── Stub Input Modal ── -->
-                <dialog id="fc-stub-input-modal" class="modal">
+                <!-- ── Step Input Modal ── -->
+                <dialog id="fc-step-input-modal" class="modal">
                     ${this._modalMsg
                         ? html`
                               <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
@@ -1418,8 +1418,8 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                                       </span>
                                                       <span class="text-base-content/30 text-xs">·</span>
                                                       <span class="text-xs text-base-content/40">
-                                                          Stub:
-                                                          <span class="font-mono">${short(this._modalMsg.stubSource)}</span>
+                                                          Step:
+                                                          <span class="font-mono">${short(this._modalMsg.stepSource)}</span>
                                                       </span>
                                                   </div>
                                               </div>
@@ -1517,8 +1517,8 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                         : ''}
                 </dialog>
 
-                <!-- ── Stub Source Modal ── -->
-                <dialog id="fc-stub-source-modal" class="modal">
+                <!-- ── Step Source Modal ── -->
+                <dialog id="fc-step-source-modal" class="modal">
                     <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
                         <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0">
                             <div class="flex items-center justify-between">
@@ -1539,8 +1539,8 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                         </svg>
                                     </div>
                                     <div>
-                                        <h3 class="font-bold text-base leading-tight font-mono truncate">${this._stubSourceName ?? ''}</h3>
-                                        ${this._stubSourceCurrent === false
+                                        <h3 class="font-bold text-base leading-tight font-mono truncate">${this._stepSourceName ?? ''}</h3>
+                                        ${this._stepSourceCurrent === false
                                             ? html`<span
                                                   class="badge badge-outline border-base-content/40 text-base-content/60 badge-sm mt-1"
                                                   >archiviert</span
@@ -1549,11 +1549,11 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    ${this._stubSource !== null
+                                    ${this._stepSource !== null
                                         ? html`<button
                                               class="btn btn-sm btn-ghost btn-square btn-circle text-base-content/30 hover:text-base-content/70"
                                               title="Quellcode kopieren"
-                                              @click=${() => navigator.clipboard.writeText(this._stubSource)}
+                                              @click=${() => navigator.clipboard.writeText(this._stepSource)}
                                           >
                                               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -1568,10 +1568,10 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                             </div>
                         </div>
                         <div class="flex-1 overflow-hidden">
-                            ${this._stubSource !== null
-                                ? html`<fc-source-viewer class="block h-full" .value=${this._stubSource}></fc-source-viewer>`
-                                : this._stubSourceError
-                                  ? html`<div class="p-4">${renderApiError(this._stubSourceError)}</div>`
+                            ${this._stepSource !== null
+                                ? html`<fc-source-viewer class="block h-full" .value=${this._stepSource}></fc-source-viewer>`
+                                : this._stepSourceError
+                                  ? html`<div class="p-4">${renderApiError(this._stepSourceError)}</div>`
                                   : html`<div class="p-4 text-base-content/40 text-sm">Loading...</div>`}
                         </div>
                     </div>
@@ -1580,9 +1580,9 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                     </form>
                 </dialog>
 
-                <!-- ── Stub Selection Modal ── -->
-                <dialog id="fc-stub-selection-modal" class="modal">
-                    ${this._stubSelection
+                <!-- ── Step Selection Modal ── -->
+                <dialog id="fc-step-selection-modal" class="modal">
+                    ${this._stepSelection
                         ? html`
                               <div class="modal-box max-w-lg p-0 flex flex-col overflow-hidden">
                                   <!-- Header -->
@@ -1609,9 +1609,9 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                                   </svg>
                                               </div>
                                               <div>
-                                                  <h3 class="font-bold text-base leading-tight">Stub-Auswahl</h3>
+                                                  <h3 class="font-bold text-base leading-tight">Step-Auswahl</h3>
                                                   <p class="text-xs text-base-content/50 mt-1">
-                                                      Die Message-Source wird von mehreren Stubs verwendet. Bitte wähle die Stubs aus, die
+                                                      Die Message-Source wird von mehreren Steps verwendet. Bitte wähle die Steps aus, die
                                                       ausgeführt werden sollen:
                                                   </p>
                                               </div>
@@ -1619,7 +1619,7 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                           <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
                                               <button
                                                   class="btn btn-sm btn-ghost btn-square btn-circle"
-                                                  @click=${() => this._closeStubSelection()}
+                                                  @click=${() => this._closeStepSelection()}
                                               >
                                                   ✕
                                               </button>
@@ -1627,16 +1627,16 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                       </div>
                                   </div>
 
-                                  <!-- Stub list -->
+                                  <!-- Step list -->
                                   <div class="flex flex-col gap-2 px-5 py-4">
-                                      ${this._stubSelection.stubs.map(
+                                      ${this._stepSelection.steps.map(
                                           (s, i) => html`
                                               <label class="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-base-200">
                                                   <input
                                                       type="checkbox"
                                                       class="checkbox checkbox-sm checkbox-primary"
                                                       .checked=${s.checked}
-                                                      @change=${() => this._toggleStubSelection(i)}
+                                                      @change=${() => this._toggleStepSelection(i)}
                                                   />
                                                   <span class="font-mono text-sm">${short(s.source)}</span>
                                               </label>
@@ -1646,18 +1646,18 @@ ${JSON.stringify(outData.message, null, 2)}</pre
 
                                   <!-- Footer -->
                                   <div class="flex justify-end gap-2 px-5 py-3 border-t border-base-300 flex-shrink-0">
-                                      <button class="btn btn-ghost btn-sm" @click=${() => this._closeStubSelection()}>Abbrechen</button>
+                                      <button class="btn btn-ghost btn-sm" @click=${() => this._closeStepSelection()}>Abbrechen</button>
                                       <button
                                           class="btn btn-primary btn-sm"
-                                          ?disabled=${!this._stubSelection.stubs.some(s => s.checked)}
-                                          @click=${() => this._confirmStubSelection()}
+                                          ?disabled=${!this._stepSelection.steps.some(s => s.checked)}
+                                          @click=${() => this._confirmStepSelection()}
                                       >
                                           Bestätigen
                                       </button>
                                   </div>
                               </div>
                               <form method="dialog" class="modal-backdrop backdrop-blur-sm">
-                                  <button @click=${() => this._closeStubSelection()}>close</button>
+                                  <button @click=${() => this._closeStepSelection()}>close</button>
                               </form>
                           `
                         : ''}

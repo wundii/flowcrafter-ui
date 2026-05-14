@@ -272,7 +272,7 @@ export class FcOverview extends BaseElement {
                                       ? shortClass(ex.scheduleName)
                                       : isObserver
                                         ? shortClass(ex.observerFlowSource)
-                                        : shortClass(ex.stubSource)
+                                        : shortClass(ex.stepSource)
                                   return html`
                                       <button
                                           class="flex items-start gap-2 text-left hover:bg-base-300/50 rounded-lg py-1.5 pl-2 pr-1 transition-colors w-full border-l-2 border-${borderColor}/40 cursor-pointer"

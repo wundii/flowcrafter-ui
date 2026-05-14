@@ -604,7 +604,7 @@ export class FcApp extends BaseElement {
         }
         if (this.activeTab === 'schedules') return html`<fc-schedule-list></fc-schedule-list>`
         if (this.activeTab === 'queues') return html`<fc-queue-list></fc-queue-list>`
-        if (this.activeTab === 'dev') return html`<fc-dev></fc-dev>`
+        if (this.activeTab === 'dev-tool') return html`<fc-dev></fc-dev>`
         return html`
             <div class="flex flex-col md:flex-row gap-4">
                 <div class="w-full md:w-1/3 md:sticky md:top-20 md:self-start">
@@ -1028,7 +1028,7 @@ export class FcApp extends BaseElement {
 
                 <div class="px-4 pt-4">
                     <div role="tablist" class="tabs tabs-border">
-                        ${[...TABS, ...(this._serverInfo?.dev ? ['dev'] : [])].map(
+                        ${[...TABS, ...(this._serverInfo?.dev ? ['dev-tool'] : [])].map(
                             tab => html`
                                 <a
                                     role="tab"
@@ -1119,7 +1119,7 @@ export class FcApp extends BaseElement {
                                                 d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859M12 3v8.25m0 0l-3-3m3 3l3-3"
                                             />
                                         </svg>`,
-                                        dev: html`<svg
+                                        'dev-tool': html`<svg
                                             class="w-3.5 h-3.5"
                                             fill="none"
                                             stroke="currentColor"
@@ -1140,7 +1140,7 @@ export class FcApp extends BaseElement {
                                         exceptions: 'Exceptions',
                                         schedules: 'Schedules',
                                         queues: 'Queues',
-                                        dev: 'DevTool',
+                                        'dev-tool': 'DevTool',
                                     }[tab]}
                                 </a>
                             `

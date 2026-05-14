@@ -634,7 +634,7 @@ export class FcFlowDetail extends BaseElement {
             <!-- Flow Graph -->
             <h3 class="font-semibold mb-2 text-sm uppercase tracking-wide text-base-content/50">
                 Flow Graph
-                <span class="normal-case font-normal ml-1 text-base-content/30">— Stub anklicken für Details</span>
+                <span class="normal-case font-normal ml-1 text-base-content/30">— Step anklicken für Details</span>
             </h3>
             <fc-flow-graph
                 .flow=${f}
@@ -904,7 +904,7 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                                                                                   <p class="text-sm text-base-content/60 leading-relaxed">
                                                                                       ${f.description}
                                                                                   </p>
-                                                                                  ${f.affectedStub
+                                                                                  ${f.affectedStep
                                                                                       ? html`<div
                                                                                             class="mt-2 inline-flex items-center gap-1.5 text-xs font-mono text-base-content/40 bg-base-content/5 rounded px-2 py-1"
                                                                                         >
@@ -921,7 +921,7 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                                                                                                     d="M17 8l4 4-4 4M7 8l-4 4 4 4M14 4l-4 16"
                                                                                                 />
                                                                                             </svg>
-                                                                                            ${shortClass(f.affectedStub)}
+                                                                                            ${shortClass(f.affectedStep)}
                                                                                         </div>`
                                                                                       : ''}
                                                                               </div>
@@ -1129,9 +1129,9 @@ ${JSON.stringify(v, null, 2)}</pre
     _renderDiffModal() {
         const runA = this._selectedRun
         const runB = this._compareRun
-        if (!runA || !runB || !this.flow?.flowSchema?.stubs) return ''
+        if (!runA || !runB || !this.flow?.flowSchema?.steps) return ''
 
-        const diffs = buildRunDiff(runA, runB, this.flow.flowSchema.stubs)
+        const diffs = buildRunDiff(runA, runB, this.flow.flowSchema.steps)
         const changedDiffs = diffs.filter(d => d.hasChanges)
         const unchangedDiffs = diffs.filter(d => !d.hasChanges)
 
@@ -1162,7 +1162,7 @@ ${JSON.stringify(v, null, 2)}</pre
         const hasIncoming = d => d.messageDiffs.filter(md => md.hasChanges && md.direction === 'in').length > 0
         const hasOutgoing = d => d.messageDiffs.filter(md => md.hasChanges && md.direction === 'out').length > 0 || d.resultChanged
 
-        const renderStubDiff = d => html`
+        const renderStepDiff = d => html`
             <div class="collapse collapse-arrow border border-base-300 bg-base-100 rounded-xl mb-3 shadow-sm">
                 <input type="checkbox" checked />
                 <div class="collapse-title flex items-center gap-3 py-3 min-h-0">
@@ -1351,13 +1351,13 @@ ${JSON.stringify(v, null, 2)}</pre
                                   </svg>
                                   Keine Unterschiede gefunden
                               </div>`
-                            : changedDiffs.map(renderStubDiff)}
+                            : changedDiffs.map(renderStepDiff)}
                         ${unchangedDiffs.length > 0
                             ? html`<div class="mt-4 flex items-center gap-2 text-xs text-base-content/30">
                                   <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                       <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                                   </svg>
-                                  ${unchangedDiffs.length} Stub${unchangedDiffs.length > 1 ? 's' : ''} ohne Unterschiede:
+                                  ${unchangedDiffs.length} Step${unchangedDiffs.length > 1 ? 's' : ''} ohne Unterschiede:
                                   ${unchangedDiffs.map(d => d.shortName).join(', ')}
                               </div>`
                             : ''}
@@ -1405,7 +1405,7 @@ ${JSON.stringify(v, null, 2)}</pre
                                 @click=${() => {
                                     this.selectedRunId = run.runId
                                     this.compareRunId = null
-                                    this.querySelector('fc-flow-graph').selectedStub = null
+                                    this.querySelector('fc-flow-graph').selectedStep = null
                                 }}
                                 @dragstart=${e => {
                                     e.dataTransfer.setData('text/plain', run.runId)

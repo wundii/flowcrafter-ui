@@ -144,21 +144,21 @@ const ANALYSIS_SYSTEM_PROMPT = `Du bist ein Experte fuer Workflow- und State-Mac
 Du analysierst Flow-Ausfuehrungsdaten und lieferst konkrete, umsetzbare Erkenntnisse in diesen Kategorien:
 - "error": Erkannte oder wahrscheinliche Fehlerquellen
 - "warning": Praeventive Warnungen vor moeglichen Problemen
-- "performance": Performance-Auffaelligkeiten innerhalb eines flowRuns (Zeitluecken, langsame Stubs, unnoetige Verarbeitung)
+- "performance": Performance-Auffaelligkeiten innerhalb eines flowRuns (Zeitluecken, langsame Steps, unnoetige Verarbeitung)
 - "info": Allgemeine Beobachtungen und Verbesserungsvorschlaege
 
 Ein Flow besteht aus:
-- Einem Schema mit Stubs (Prozessoren), die typisierte Messages konsumieren und produzieren
-- Messages fliessen zwischen Stubs mit den Zustaenden: WAIT -> PROCESS -> FINISH
+- Einem Schema mit Steps (Prozessoren), die typisierte Messages konsumieren und produzieren
+- Messages fliessen zwischen Steps mit den Zustaenden: WAIT -> PROCESS -> FINISH
 - Jede Message hat Zeitstempel, predecessorHash-Ketten und ist an einen flowRuntimeHash (Run) gebunden
 - Exceptions werden mit vollstaendigem Stack-Trace erfasst
-- FlowResults erfassen boolsche Rueckgabewerte von Stubs. Jeder Stub kann bool|MessageDataInterface|MessageReturnInterface zurueckgeben. Ein FlowResult enthaelt: stubSource, stubHash, result (true/false), flowRuntimeHash. Ein result=false bedeutet, dass der Stub die Verarbeitung abgelehnt hat (Status "rejected"), ist aber KEIN Fehler — der Flow kann trotzdem weiterlaufen
+- FlowResults erfassen boolsche Rueckgabewerte von Steps. Jeder Step kann bool|MessageDataInterface|MessageReturnInterface zurueckgeben. Ein FlowResult enthaelt: stepSource, stepHash, result (true/false), flowRuntimeHash. Ein result=false bedeutet, dass der Step die Verarbeitung abgelehnt hat (Status "rejected"), ist aber KEIN Fehler — der Flow kann trotzdem weiterlaufen
 - Pro Flow Instanze koennen mehrere Runs existieren (Wiederausfuehrung mit neuen Messages)
 - Jeder Run in einer Flow Instanze wird durch eine Message ausgelöst, diese Message besitzt kein predecessorHash
-- WICHTIG: Nur der allererste Run einer Flow-Instanz (zeitlich fruehester) startet mit einer Init-Message (messageEnum:"init") und durchlaeuft den Init-Stub. Alle nachfolgenden Runs können ohne Init-Stub starten — sie setzen den Flow an einer beliebigen Stelle fort (z.B. nach einem Fehler). Das Fehlen des Init-Stubs in einem Folge-Run ist KEIN Fehler und KEINE Auffaelligkeit, sondern gewolltes Verhalten
+- WICHTIG: Nur der allererste Run einer Flow-Instanz (zeitlich fruehester) startet mit einer Init-Message (messageEnum:"init") und durchlaeuft den Init-Step. Alle nachfolgenden Runs können ohne Init-Step starten — sie setzen den Flow an einer beliebigen Stelle fort (z.B. nach einem Fehler). Das Fehlen des Init-Steps in einem Folge-Run ist KEIN Fehler und KEINE Auffaelligkeit, sondern gewolltes Verhalten
 - Messages in flowMessages sind nicht sortiert
-- Mehrere Runs sind normal und gewollt: Ein Run bricht typischerweise ab, wenn ein Stub einen Fehler im eigenen Code hat oder eine externe Abhaengigkeit einen Fehler zurueckliefert. In diesem Fall wird ein neuer Run mit gleicher oder geänderten message gestartet um den Flow fortzusetzen. Das ist erwartetes Verhalten und KEINE Auffaelligkeit.
-- includeStubs: Beim Starten eines Runs kann der Benutzer eine Auswahl treffen, welche Stubs ausgefuehrt werden sollen (includeStubs). Wenn eine messageSource von mehreren Stubs konsumiert wird, kann der Benutzer gezielt einzelne Stubs ein- oder ausschliessen. Wenn in einem Run bestimmte Stubs nicht ausgefuehrt wurden obwohl sie laut Schema die Message konsumieren, ist das KEIN Fehler — es kann eine bewusste includeStubs-Auswahl gewesen sein.
+- Mehrere Runs sind normal und gewollt: Ein Run bricht typischerweise ab, wenn ein Step einen Fehler im eigenen Code hat oder eine externe Abhaengigkeit einen Fehler zurueckliefert. In diesem Fall wird ein neuer Run mit gleicher oder geänderten message gestartet um den Flow fortzusetzen. Das ist erwartetes Verhalten und KEINE Auffaelligkeit.
+- includeSteps: Beim Starten eines Runs kann der Benutzer eine Auswahl treffen, welche Steps ausgefuehrt werden sollen (includeSteps). Wenn eine messageSource von mehreren Steps konsumiert wird, kann der Benutzer gezielt einzelne Steps ein- oder ausschliessen. Wenn in einem Run bestimmte Steps nicht ausgefuehrt wurden obwohl sie laut Schema die Message konsumieren, ist das KEIN Fehler — es kann eine bewusste includeSteps-Auswahl gewesen sein.
 
 Antworte AUSSCHLIESSLICH mit validem JSON in genau dieser Struktur:
 {
@@ -168,13 +168,13 @@ Antworte AUSSCHLIESSLICH mit validem JSON in genau dieser Struktur:
       "category": "error|warning|performance|info",
       "severity": "high|medium|low",
       "title": "Kurzer Titel",
-      "description": "Detaillierte Erklaerung mit konkreten Verweisen auf Stubs/Messages",
-      "affectedStub": "ClassName oder null"
+      "description": "Detaillierte Erklaerung mit konkreten Verweisen auf Steps/Messages",
+      "affectedStep": "ClassName oder null"
     }
   ]
 }
 
-Du hast Zugriff auf das Tool "get_stub_source", um den PHP-Quellcode einzelner Stubs zu laden. Nutze es, wenn der Quellcode fuer eine fundierte Analyse hilfreich waere (z.B. bei Exceptions, unklarem Verhalten oder Performance-Problemen).
+Du hast Zugriff auf das Tool "get_step_source", um den PHP-Quellcode einzelner Steps zu laden. Nutze es, wenn der Quellcode fuer eine fundierte Analyse hilfreich waere (z.B. bei Exceptions, unklarem Verhalten oder Performance-Problemen).
 
 Alle Texte (summary, title, description) muessen auf Deutsch sein.
 Wenn es keine Auffaelligkeiten gibt, liefere ein leeres findings-Array.
@@ -191,22 +191,22 @@ function buildUserPrompt(flowData, runtimeHash) {
 // Anthropic format
 const ANALYSIS_TOOLS = [
     {
-        name: 'get_stub_source',
+        name: 'get_step_source',
         description:
-            'Laedt den PHP-Quellcode eines Stubs anhand seines stubHash. Nutze dieses Tool, wenn du den Quellcode eines Stubs benoetist um die Analyse zu vertiefen (z.B. bei Fehlern, unklarer Logik oder Performance-Problemen). Der stubHash ist in den Flow-Messages und Exceptions enthalten und ermoeglicht auch den Zugriff auf archivierte Versionen.',
+            'Laedt den PHP-Quellcode eines Steps anhand seines stepHash. Nutze dieses Tool, wenn du den Quellcode eines Steps benoetist um die Analyse zu vertiefen (z.B. bei Fehlern, unklarer Logik oder Performance-Problemen). Der stepHash ist in den Flow-Messages und Exceptions enthalten und ermoeglicht auch den Zugriff auf archivierte Versionen.',
         input_schema: {
             type: 'object',
             properties: {
-                stubHash: {
+                stepHash: {
                     type: 'string',
-                    description: 'Der stubHash des Stubs (z.B. aus flowMessages[].stubHash oder flowExceptions[].stubHash)',
+                    description: 'Der stepHash des Steps (z.B. aus flowMessages[].stepHash oder flowExceptions[].stepHash)',
                 },
                 className: {
                     type: 'string',
-                    description: 'Vollqualifizierter PHP-Klassenname des Stubs (z.B. App\\Stubs\\MyStub) — nur zur Anzeige',
+                    description: 'Vollqualifizierter PHP-Klassenname des Steps (z.B. App\\Steps\\MyStep) — nur zur Anzeige',
                 },
             },
-            required: ['stubHash'],
+            required: ['stepHash'],
         },
     },
 ]
@@ -216,7 +216,7 @@ const ANALYSIS_TOOLS_OPENAI = [
     {
         type: 'function',
         function: {
-            name: 'get_stub_source',
+            name: 'get_step_source',
             description: ANALYSIS_TOOLS[0].description,
             parameters: ANALYSIS_TOOLS[0].input_schema,
         },
@@ -237,11 +237,11 @@ function extractJsonFromText(text) {
     return JSON.parse(match[0])
 }
 
-async function fetchStubSource(stubHash, className, phpUrl, phpHeaders, onProgress, signal) {
-    onProgress({ type: 'tool_use', message: `Lade Quellcode: ${shortClassName(className ?? stubHash)}` })
+async function fetchStepSource(stepHash, className, phpUrl, phpHeaders, onProgress, signal) {
+    onProgress({ type: 'tool_use', message: `Lade Quellcode: ${shortClassName(className ?? stepHash)}` })
     try {
-        const p = new URLSearchParams({ stubHash })
-        const srcRes = await fetch(`${phpUrl}/api/flow/stub-source?${p}`, { headers: phpHeaders, signal })
+        const p = new URLSearchParams({ stepHash })
+        const srcRes = await fetch(`${phpUrl}/api/flow/step-source?${p}`, { headers: phpHeaders, signal })
         return srcRes.ok ? await srcRes.json() : { error: `HTTP ${srcRes.status}` }
     } catch (err) {
         if (err.name === 'AbortError') throw err
@@ -270,8 +270,8 @@ async function analyzeFlowAnthropic(apiKey, model, flowData, runtimeHash, phpUrl
 
         const toolResults = []
         for (const block of toolBlocks) {
-            if (block.name === 'get_stub_source') {
-                const srcData = await fetchStubSource(block.input.stubHash, block.input.className, phpUrl, phpHeaders, onProgress, signal)
+            if (block.name === 'get_step_source') {
+                const srcData = await fetchStepSource(block.input.stepHash, block.input.className, phpUrl, phpHeaders, onProgress, signal)
                 toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(srcData) })
             }
         }
@@ -382,7 +382,7 @@ async function analyzeFlowOllama(ollamaUrl, model, flowData, runtimeHash, phpUrl
 
         for (const call of toolCalls) {
             const args = JSON.parse(call.function.arguments ?? '{}')
-            const srcData = await fetchStubSource(args.stubHash, args.className, phpUrl, phpHeaders, onProgress, signal)
+            const srcData = await fetchStepSource(args.stepHash, args.className, phpUrl, phpHeaders, onProgress, signal)
             messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(srcData) })
         }
 
@@ -774,7 +774,7 @@ const server = createServer(async (req, res) => {
 
                 const schemasMap = {}
                 for (const s of schemas) {
-                    schemasMap[s.type] = { storedHash: s.schemaHash, stubs: s.stubs }
+                    schemasMap[s.type] = { storedHash: s.schemaHash, steps: s.steps }
                 }
                 const snapshot = {
                     importedAt: new Date().toISOString(),

@@ -32,10 +32,10 @@ function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
 }
 
-function computeStubDiff(liveStubs, storedStubs) {
-    const storedBySource = new Map(storedStubs.map(s => [s.source, s]))
+function computeStepDiff(liveSteps, storedSteps) {
+    const storedBySource = new Map(storedSteps.map(s => [s.source, s]))
     const diff = {}
-    for (const live of liveStubs) {
+    for (const live of liveSteps) {
         const stored = storedBySource.get(live.source)
         if (!stored) {
             diff[live.source] = { status: 'added', changes: null }
@@ -66,9 +66,9 @@ function nextVersion(type) {
     return { current: `v${m[1]}`, next: `v${parseInt(m[1]) + 1}` }
 }
 
-function removedStubs(liveStubs, storedStubs) {
-    const liveSources = new Set(liveStubs.map(s => s.source))
-    return storedStubs.filter(s => !liveSources.has(s.source))
+function removedSteps(liveSteps, storedSteps) {
+    const liveSources = new Set(liveSteps.map(s => s.source))
+    return storedSteps.filter(s => !liveSources.has(s.source))
 }
 
 export class FcDev extends BaseElement {
@@ -90,7 +90,7 @@ export class FcDev extends BaseElement {
         _lastRunOutput: { state: true },
         _devRawModal: { state: true },
         _loading: { state: true },
-        _outputModalSelectedStub: { state: true },
+        _outputModalSelectedStep: { state: true },
         _errorModalTab: { state: true },
         _runError: { state: true },
         _runMessage: { state: true },
@@ -237,7 +237,7 @@ export class FcDev extends BaseElement {
                 const imp = this._devImport.schemas?.[data.schema.type]
                 if (imp) {
                     if (data.storedHash === null) data.storedHash = imp.storedHash
-                    if (data.storedSchema === null) data.storedSchema = { type: data.schema.type, stubs: imp.stubs }
+                    if (data.storedSchema === null) data.storedSchema = { type: data.schema.type, steps: imp.steps }
                     data.hashDrift = data.hash !== null && data.storedHash !== null && data.hash !== data.storedHash
                 }
 
@@ -341,7 +341,7 @@ export class FcDev extends BaseElement {
         await this.updateComplete
         this.querySelector('#fc-dev-source-modal')?.showModal()
         try {
-            const data = await api.getStubSource(source)
+            const data = await api.getStepSource(source)
             this._srcContent = data.source ?? ''
         } catch (err) {
             this._srcError = err
@@ -358,8 +358,8 @@ export class FcDev extends BaseElement {
     }
 
     _initMessageClass(schema) {
-        const initStub = schema?.stubs?.find(s => s.messageEnum === 'init')
-        return initStub?.messages?.[0] ?? null
+        const initStep = schema?.steps?.find(s => s.messageEnum === 'init')
+        return initStep?.messages?.[0] ?? null
     }
 
     async _loadRunModalData() {
@@ -489,7 +489,7 @@ export class FcDev extends BaseElement {
             const result = await api.runDevFlow(this._selected, messageSource, message)
             this._runResult = result
             this._lastRunOutput = result.output ?? null
-            this._outputModalSelectedStub = result.output?.[0]?.class ?? null
+            this._outputModalSelectedStep = result.output?.[0]?.class ?? null
             if (result.success && result.flow) {
                 this._lastRunFlow = result.flow
                 this._lastRunMemory = result.memory ?? null
@@ -505,7 +505,7 @@ export class FcDev extends BaseElement {
         }
     }
 
-    _stubNameFromError(err) {
+    _stepNameFromError(err) {
         if (!err?.file) return null
         const match = err.file.match(/([^/\\]+)\.php$/)
         return match ? match[1] : null
@@ -515,7 +515,7 @@ export class FcDev extends BaseElement {
         const err =
             this._runError ?? (this._runResult && !this._runResult.success ? { message: this._runResult.error, ...this._runResult } : null)
         if (!err) return ''
-        const stubName = this._stubNameFromError(err)
+        const stepName = this._stepNameFromError(err)
         const msg = err.message ?? ''
         const file = err.file ?? null
         const line = err.line ?? null
@@ -532,10 +532,10 @@ export class FcDev extends BaseElement {
                         />
                     </svg>
                     <div class="flex-1 min-w-0">
-                        ${stubName
+                        ${stepName
                             ? html`
                                   <div class="flex items-center gap-1.5 mb-1">
-                                      <span class="text-xs text-base-content/40">${stubName}</span>
+                                      <span class="text-xs text-base-content/40">${stepName}</span>
                                   </div>
                               `
                             : ''}
@@ -1157,7 +1157,7 @@ export class FcDev extends BaseElement {
                               ${(() => {
                                   const graphRun = this._lastRunFlow ? (buildRuns(this._lastRunFlow).at(-1) ?? null) : null
                                   const graphFlow = this._lastRunFlow ?? this._syntheticFlow(d.schema)
-                                  const stubDiff = this._lastRunFlow
+                                  const stepDiff = this._lastRunFlow
                                       ? null
                                       : (() => {
                                             const messageDriftMap = Object.fromEntries((d.changedMessages ?? []).map(m => [m.class, m]))
@@ -1168,25 +1168,25 @@ export class FcDev extends BaseElement {
                                                 this._storedSchemas.some(s => s.type && s.type.replace(/\.v\d+$/, '') === _typeBase)
                                             const base = d.storedSchema
                                                 ? d.hashDrift
-                                                    ? computeStubDiff(d.schema.stubs, d.storedSchema.stubs)
+                                                    ? computeStepDiff(d.schema.steps, d.storedSchema.steps)
                                                     : Object.fromEntries(
-                                                          (d.schema.stubs ?? []).map(s => [
+                                                          (d.schema.steps ?? []).map(s => [
                                                               s.source,
                                                               { status: 'unchanged', changes: null },
                                                           ])
                                                       )
                                                 : !_hasAnyVersion
                                                   ? Object.fromEntries(
-                                                        (d.schema.stubs ?? []).map(s => [s.source, { status: 'added', changes: null }])
+                                                        (d.schema.steps ?? []).map(s => [s.source, { status: 'added', changes: null }])
                                                     )
                                                   : {}
                                             const diff = { ...base }
-                                            for (const stub of d.schema.stubs ?? []) {
-                                                const affectedMessages = [...stub.messages, ...stub.returnTypes].filter(m =>
+                                            for (const step of d.schema.steps ?? []) {
+                                                const affectedMessages = [...step.messages, ...step.returnTypes].filter(m =>
                                                     messageDriftClasses.has(m)
                                                 )
-                                                if (affectedMessages.length > 0 && diff[stub.source]?.status !== 'added') {
-                                                    diff[stub.source] = {
+                                                if (affectedMessages.length > 0 && diff[step.source]?.status !== 'added') {
+                                                    diff[step.source] = {
                                                         status: 'messageDrift',
                                                         changes: {
                                                             properties: affectedMessages.map(m => ({
@@ -1210,7 +1210,7 @@ export class FcDev extends BaseElement {
                                           .runExceptions=${graphRun?.exceptions ?? null}
                                           .runResults=${graphRun?.results ?? null}
                                           .readonly=${true}
-                                          .stubDiff=${stubDiff}
+                                          .stepDiff=${stepDiff}
                                           .messageSchemas=${this._lastRunFlow ? null : (this._detail?.messageSchemas ?? null)}
                                           @source-requested=${e => this._handleSourceRequested(e)}
                                       ></fc-flow-graph>
@@ -1224,8 +1224,8 @@ export class FcDev extends BaseElement {
                           </div>
                       `}
 
-                <!-- Removed stubs banner -->
-                ${d.hashDrift && d.storedSchema && removedStubs(d.schema.stubs, d.storedSchema.stubs).length > 0
+                <!-- Removed steps banner -->
+                ${d.hashDrift && d.storedSchema && removedSteps(d.schema.steps, d.storedSchema.steps).length > 0
                     ? html`
                           <div class="px-5 py-3 border-t border-error/30 bg-error/5 shrink-0">
                               <div class="flex items-start gap-3">
@@ -1239,17 +1239,17 @@ export class FcDev extends BaseElement {
                                       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                                   </svg>
                                   <div class="flex-1 min-w-0">
-                                      <div class="font-semibold text-error text-sm">Entfernte Stubs</div>
+                                      <div class="font-semibold text-error text-sm">Entfernte Steps</div>
                                       <div class="text-xs text-base-content/60 mt-1">
-                                          Folgende Stubs existieren nicht mehr im aktuellen Schema.
+                                          Folgende Steps existieren nicht mehr im aktuellen Schema.
                                       </div>
                                       <ul class="mt-2 flex flex-col gap-0.5">
-                                          ${removedStubs(d.schema.stubs, d.storedSchema.stubs).map(
-                                              stub => html`
+                                          ${removedSteps(d.schema.steps, d.storedSchema.steps).map(
+                                              step => html`
                                                   <li class="text-xs font-mono text-error/80 flex items-center gap-1.5">
                                                       <span class="text-error font-bold">−</span>
-                                                      ${shortClass(stub.source)}
-                                                      <span class="text-base-content/30" title="${stub.source}">${stub.source}</span>
+                                                      ${shortClass(step.source)}
+                                                      <span class="text-base-content/30" title="${step.source}">${step.source}</span>
                                                   </li>
                                               `
                                           )}
@@ -1663,7 +1663,7 @@ export class FcDev extends BaseElement {
                                           ? { message: this._runResult.error, ...this._runResult }
                                           : null)
                                   if (!err) return ''
-                                  const stubName = this._stubNameFromError(err)
+                                  const stepName = this._stepNameFromError(err)
                                   return html` ${renderApiError(err, { detailed: true })} `
                               })()
                             : html`
@@ -1678,11 +1678,11 @@ export class FcDev extends BaseElement {
                                                             entry => html`
                                                                 <button
                                                                     class="px-3 py-1.5 text-left text-xs font-mono rounded-lg truncate transition-colors ${this
-                                                                        ._outputModalSelectedStub === entry.class
+                                                                        ._outputModalSelectedStep === entry.class
                                                                         ? 'bg-base-300/60 text-base-content font-medium'
                                                                         : 'hover:bg-base-300/50 text-base-content/70'}"
                                                                     @click=${() => {
-                                                                        this._outputModalSelectedStub = entry.class
+                                                                        this._outputModalSelectedStep = entry.class
                                                                     }}
                                                                 >
                                                                     ${entry.class.split('\\').at(-1)}
@@ -1702,7 +1702,7 @@ export class FcDev extends BaseElement {
                                                   .map(m => m[0])
                                                   .join('')
                                               const selected = (
-                                                  (this._lastRunOutput ?? []).find(e => e.class === this._outputModalSelectedStub)
+                                                  (this._lastRunOutput ?? []).find(e => e.class === this._outputModalSelectedStep)
                                                       ?.content ?? ''
                                               ).trim()
                                               return unsafeHTML(allStyles + selected)
@@ -1776,21 +1776,21 @@ export class FcDev extends BaseElement {
                         </div>
                     </div>
                     <div class="flex flex-1 min-h-0 overflow-hidden">
-                        <!-- Left: Stub list -->
+                        <!-- Left: Step list -->
                         <div class="w-64 shrink-0 border-r border-base-300 bg-base-200/40 flex flex-col overflow-y-auto">
                             <div class="px-4 py-3 border-b border-base-300/50 shrink-0">
-                                <div class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest">Stubs mit Output</div>
+                                <div class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest">Steps mit Output</div>
                             </div>
                             <div class="flex flex-col flex-1 overflow-y-auto py-1.5 gap-0.5 px-2">
                                 ${(this._lastRunOutput ?? []).map(
                                     entry => html`
                                         <button
                                             class="px-3 py-2 text-left text-xs font-mono rounded-lg truncate transition-colors ${this
-                                                ._outputModalSelectedStub === entry.class
+                                                ._outputModalSelectedStep === entry.class
                                                 ? 'bg-base-300/60 text-base-content font-medium'
                                                 : 'hover:bg-base-300/50 text-base-content/70'}"
                                             @click=${() => {
-                                                this._outputModalSelectedStub = entry.class
+                                                this._outputModalSelectedStep = entry.class
                                             }}
                                         >
                                             ${entry.class.split('\\').at(-1)}
@@ -1808,7 +1808,7 @@ export class FcDev extends BaseElement {
                                     .flatMap(e => [...e.content.matchAll(/<style[\s\S]*?<\/style>/gi)].map(m => m[0]))
                                     .join('')
                                 const selected = (
-                                    (this._lastRunOutput ?? []).find(e => e.class === this._outputModalSelectedStub)?.content ?? ''
+                                    (this._lastRunOutput ?? []).find(e => e.class === this._outputModalSelectedStep)?.content ?? ''
                                 ).trim()
                                 return unsafeHTML(allStyles + selected)
                             })()}
@@ -2081,13 +2081,13 @@ export class FcDev extends BaseElement {
                 </form>
             </dialog>
 
-            <!-- Stub Source Modal -->
+            <!-- Step Source Modal -->
             <dialog id="fc-dev-source-modal" class="modal">
                 <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
                     <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="font-bold text-base">Stub Source</h3>
+                                <h3 class="font-bold text-base">Step Source</h3>
                                 ${this._srcSource
                                     ? html`<p class="text-xs font-mono text-base-content/50 mt-0.5 truncate">${this._srcSource}</p>`
                                     : ''}

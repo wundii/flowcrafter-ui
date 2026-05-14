@@ -1,4 +1,4 @@
-const VALID_TABS = new Set(['overview', 'schemas', 'flows', 'exceptions', 'schedules', 'queues', 'dev'])
+const VALID_TABS = new Set(['overview', 'schemas', 'flows', 'exceptions', 'schedules', 'queues', 'dev-tool'])
 const HASH_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function parseHash(hash) {

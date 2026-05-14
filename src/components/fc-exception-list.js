@@ -46,7 +46,7 @@ function buildFingerprint(ex) {
     const fileLine = `${ex.file ?? ''}:${ex.line ?? ''}`
     switch (ex.type) {
         case 'flow':
-            return `flow|${ex.message}|${ex.stubSource ?? ''}|${fileLine}`
+            return `flow|${ex.message}|${ex.stepSource ?? ''}|${fileLine}`
         case 'schedule':
             return `schedule|${ex.message}|${ex.scheduleName ?? ''}|${ex.scheduleExpression ?? ''}`
         case 'observer':
@@ -363,11 +363,11 @@ export class FcExceptionList extends BaseElement {
         return html`
             <div class="rounded-box border border-error/25 bg-base-200 overflow-hidden">
                 <div class="px-4 py-3 flex flex-col gap-1.5">
-                    <!-- Row 1: Stub + Status + Time -->
+                    <!-- Row 1: Step + Status + Time -->
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center gap-2 min-w-0">
-                            <span class="font-semibold text-sm text-base-content truncate" title="${ex.stubSource}">
-                                ${shortClass(ex.stubSource)}
+                            <span class="font-semibold text-sm text-base-content truncate" title="${ex.stepSource}">
+                                ${shortClass(ex.stepSource)}
                             </span>
                             ${ex.flowStatus
                                 ? html`<span class="badge badge-xs ${STATUS_COLORS[ex.flowStatus] ?? 'badge-ghost'}"
