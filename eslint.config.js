@@ -49,6 +49,25 @@ export default [
         },
     },
     {
-        ignores: ['dist/**', 'node_modules/**'],
+        files: ['tests/**/*.js'],
+        languageOptions: {
+            ecmaVersion: 2024,
+            sourceType: 'module',
+            globals: {
+                console: 'readonly',
+                process: 'readonly',
+                sessionStorage: 'readonly',
+            },
+        },
+        rules: {
+            'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+            'prefer-const': 'error',
+            'no-var': 'error',
+            eqeqeq: ['error', 'always'],
+            'no-duplicate-imports': 'error',
+        },
+    },
+    {
+        ignores: ['dist/**', 'node_modules/**', 'playwright-report/**', 'test-results/**', 'playwright.config.js'],
     },
 ]

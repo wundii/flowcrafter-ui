@@ -268,7 +268,7 @@ export class FcApp extends BaseElement {
             this._loadAiConfig()
         }
         this._loadUiVersion()
-        this._applyRoute()
+        this._applyRoute(router.parse())
     }
 
     async _loadUiVersion() {

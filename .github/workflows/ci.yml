@@ -34,8 +34,39 @@ jobs:
       - name: 'Check Prettier formatting'
         run: npm run format:check
 
-  build-preview:
+  test:
     needs: [lint]
+    runs-on: ubuntu-latest
+    name: 'CI Pipeline - E2E Tests'
+    steps:
+      - name: 'Uses git-checkout'
+        uses: actions/checkout@v6
+
+      - name: 'Uses setup-node'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: 'Install dependencies'
+        run: npm ci
+
+      - name: 'Install Playwright browsers'
+        run: npx playwright install chromium --with-deps
+
+      - name: 'Run E2E tests'
+        run: npm test
+
+      - name: 'Upload test report'
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+  build-preview:
+    needs: [lint, test]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     name: 'CI Pipeline - Build and push (preview)'
@@ -62,7 +93,7 @@ jobs:
           build-args: APP_VERSION=preview
 
   build-release:
-    needs: [lint]
+    needs: [lint, test]
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     name: 'CI Pipeline - Build and push (release)'
