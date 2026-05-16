@@ -5,6 +5,7 @@ import { auth } from '../services/auth.js'
 import { connection } from '../services/connection.js'
 import { logoIcon } from '../assets/logo.js'
 import { router } from '../utils/router.js'
+import { masking } from '../services/masking.js'
 import { theme } from '../services/theme.js'
 import './fc-exception-chart.js'
 import './fc-exception-list.js'
@@ -20,6 +21,7 @@ import './fc-schedule-list.js'
 import './fc-schema-list.js'
 import './fc-service-setup.js'
 import './fc-type-list.js'
+import './fc-masking-settings.js'
 import './fc-tooltip.js'
 
 const TABS = ['overview', 'schemas', 'flows', 'exceptions', 'schedules', 'queues']
@@ -70,6 +72,7 @@ export class FcApp extends BaseElement {
         _flowChartDate: { state: true },
         _flowListCache: { state: true },
         _isDark: { state: true },
+        _maskingModal: { state: true },
         _pwModal: { state: true },
         _searchQuery: { state: true },
         _searchResults: { state: true },
@@ -103,6 +106,7 @@ export class FcApp extends BaseElement {
         this._flowListCache = null
         this._infoTimer = null
         this._isDark = theme.get() === 'dark'
+        this._maskingModal = false
         this._pwModal = null
         this._searchQuery = ''
         this._searchResults = null
@@ -180,6 +184,12 @@ export class FcApp extends BaseElement {
         } catch {
             this._aiConfigured = false
         }
+    }
+
+    _closeMaskingModal() {
+        this._maskingModal = false
+        masking.invalidateCache()
+        this.querySelector('fc-flow-graph')?._loadMaskingRules()
     }
 
     _openAiModal() {
@@ -950,6 +960,23 @@ export class FcApp extends BaseElement {
                             `}
                         ></fc-tooltip>
 
+                        <!-- Masking settings -->
+                        <fc-tooltip
+                            position="bottom"
+                            text="Datenschutz-Maskierung"
+                            .content=${html`
+                                <button class="hidden sm:flex btn btn-ghost btn-sm btn-circle" @click=${() => (this._maskingModal = true)}>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+                                        />
+                                    </svg>
+                                </button>
+                            `}
+                        ></fc-tooltip>
+
                         <!-- AI config -->
                         <fc-tooltip
                             position="bottom"
@@ -1147,6 +1174,50 @@ export class FcApp extends BaseElement {
                         )}
                     </div>
                 </div>
+
+                <!-- Masking settings modal -->
+                ${this._maskingModal
+                    ? html`
+                          <dialog id="masking-modal" class="modal modal-open backdrop-blur-sm">
+                              <div class="modal-box max-w-2xl p-0 overflow-hidden">
+                                  <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-6 pt-5 pb-4">
+                                      <div class="flex items-center justify-between">
+                                          <div class="flex items-center gap-3">
+                                              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                  <svg
+                                                      class="w-5 h-5 text-primary"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                      viewBox="0 0 24 24"
+                                                  >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+                                                      />
+                                                  </svg>
+                                              </div>
+                                              <h3 class="font-bold text-base">Datenschutz-Maskierung</h3>
+                                          </div>
+                                          <button
+                                              class="btn btn-sm btn-ghost btn-square btn-circle"
+                                              @click=${() => this._closeMaskingModal()}
+                                          >
+                                              ✕
+                                          </button>
+                                      </div>
+                                  </div>
+                                  <div class="px-6 pb-6 pt-4">
+                                      <fc-masking-settings></fc-masking-settings>
+                                  </div>
+                              </div>
+                              <form method="dialog" class="modal-backdrop">
+                                  <button @click=${() => this._closeMaskingModal()}>close</button>
+                              </form>
+                          </dialog>
+                      `
+                    : ''}
 
                 <!-- Change password modal -->
                 <dialog id="pw-change-modal" class="modal">

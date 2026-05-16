@@ -1663,7 +1663,6 @@ export class FcDev extends BaseElement {
                                           ? { message: this._runResult.error, ...this._runResult }
                                           : null)
                                   if (!err) return ''
-                                  const stepName = this._stepNameFromError(err)
                                   return html` ${renderApiError(err, { detailed: true })} `
                               })()
                             : html`

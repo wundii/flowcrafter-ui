@@ -1,6 +1,7 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
+import { masking } from '../services/masking.js'
 import { renderApiError } from '../utils/error.js'
 import { formatDuration } from '../utils/duration.js'
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js'
@@ -300,8 +301,10 @@ export class FcFlowGraph extends BaseElement {
         this._diffTooltipTimer = null
         this._excTooltip = null
         this._excTooltipTimer = null
+        this._maskingRules = null
         this._modalMsg = null
         this._observerRunning = false
+        this._revealedBlocks = new Set()
         this._sendError = null
         this._sending = false
         this._stepSelection = null
@@ -320,6 +323,26 @@ export class FcFlowGraph extends BaseElement {
         this.selectedStep = null
         this.stepDiff = null
         injectAnimation()
+        this._loadMaskingRules()
+    }
+
+    async _loadMaskingRules() {
+        this._maskingRules = await masking.loadRules()
+        this.requestUpdate()
+    }
+
+    _toggleReveal(blockId) {
+        if (this._revealedBlocks.has(blockId)) {
+            this._revealedBlocks.delete(blockId)
+        } else {
+            this._revealedBlocks.add(blockId)
+        }
+        this.requestUpdate()
+    }
+
+    _maskMessage(msg, blockId) {
+        if (!this._maskingRules || this._revealedBlocks.has(blockId)) return msg
+        return masking.maskObject(msg, this._maskingRules)
     }
 
     _showTooltip(e, label, messageSource, data) {
@@ -349,10 +372,14 @@ export class FcFlowGraph extends BaseElement {
     }
 
     _openModal(stepSource, messageClass, msgData) {
+        const originalMessage = msgData?.message ?? {}
+        const maskedMessage = this._maskingRules ? masking.maskObject(originalMessage, this._maskingRules) : originalMessage
         this._modalMsg = {
             stepSource,
             messageClass,
-            payload: msgData?.message !== null && msgData?.message !== undefined ? JSON.stringify(msgData.message, null, 2) : '{}',
+            payload: JSON.stringify(maskedMessage, null, 2),
+            originalMessage,
+            revealed: false,
             valid: true,
         }
         api.getInfo()
@@ -365,6 +392,21 @@ export class FcFlowGraph extends BaseElement {
         this.updateComplete.then(() => {
             this.querySelector('#fc-step-input-modal')?.showModal()
         })
+    }
+
+    _toggleModalReveal() {
+        if (!this._modalMsg) return
+        const revealed = !this._modalMsg.revealed
+        const payload = revealed
+            ? JSON.stringify(this._modalMsg.originalMessage, null, 2)
+            : JSON.stringify(
+                  this._maskingRules
+                      ? masking.maskObject(this._modalMsg.originalMessage, this._maskingRules)
+                      : this._modalMsg.originalMessage,
+                  null,
+                  2
+              )
+        this._modalMsg = { ...this._modalMsg, revealed, payload }
     }
 
     _closeModal() {
@@ -440,7 +482,10 @@ export class FcFlowGraph extends BaseElement {
         this._sending = true
         this._sendError = null
         try {
-            const message = JSON.parse(this._modalMsg.payload)
+            let message = JSON.parse(this._modalMsg.payload)
+            if (!this._modalMsg.revealed && this._maskingRules) {
+                message = masking.mergeWithOriginal(message, this._modalMsg.originalMessage, this._maskingRules)
+            }
             let runtimeHash = null
             if (queued) {
                 await api.queueFlow(this.flow.flowHash, this._modalMsg.messageClass, message, includeSteps)
@@ -1050,7 +1095,7 @@ export class FcFlowGraph extends BaseElement {
                                   .content=${html`<pre
                                       class="text-xs font-mono text-base-content/90 whitespace-pre-wrap overflow-auto max-h-48"
                                   >
-${JSON.stringify(this._tooltip.data, null, 2)}</pre
+${JSON.stringify(this._maskingRules ? masking.maskObject(this._tooltip.data, this._maskingRules) : this._tooltip.data, null, 2)}</pre
                                   >`}
                               ></fc-info-box>
                           </div>
@@ -1169,59 +1214,108 @@ ${JSON.stringify(this._tooltip.data, null, 2)}</pre
                                                                       nicht empfangen
                                                                   </div>`
                                                                 : ''
-                                                            : received.map(
-                                                                  m => html`
-                                                                      <div class="rounded-lg bg-base-300 p-3 mb-1">
-                                                                          <div class="flex items-center gap-2 mb-2">
-                                                                              <span
-                                                                                  class="badge badge-xs leading-none ${m.messageType ===
-                                                                                  'finish'
-                                                                                      ? 'badge-success'
-                                                                                      : m.messageType === 'process'
-                                                                                        ? 'badge-info'
-                                                                                        : 'badge-warning'}"
-                                                                                  >${m.messageType}</span
-                                                                              >
-                                                                              <span class="text-xs text-base-content/40"
-                                                                                  >${fmtDate(m.time)}</span
-                                                                              >
-                                                                              <button
-                                                                                  class="btn btn-ghost btn-xs px-1 ml-auto text-base-content/30 hover:text-base-content/70"
-                                                                                  title="Inhalt kopieren"
-                                                                                  @click=${() =>
-                                                                                      navigator.clipboard.writeText(
-                                                                                          JSON.stringify(m.message, null, 2)
-                                                                                      )}
-                                                                              >
-                                                                                  <svg
-                                                                                      class="w-3 h-3"
-                                                                                      fill="none"
-                                                                                      stroke="currentColor"
-                                                                                      stroke-width="2"
-                                                                                      viewBox="0 0 24 24"
+                                                            : (() => {
+                                                                  const blockId = `${selStep.source}::${msgClass}`
+                                                                  const revealed = this._revealedBlocks.has(blockId)
+                                                                  return html`
+                                                                      ${received.map(
+                                                                          m => html`
+                                                                              <div class="rounded-lg bg-base-300 p-3 mb-1">
+                                                                                  <div class="flex items-center gap-2 mb-2">
+                                                                                      <span
+                                                                                          class="badge badge-xs leading-none ${m.messageType ===
+                                                                                          'finish'
+                                                                                              ? 'badge-success'
+                                                                                              : m.messageType === 'process'
+                                                                                                ? 'badge-info'
+                                                                                                : 'badge-warning'}"
+                                                                                          >${m.messageType}</span
+                                                                                      >
+                                                                                      <span class="text-xs text-base-content/40"
+                                                                                          >${fmtDate(m.time)}</span
+                                                                                      >
+                                                                                      <button
+                                                                                          class="btn btn-ghost btn-xs px-1 ml-auto ${revealed
+                                                                                              ? 'text-warning'
+                                                                                              : 'text-base-content/30 hover:text-base-content/70'}"
+                                                                                          title="${revealed
+                                                                                              ? 'Sensible Daten maskieren'
+                                                                                              : 'Sensible Daten anzeigen'}"
+                                                                                          @click=${() => this._toggleReveal(blockId)}
+                                                                                      >
+                                                                                          <svg
+                                                                                              class="w-4 h-4 ${revealed ? '' : 'hidden'}"
+                                                                                              fill="none"
+                                                                                              stroke="currentColor"
+                                                                                              stroke-width="1.5"
+                                                                                              viewBox="0 0 24 24"
+                                                                                              xmlns="http://www.w3.org/2000/svg"
+                                                                                          >
+                                                                                              <path
+                                                                                                  stroke-linecap="round"
+                                                                                                  stroke-linejoin="round"
+                                                                                                  d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                                                                                              />
+                                                                                              <circle cx="12" cy="12" r="3" />
+                                                                                          </svg>
+                                                                                          <svg
+                                                                                              class="w-4 h-4 ${revealed ? 'hidden' : ''}"
+                                                                                              fill="none"
+                                                                                              stroke="currentColor"
+                                                                                              stroke-width="1.5"
+                                                                                              viewBox="0 0 24 24"
+                                                                                              xmlns="http://www.w3.org/2000/svg"
+                                                                                          >
+                                                                                              <path
+                                                                                                  stroke-linecap="round"
+                                                                                                  stroke-linejoin="round"
+                                                                                                  d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
+                                                                                              />
+                                                                                          </svg>
+                                                                                      </button>
+                                                                                      <button
+                                                                                          class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
+                                                                                          title="Inhalt kopieren"
+                                                                                          @click=${() =>
+                                                                                              navigator.clipboard.writeText(
+                                                                                                  JSON.stringify(
+                                                                                                      this._maskMessage(m.message, blockId),
+                                                                                                      null,
+                                                                                                      2
+                                                                                                  )
+                                                                                              )}
+                                                                                      >
+                                                                                          <svg
+                                                                                              class="w-3 h-3"
+                                                                                              fill="none"
+                                                                                              stroke="currentColor"
+                                                                                              stroke-width="2"
+                                                                                              viewBox="0 0 24 24"
+                                                                                          >
+                                                                                              <rect
+                                                                                                  x="9"
+                                                                                                  y="9"
+                                                                                                  width="13"
+                                                                                                  height="13"
+                                                                                                  rx="2"
+                                                                                                  ry="2"
+                                                                                              ></rect>
+                                                                                              <path
+                                                                                                  d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                                                              ></path>
+                                                                                          </svg>
+                                                                                      </button>
+                                                                                  </div>
+                                                                                  <pre
+                                                                                      class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"
                                                                                   >
-                                                                                      <rect
-                                                                                          x="9"
-                                                                                          y="9"
-                                                                                          width="13"
-                                                                                          height="13"
-                                                                                          rx="2"
-                                                                                          ry="2"
-                                                                                      ></rect>
-                                                                                      <path
-                                                                                          d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
-                                                                                      ></path>
-                                                                                  </svg>
-                                                                              </button>
-                                                                          </div>
-                                                                          <pre
-                                                                              class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"
-                                                                          >
-${JSON.stringify(m.message, null, 2)}</pre
-                                                                          >
-                                                                      </div>
+${JSON.stringify(this._maskMessage(m.message, blockId), null, 2)}</pre
+                                                                                  >
+                                                                              </div>
+                                                                          `
+                                                                      )}
                                                                   `
-                                                              )}
+                                                              })()}
                                                     </div>
                                                 `
                                             })}
@@ -1425,6 +1519,43 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                               </div>
                                           </div>
                                           <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
+                                              <button
+                                                  class="btn btn-ghost btn-sm ${this._modalMsg.revealed ? 'text-warning' : ''}"
+                                                  title="${this._modalMsg.revealed
+                                                      ? 'Sensible Daten maskieren'
+                                                      : 'Sensible Daten anzeigen'}"
+                                                  @click=${() => this._toggleModalReveal()}
+                                              >
+                                                  <svg
+                                                      class="w-4 h-4 ${this._modalMsg.revealed ? '' : 'hidden'}"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="1.5"
+                                                      viewBox="0 0 24 24"
+                                                      xmlns="http://www.w3.org/2000/svg"
+                                                  >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                                                      />
+                                                      <circle cx="12" cy="12" r="3" />
+                                                  </svg>
+                                                  <svg
+                                                      class="w-4 h-4 ${this._modalMsg.revealed ? 'hidden' : ''}"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="1.5"
+                                                      viewBox="0 0 24 24"
+                                                      xmlns="http://www.w3.org/2000/svg"
+                                                  >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
+                                                      />
+                                                  </svg>
+                                              </button>
                                               <button
                                                   class="btn btn-ghost btn-sm"
                                                   title="JSON kopieren"

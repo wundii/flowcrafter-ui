@@ -55,6 +55,7 @@ export default [
             sourceType: 'module',
             globals: {
                 console: 'readonly',
+                navigator: 'readonly',
                 process: 'readonly',
                 sessionStorage: 'readonly',
             },

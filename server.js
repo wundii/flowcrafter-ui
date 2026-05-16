@@ -14,6 +14,7 @@ const AUTH_FILE = './data/auth.json'
 const CONNECTION_FILE = './data/connection.json'
 const DEV_IMPORT_FILE = './data/dev-import.json'
 const KEY_FILE = './data/.key'
+const MASKING_RULES_FILE = './data/masking-rules.json'
 
 const MIME = {
     '.html': 'text/html',
@@ -123,6 +124,16 @@ async function fetchOllamaModels(ollamaUrl) {
     }
 }
 
+// ─── Masking rules store ────��────��───────────────────────────────────────────
+function loadMaskingRules() {
+    if (!existsSync(MASKING_RULES_FILE)) return null
+    return JSON.parse(readFileSync(MASKING_RULES_FILE, 'utf8'))
+}
+
+function saveMaskingRules(rules) {
+    mkdirSync(dirname(MASKING_RULES_FILE), { recursive: true })
+    writeFileSync(MASKING_RULES_FILE, JSON.stringify(rules, null, 2))
+}
 // ─── Dev import store ─────────────────────────────────────────────────────────
 function loadDevImport() {
     if (!existsSync(DEV_IMPORT_FILE)) return null
@@ -476,6 +487,7 @@ function normalizeMetricsPath(p) {
     if (p === '/api/version') return '/api/version'
     if (p.startsWith('/api/dev-import')) return '/api/dev-import'
     if (p === '/api/fc-ping') return '/api/fc-ping'
+    if (p === '/api/masking-rules') return '/api/masking-rules'
     if (p === '/api/analyze') return '/api/analyze'
     if (p === '/metrics') return '/metrics'
     return '/static'
@@ -791,6 +803,26 @@ const server = createServer(async (req, res) => {
                 console.error('Dev import error:', cause)
                 return json(res, { error: `Verbindung fehlgeschlagen: ${cause}` }, 502)
             }
+        }
+
+        return json(res, { error: 'Not found.' }, 404)
+    }
+
+    // ── Masking rules API ────────────────────────────────────────────────
+    if (path === '/api/masking-rules') {
+        const db = loadDb()
+        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+
+        if (method === 'GET') {
+            const rules = loadMaskingRules()
+            return json(res, rules ?? [])
+        }
+
+        if (method === 'POST') {
+            const rules = await readBody(req)
+            if (!Array.isArray(rules)) return json(res, { error: 'Ungültiges Format.' }, 400)
+            saveMaskingRules(rules)
+            return json(res, { ok: true })
         }
 
         return json(res, { error: 'Not found.' }, 404)

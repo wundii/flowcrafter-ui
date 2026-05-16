@@ -62,6 +62,12 @@ export async function mockAuthenticatedApp(page, overrides = {}) {
         return route.continue()
     })
     await page.route('**/api/ai-config', route => route.fulfill({ json: data.aiConfigUnconfigured ?? mocks.aiConfigUnconfigured }))
+    await page.route('**/api/masking-rules', async route => {
+        if (route.request().method() === 'GET') {
+            return route.fulfill({ json: data.maskingRules ?? [] })
+        }
+        return route.fulfill({ json: { ok: true } })
+    })
     await page.route('**/api/version', route => route.fulfill({ json: data.uiVersion ?? mocks.uiVersion }))
 
     await mockFlowcrafterApi(page, data)

@@ -1,6 +1,7 @@
 import { html } from 'lit'
 import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
+import { masking } from '../services/masking.js'
 import { buildRunDiff } from '../services/run-diff.js'
 import { buildRuns } from '../services/runs.js'
 import { formatAbsolute } from '../utils/time.js'
@@ -28,7 +29,9 @@ export class FcFlowDetail extends BaseElement {
         _analysisUsage: { state: true },
         _dragOverRunId: { state: true },
         _hoveredRunId: { state: true },
+        _diffRevealed: { state: true },
         _rawModal: { state: true },
+        _rawRevealed: { state: true },
         _readOnlyModal: { state: true },
         _refreshCountdown: { state: true },
         _toast: { state: true },
@@ -59,7 +62,10 @@ export class FcFlowDetail extends BaseElement {
         this._countdownInterval = null
         this._dragOverRunId = null
         this._hoveredRunId = null
+        this._diffRevealed = false
+        this._maskingRules = null
         this._rawModal = false
+        this._rawRevealed = false
         this._readOnlyModal = false
         this._refreshCountdown = null
         this._refreshTimer = null
@@ -106,6 +112,7 @@ export class FcFlowDetail extends BaseElement {
         this.flow = null
         this.runs = []
         if (!preserveSelection) this.selectedRunId = null
+        if (!this._maskingRules) this._maskingRules = await masking.loadRules()
         try {
             this.flow = await api.getFlow(this.hash)
             this.runs = buildRuns(this.flow)
@@ -390,8 +397,10 @@ export class FcFlowDetail extends BaseElement {
                                       .content=${html`
                                           <button
                                               class="btn btn-sm btn-ghost btn-circle border border-base-content/30 hover:border-base-content/50"
-                                              @click=${() => {
+                                              @click=${async () => {
                                                   this._rawModal = true
+                                                  this._rawRevealed = false
+                                                  this._maskingRules = await masking.loadRules()
                                                   this.updateComplete.then(() => this.querySelector('#fc-raw-modal')?.showModal())
                                               }}
                                           >
@@ -487,11 +496,56 @@ export class FcFlowDetail extends BaseElement {
                                           </div>
                                           <div class="flex items-center gap-2">
                                               <fc-tooltip
+                                                  text="${this._rawRevealed ? 'Sensible Daten maskieren' : 'Sensible Daten anzeigen'}"
+                                                  .content=${html`
+                                                      <button
+                                                          class="btn btn-ghost btn-sm ${this._rawRevealed ? 'text-warning' : ''}"
+                                                          @click=${() => (this._rawRevealed = !this._rawRevealed)}
+                                                      >
+                                                          <svg
+                                                              class="w-4 h-4 ${this._rawRevealed ? '' : 'hidden'}"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              stroke-width="1.5"
+                                                              viewBox="0 0 24 24"
+                                                              xmlns="http://www.w3.org/2000/svg"
+                                                          >
+                                                              <path
+                                                                  stroke-linecap="round"
+                                                                  stroke-linejoin="round"
+                                                                  d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                                                              />
+                                                              <circle cx="12" cy="12" r="3" />
+                                                          </svg>
+                                                          <svg
+                                                              class="w-4 h-4 ${this._rawRevealed ? 'hidden' : ''}"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              stroke-width="1.5"
+                                                              viewBox="0 0 24 24"
+                                                              xmlns="http://www.w3.org/2000/svg"
+                                                          >
+                                                              <path
+                                                                  stroke-linecap="round"
+                                                                  stroke-linejoin="round"
+                                                                  d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
+                                                              />
+                                                          </svg>
+                                                      </button>
+                                                  `}
+                                              ></fc-tooltip>
+                                              <fc-tooltip
                                                   text="JSON kopieren"
                                                   .content=${html`
                                                       <button
                                                           class="btn btn-ghost btn-sm"
-                                                          @click=${() => navigator.clipboard.writeText(JSON.stringify(this.flow, null, 2))}
+                                                          @click=${() => {
+                                                              const data =
+                                                                  this._rawRevealed || !this._maskingRules
+                                                                      ? this.flow
+                                                                      : masking.maskObject(this.flow, this._maskingRules)
+                                                              navigator.clipboard.writeText(JSON.stringify(data, null, 2))
+                                                          }}
                                                       >
                                                           <svg
                                                               class="w-4 h-4"
@@ -519,7 +573,13 @@ export class FcFlowDetail extends BaseElement {
                                   <!-- Editor -->
                                   <div class="flex-1 overflow-hidden relative">
                                       <fc-json-editor
-                                          .value=${JSON.stringify(this.flow, null, 2)}
+                                          .value=${JSON.stringify(
+                                              this._rawRevealed || !this._maskingRules
+                                                  ? this.flow
+                                                  : masking.maskObject(this.flow, this._maskingRules),
+                                              null,
+                                              2
+                                          )}
                                           .readonly=${true}
                                           .search=${true}
                                           style="display:block; height:100%; overflow:hidden;"
@@ -970,6 +1030,7 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                 <span class="text-success">✓</span>
                 <span class="text-base-content/60">Nur in <strong>${runB.label}</strong></span>
             </div>`
+        const rules = this._maskingRules
         return html`
             <div class="rounded-lg border border-base-300 overflow-hidden">
                 <table class="table table-xs w-full mb-0">
@@ -984,9 +1045,12 @@ ${JSON.stringify(this._analysisError.detail, null, 2)}</pre
                         ${md.payloadDiff
                             .filter(f => f.changed)
                             .map(f => {
+                                const leafKey = f.key.includes('.') ? f.key.split('.').pop() : f.key
+                                const sensitive = !this._diffRevealed && rules && masking.isSensitiveKey(leafKey, rules)
                                 const isBlock = v => typeof v === 'object' && v !== null
                                 const renderVal = v => {
                                     if (v === undefined) return '—'
+                                    if (sensitive) return '***'
                                     if (isBlock(v))
                                         return html`<pre class="whitespace-pre-wrap break-all m-0 font-mono text-xs">
 ${JSON.stringify(v, null, 2)}</pre
@@ -1329,12 +1393,49 @@ ${JSON.stringify(v, null, 2)}</pre
                                     <span class="text-xs text-base-content/50">${runA.label} ↔ ${runB.label}</span>
                                 </div>
                             </div>
-                            <button
-                                class="btn btn-ghost btn-sm btn-square btn-circle"
-                                @click=${() => this.querySelector('#fc-diff-modal')?.close()}
-                            >
-                                ✕
-                            </button>
+                            <div class="flex items-center gap-1">
+                                <button
+                                    class="btn btn-ghost btn-sm ${this._diffRevealed ? 'text-warning' : ''}"
+                                    title="${this._diffRevealed ? 'Sensible Daten maskieren' : 'Sensible Daten anzeigen'}"
+                                    @click=${() => (this._diffRevealed = !this._diffRevealed)}
+                                >
+                                    <svg
+                                        class="w-4 h-4 ${this._diffRevealed ? '' : 'hidden'}"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                        viewBox="0 0 24 24"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                                        />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                    <svg
+                                        class="w-4 h-4 ${this._diffRevealed ? 'hidden' : ''}"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                        viewBox="0 0 24 24"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
+                                        />
+                                    </svg>
+                                </button>
+                                <button
+                                    class="btn btn-ghost btn-sm btn-square btn-circle"
+                                    @click=${() => this.querySelector('#fc-diff-modal')?.close()}
+                                >
+                                    ✕
+                                </button>
+                            </div>
                         </div>
                     </div>
 
