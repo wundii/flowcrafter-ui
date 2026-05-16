@@ -19,7 +19,6 @@ const DEFAULT_RULES = [
     { field: 'telefonnummer', enabled: true, isDefault: true },
     { field: 'mobile', enabled: true, isDefault: true },
     { field: 'handy', enabled: true, isDefault: true },
-    { field: 'name', enabled: true, isDefault: true },
     { field: 'vorname', enabled: true, isDefault: true },
     { field: 'nachname', enabled: true, isDefault: true },
     { field: 'firstname', enabled: true, isDefault: true },
@@ -41,8 +40,11 @@ async function loadRules() {
             headers: { Authorization: `Bearer ${_token()}` },
         })
         if (res.ok) {
-            _rules = await res.json()
-            return _rules
+            const data = await res.json()
+            if (data.length > 0) {
+                _rules = data
+                return _rules
+            }
         }
     } catch {
         // fallback to defaults
@@ -69,7 +71,7 @@ function invalidateCache() {
 
 function isSensitiveKey(key, rules) {
     const lower = key.toLowerCase()
-    return rules.some(r => r.enabled && lower.includes(r.field.toLowerCase()))
+    return rules.some(r => r.enabled && lower === r.field.toLowerCase())
 }
 
 function maskValue(value) {

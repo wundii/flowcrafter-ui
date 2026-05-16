@@ -38,7 +38,7 @@ const flowDetailWithPII = {
             message: {
                 orderId: 42,
                 email: 'max@example.com',
-                name: 'Max Mustermann',
+                vorname: 'Max',
                 password: 'geheim123',
                 address: 'Musterstr. 1',
             },
@@ -90,7 +90,7 @@ test.describe('Datenschutz-Maskierung', () => {
 
         await expect(page.locator('fc-masking-settings .badge', { hasText: 'password' })).toBeVisible()
         await expect(page.locator('fc-masking-settings .badge', { hasText: 'email' })).toBeVisible()
-        await expect(page.locator('fc-masking-settings .badge').getByText('name', { exact: true })).toBeVisible()
+        await expect(page.locator('fc-masking-settings .badge', { hasText: 'vorname' })).toBeVisible()
     })
 
     test('Masking-Settings erlaubt neue Regel hinzuzufügen', async ({ page }) => {
@@ -126,20 +126,43 @@ test.describe('Datenschutz-Maskierung', () => {
         await expect(preContent).toBeVisible()
         await expect(preContent).toContainText('"orderId": 42')
         await expect(preContent).toContainText('"email": "***"')
-        await expect(preContent).toContainText('"name": "***"')
+        await expect(preContent).toContainText('"vorname": "***"')
         await expect(preContent).toContainText('"password": "***"')
 
         const revealBtn = messageBlock.locator('button[title="Sensible Daten anzeigen"]')
         await revealBtn.click()
 
         await expect(preContent).toContainText('"email": "max@example.com"')
-        await expect(preContent).toContainText('"name": "Max Mustermann"')
+        await expect(preContent).toContainText('"vorname": "Max"')
         await expect(preContent).toContainText('"password": "geheim123"')
 
         const maskBtn = messageBlock.locator('button[title="Sensible Daten maskieren"]')
         await maskBtn.click()
 
         await expect(preContent).toContainText('"email": "***"')
+    })
+
+    test('Default-Regeln greifen wenn Server keine Regeln gespeichert hat', async ({ page }) => {
+        if (!isMocked) return
+
+        await page.route('**/api/masking-rules', route => route.fulfill({ json: [] }))
+
+        await tab(page, 'Flows').click()
+        await expect(page.locator('fc-type-list')).toBeVisible()
+        await page.locator('fc-type-list .rounded-box', { hasText: 'OrderFlow' }).click()
+        await expect(page.locator('fc-flow-list')).toBeVisible()
+        await page.locator('fc-flow-list .rounded-box').first().click()
+        await expect(page.locator('fc-flow-detail')).toBeVisible({ timeout: 10_000 })
+
+        await page.locator('.fc-node').first().click()
+
+        const messageBlock = page.locator('.rounded-lg.bg-base-300').first()
+        await expect(messageBlock).toBeVisible()
+
+        const preContent = messageBlock.locator('pre')
+        await expect(preContent).toBeVisible()
+        await expect(preContent).toContainText('"email": "***"')
+        await expect(preContent).toContainText('"password": "***"')
     })
 
     test('Copy-Button kopiert maskierte Daten im maskierten Zustand', async ({ page, context }) => {
