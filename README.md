@@ -122,6 +122,8 @@ docker build -t flowcrafter-ui .
 | GET     | `/api/ai-config`            | KI-Konfiguration abrufen              |
 | POST    | `/api/ai-config`            | API-Key & Modell speichern            |
 | DELETE  | `/api/ai-config`            | KI-Konfiguration löschen              |
+| GET     | `/api/masking-rules`        | Maskierungs-Regeln abrufen            |
+| POST    | `/api/masking-rules`        | Maskierungs-Regeln speichern          |
 | POST    | `/api/analyze`              | Flow-Analyse starten (NDJSON-Stream)  |
 | POST    | `/api/fc-ping`              | FlowCrafter-Erreichbarkeit testen     |
 | ALL     | `/api/fc/*`                 | Proxy zu FlowCrafter-API (mit Auth)   |
@@ -141,6 +143,14 @@ Der Node.js-Server stellt unter `GET /metrics` einen Prometheus-kompatiblen Endp
 | `flowcrafter_ui_http_request_duration_ms_count` | Counter | Anzahl Requests pro Route                        |
 
 Pfade werden normalisiert (`/api/auth/*`, `/api/fc/*`, `/static`), um die Label-Kardinalität niedrig zu halten.
+
+---
+
+## Datenschutz-Maskierung
+
+Sensible Daten (Passwörter, Tokens, E-Mail-Adressen, etc.) werden in allen Message-Ansichten automatisch mit `***` maskiert — inkl. Tooltips, JSON-Raw-Modal, Run-Vergleich und Copy-Button. Pro Block kann die Maskierung per Toggle aufgehoben werden. Beim maskierten Editieren im Message-Input-Modal werden unveränderte `***`-Felder mit dem Originalwert an das Backend gesendet.
+
+Die Maskierung nutzt **exakten Key-Match** (case-insensitive): `email` wird maskiert, `userEmail` nicht. Vorkonfigurierte Standard-Regeln decken gängige Credentials- und PII-Felder ab (DE + EN). Über das Datenschutz-Modal (Schild-Icon in der Navbar) lassen sich Regeln ein-/ausschalten und eigene ergänzen. Regeln werden in `./data/masking-rules.json` persistiert.
 
 ---
 
