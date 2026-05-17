@@ -4,6 +4,7 @@ import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
 import { skeletonFlowList } from '../utils/skeleton.js'
 import { timeEl } from '../utils/time.js'
+import './fc-empty-state.js'
 import './fc-tooltip.js'
 
 const PAGE_SIZE = 20
@@ -286,11 +287,9 @@ export class FcFlowList extends BaseElement {
 
         if (this.error) return renderApiError(this.error, { compact: true, retry: this._load })
 
-        if (this._items.length === 0 && !this._dateFrom && !this._dateTo)
-            return html` <div class="alert alert-info"><span>Keine Flows gefunden.</span></div> `
-
+        const noData = this._items.length === 0 && !this._dateFrom && !this._dateTo
         const filtered = this._filteredItems
-        const isEmpty = filtered.length === 0
+        const isEmpty = noData || filtered.length === 0
 
         return html`
             <!-- Toolbar -->
@@ -439,7 +438,9 @@ export class FcFlowList extends BaseElement {
             ${isEmpty
                 ? this._hasMore
                     ? html`<div class="flex justify-center py-8"><span class="loading loading-spinner loading-md"></span></div>`
-                    : html`<div class="alert alert-info"><span>Keine Flows für den gewählten Zeitraum gefunden.</span></div>`
+                    : html`<fc-empty-state
+                          message=${noData ? 'Keine Flows gefunden.' : 'Keine Flows für den gewählten Zeitraum gefunden.'}
+                      ></fc-empty-state>`
                 : html`
                       <!-- Flow cards -->
                       <div class="flex flex-col gap-2">

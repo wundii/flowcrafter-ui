@@ -4,6 +4,7 @@ import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
 import { skeletonExceptionList } from '../utils/skeleton.js'
 import { timeEl } from '../utils/time.js'
+import './fc-empty-state.js'
 import './fc-tooltip.js'
 
 const PAGE_SIZE = 20
@@ -630,13 +631,11 @@ ${ex.traceString}</pre
             </div>
 
             ${isEmpty
-                ? html`<div class="alert alert-success">
-                      <span
-                          >${this._dateFrom || this._dateTo
-                              ? 'Keine Exceptions für den gewählten Zeitraum gefunden.'
-                              : 'Keine Exceptions gefunden.'}</span
-                      >
-                  </div>`
+                ? html`<fc-empty-state
+                      message=${this._dateFrom || this._dateTo
+                          ? 'Keine Exceptions für den gewählten Zeitraum gefunden.'
+                          : 'Keine Exceptions gefunden.'}
+                  ></fc-empty-state>`
                 : html`
                       <!-- Exception cards -->
                       <div class="flex flex-col gap-2">${displayItems.map((ex, idx) => this._renderWithGroup(ex, idx))}</div>

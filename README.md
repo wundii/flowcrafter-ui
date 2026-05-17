@@ -4,17 +4,37 @@ Web-Frontend für [FlowCrafter](https://github.com/wundii/flowcrafter) — visua
 
 <p align="center">
   <picture>
-    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/screen_01.png" alt="wundii/flowcrafter" style="width: 100%; max-width: 600px; height: auto;">
+    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/01-overview.png" alt="Overview" style="width: 100%; max-width: 600px; height: auto;">
   </picture>
 </p>
 <p align="center">
   <picture>
-    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/screen_02.png" alt="wundii/flowcrafter" style="width: 100%; max-width: 600px; height: auto;">
+    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/02-flows-types.png" alt="Flow Types" style="width: 100%; max-width: 600px; height: auto;">
   </picture>
 </p>
 <p align="center">
   <picture>
-    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/screen_03.png" alt="wundii/flowcrafter" style="width: 100%; max-width: 600px; height: auto;">
+    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/04-flow-detail.png" alt="Flow Detail" style="width: 100%; max-width: 600px; height: auto;">
+  </picture>
+</p>
+<p align="center">
+  <picture>
+    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/05-flow-input-modal.png" alt="Flow Input Modal" style="width: 100%; max-width: 600px; height: auto;">
+  </picture>
+</p>
+<p align="center">
+  <picture>
+    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/06-exceptions.png" alt="Exceptions" style="width: 100%; max-width: 600px; height: auto;">
+  </picture>
+</p>
+<p align="center">
+  <picture>
+    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/07-schedules.png" alt="Schedules" style="width: 100%; max-width: 600px; height: auto;">
+  </picture>
+</p>
+<p align="center">
+  <picture>
+    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/08-devtool.png" alt="Devtool" style="width: 100%; max-width: 600px; height: auto;">
   </picture>
 </p>
 

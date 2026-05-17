@@ -24,7 +24,7 @@
     "@codemirror/theme-one-dark": "^6.1.3",
     "codemirror": "^6.0.2",
     "cytoscape": "^3.33.3",
-    "cytoscape-dagre": "^2.5.0",
+    "cytoscape-dagre": "^3.0.0",
     "lit": "^3.3.3"
   },
   "devDependencies": {
@@ -33,8 +33,9 @@
     "@tailwindcss/vite": "^4.3.0",
     "concurrently": "^9.2.1",
     "daisyui": "^5.5.19",
-    "eslint": "^10.3.0",
+    "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
+    "pngjs": "^7.0.0",
     "prettier": "^3.8.3",
     "tailwindcss": "^4.3.0",
     "vite": "^8.0.13"

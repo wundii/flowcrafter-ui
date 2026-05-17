@@ -4,6 +4,7 @@ import { api } from '../services/api.js'
 import { timeEl } from '../utils/time.js'
 import './fc-flow-graph.js'
 import './fc-source-viewer.js'
+import './fc-empty-state.js'
 import './fc-tooltip.js'
 
 function shortName(fqcn) {
@@ -359,18 +360,9 @@ export class FcSchemaList extends BaseElement {
 
                 <div class="flex flex-col gap-2">
                     ${filtered.length === 0
-                        ? html`
-                              <div class="flex flex-col items-center gap-3 py-12 text-base-content/40">
-                                  <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                                      <path
-                                          stroke-linecap="round"
-                                          stroke-linejoin="round"
-                                          d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0016.803 15.803z"
-                                      />
-                                  </svg>
-                                  <span class="text-sm">${this._filter ? 'Keine Flows für diesen Filter.' : 'Keine Flows vorhanden.'}</span>
-                              </div>
-                          `
+                        ? html`<fc-empty-state
+                              message=${this._filter ? 'Keine Flows für diesen Filter.' : 'Keine Flows vorhanden.'}
+                          ></fc-empty-state>`
                         : filtered.map(f => {
                               const initSteps = f.steps.filter(s => s.messageEnum === 'init')
                               const otherSteps = f.steps.filter(s => s.messageEnum !== 'init')

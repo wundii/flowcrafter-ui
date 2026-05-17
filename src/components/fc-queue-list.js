@@ -3,6 +3,7 @@ import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
 import { skeletonQueueList } from '../utils/skeleton.js'
+import './fc-empty-state.js'
 import './fc-tooltip.js'
 
 function shortClass(fqn) {
@@ -92,7 +93,7 @@ export class FcQueueList extends BaseElement {
             </div>
 
             ${isEmpty
-                ? html`<div class="alert alert-success"><span>Queue ist leer.</span></div>`
+                ? html`<fc-empty-state message="Queue ist leer."></fc-empty-state>`
                 : html`
                       <!-- Queue cards -->
                       <div class="flex flex-col gap-2">

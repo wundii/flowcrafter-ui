@@ -3,6 +3,7 @@ import { BaseElement } from '../base-element.js'
 import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
 import { skeletonScheduleGrid } from '../utils/skeleton.js'
+import './fc-empty-state.js'
 import './fc-source-viewer.js'
 import './fc-tooltip.js'
 
@@ -379,13 +380,15 @@ export class FcScheduleList extends BaseElement {
             </div>
 
             ${isEmpty
-                ? html`<div class="alert alert-info"><span>Keine Schedules gefunden.</span></div>`
+                ? html`<fc-empty-state message="Keine Schedules gefunden."></fc-empty-state>`
                 : this._filter.trim()
-                  ? html`
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            ${this._filteredInGroup(this._schedules).map(item => this._renderScheduleCard(item))}
-                        </div>
-                    `
+                  ? this._filteredInGroup(this._schedules).length === 0
+                      ? html`<fc-empty-state message="Keine Schedules für diesen Filter."></fc-empty-state>`
+                      : html`
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                ${this._filteredInGroup(this._schedules).map(item => this._renderScheduleCard(item))}
+                            </div>
+                        `
                   : html`
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             ${sortedGroups.map(([name, items]) => this._renderGroupCard(name, items))}
@@ -428,9 +431,13 @@ export class FcScheduleList extends BaseElement {
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                ${items.map(item => this._renderScheduleCard(item))}
-            </div>
+            ${items.length === 0
+                ? html`<fc-empty-state message="Keine Schedules für diesen Filter."></fc-empty-state>`
+                : html`
+                      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          ${items.map(item => this._renderScheduleCard(item))}
+                      </div>
+                  `}
         `
     }
 

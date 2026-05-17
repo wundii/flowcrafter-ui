@@ -4,6 +4,7 @@ import { api } from '../services/api.js'
 import { renderApiError } from '../utils/error.js'
 import { skeletonTypeGrid } from '../utils/skeleton.js'
 import { timeEl } from '../utils/time.js'
+import './fc-empty-state.js'
 import './fc-tooltip.js'
 
 export class FcTypeList extends BaseElement {
@@ -285,7 +286,8 @@ export class FcTypeList extends BaseElement {
 
         if (this.error) return renderApiError(this.error, { compact: true, retry: this._load })
 
-        if (this.schemas.length === 0) return html`<div class="alert alert-info"><span>Keine Types gefunden.</span></div>`
+        if (this.schemas.length === 0)
+            return html` ${this._renderToolbar(false)} <fc-empty-state message="Keine Types gefunden."></fc-empty-state> `
 
         // Group view
         if (this._activeGroup !== null) {

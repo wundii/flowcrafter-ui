@@ -76,10 +76,10 @@ export class FcMaskingSettings extends BaseElement {
             </p>
 
             <!-- Add new rule -->
-            <div class="flex gap-2 mb-6">
+            <div class="grid grid-cols-[1fr_auto] gap-2 mb-6">
                 <input
                     type="text"
-                    class="input input-sm input-bordered flex-1"
+                    class="input input-sm input-bordered w-full"
                     placeholder="Neues Feld hinzufügen (z.B. username, age, ...)"
                     .value=${this._newField}
                     @input=${e => (this._newField = e.target.value)}

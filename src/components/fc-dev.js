@@ -665,90 +665,92 @@ export class FcDev extends BaseElement {
 
                 ${this._flows.length === 0
                     ? html`<div class="text-sm text-base-content/40 text-center py-8">Keine lokalen Flows gefunden</div>`
-                    : html`
-                          ${sortedGroups.map(([groupName, items]) => {
-                              const filtered = this._filtered(items)
-                              if (filtered.length === 0) return ''
-                              const collapsed = !this._filter && this._collapsedGroups.has(groupName)
-                              return html`
-                                  <div class="mb-1">
-                                      <button
-                                          class="flex items-center gap-1.5 w-full px-2 py-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider hover:text-base-content/70 transition-colors"
-                                          @click=${() => {
-                                              const next = new Set(this._collapsedGroups)
-                                              collapsed ? next.delete(groupName) : next.add(groupName)
-                                              this._collapsedGroups = next
-                                          }}
-                                      >
-                                          <svg
-                                              class="w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              stroke-width="2"
-                                              viewBox="0 0 24 24"
-                                          >
-                                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                          </svg>
-                                          <svg
-                                              class="w-3 h-3 shrink-0"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              stroke-width="2"
-                                              viewBox="0 0 24 24"
-                                          >
-                                              <path
-                                                  stroke-linecap="round"
-                                                  stroke-linejoin="round"
-                                                  d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v8.25A2.25 2.25 0 004.5 16.5h15a2.25 2.25 0 002.25-2.25V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
-                                              />
-                                          </svg>
-                                          <span class="flex-1 text-left">${groupName}</span>
-                                          <span class="font-mono font-normal normal-case tracking-normal text-base-content/30"
-                                              >${filtered.length}</span
-                                          >
-                                      </button>
-                                      ${collapsed ? '' : filtered.map(f => this._renderFlowItem(f))}
-                                  </div>
-                              `
-                          })}
-                          ${ungrouped.length > 0
-                              ? html`
+                    : this._filter && this._filtered(this._flows).length === 0
+                      ? html`<div class="text-sm text-base-content/40 text-center py-4">Kein Treffer</div>`
+                      : html`
+                            ${sortedGroups.map(([groupName, items]) => {
+                                const filtered = this._filtered(items)
+                                if (filtered.length === 0) return ''
+                                const collapsed = !this._filter && this._collapsedGroups.has(groupName)
+                                return html`
                                     <div class="mb-1">
-                                        ${sortedGroups.length > 0
-                                            ? (() => {
-                                                  const collapsed = !this._filter && this._collapsedGroups.has('__ungrouped__')
-                                                  return html`
-                                                      <button
-                                                          class="flex items-center gap-1.5 w-full px-2 py-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider hover:text-base-content/70 transition-colors"
-                                                          @click=${() => {
-                                                              const next = new Set(this._collapsedGroups)
-                                                              collapsed ? next.delete('__ungrouped__') : next.add('__ungrouped__')
-                                                              this._collapsedGroups = next
-                                                          }}
-                                                      >
-                                                          <svg
-                                                              class="w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}"
-                                                              fill="none"
-                                                              stroke="currentColor"
-                                                              stroke-width="2"
-                                                              viewBox="0 0 24 24"
-                                                          >
-                                                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                                          </svg>
-                                                          <span class="flex-1 text-left">Ohne Gruppe</span>
-                                                          <span
-                                                              class="font-mono font-normal normal-case tracking-normal text-base-content/30"
-                                                              >${ungrouped.length}</span
-                                                          >
-                                                      </button>
-                                                      ${collapsed ? '' : ungrouped.map(f => this._renderFlowItem(f))}
-                                                  `
-                                              })()
-                                            : ungrouped.map(f => this._renderFlowItem(f))}
+                                        <button
+                                            class="flex items-center gap-1.5 w-full px-2 py-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider hover:text-base-content/70 transition-colors"
+                                            @click=${() => {
+                                                const next = new Set(this._collapsedGroups)
+                                                collapsed ? next.delete(groupName) : next.add(groupName)
+                                                this._collapsedGroups = next
+                                            }}
+                                        >
+                                            <svg
+                                                class="w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                            <svg
+                                                class="w-3 h-3 shrink-0"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v8.25A2.25 2.25 0 004.5 16.5h15a2.25 2.25 0 002.25-2.25V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
+                                                />
+                                            </svg>
+                                            <span class="flex-1 text-left">${groupName}</span>
+                                            <span class="font-mono font-normal normal-case tracking-normal text-base-content/30"
+                                                >${filtered.length}</span
+                                            >
+                                        </button>
+                                        ${collapsed ? '' : filtered.map(f => this._renderFlowItem(f))}
                                     </div>
                                 `
-                              : ''}
-                      `}
+                            })}
+                            ${ungrouped.length > 0
+                                ? html`
+                                      <div class="mb-1">
+                                          ${sortedGroups.length > 0
+                                              ? (() => {
+                                                    const collapsed = !this._filter && this._collapsedGroups.has('__ungrouped__')
+                                                    return html`
+                                                        <button
+                                                            class="flex items-center gap-1.5 w-full px-2 py-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider hover:text-base-content/70 transition-colors"
+                                                            @click=${() => {
+                                                                const next = new Set(this._collapsedGroups)
+                                                                collapsed ? next.delete('__ungrouped__') : next.add('__ungrouped__')
+                                                                this._collapsedGroups = next
+                                                            }}
+                                                        >
+                                                            <svg
+                                                                class="w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                stroke-width="2"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                                            </svg>
+                                                            <span class="flex-1 text-left">Ohne Gruppe</span>
+                                                            <span
+                                                                class="font-mono font-normal normal-case tracking-normal text-base-content/30"
+                                                                >${ungrouped.length}</span
+                                                            >
+                                                        </button>
+                                                        ${collapsed ? '' : ungrouped.map(f => this._renderFlowItem(f))}
+                                                    `
+                                                })()
+                                              : ungrouped.map(f => this._renderFlowItem(f))}
+                                      </div>
+                                  `
+                                : ''}
+                        `}
             </div>
         `
     }
