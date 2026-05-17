@@ -273,6 +273,7 @@ export class FcFlowGraph extends BaseElement {
     static properties = {
         _diffTooltip: { state: true }, // { x, y, source, diff } | null
         _excTooltip: { state: true }, // { x, y, exc } | null
+        _retryTooltip: { state: true }, // { x, y, retries } | null
         _modalMsg: { state: true }, // { stepSource, messageClass, payload, valid }
         _observerRunning: { state: true },
         _sendError: { state: true },
@@ -291,6 +292,7 @@ export class FcFlowGraph extends BaseElement {
         runId: { type: String },
         runMessages: { type: Array }, // overrides flow.flowMessages for a specific run
         runResults: { type: Array }, // overrides flow.flowResults for a specific run
+        runRetries: { type: Array }, // FlowRetry[] for the selected run
         selectedStep: { state: true },
         stepDiff: { type: Object }, // { [source]: { status: 'added'|'changed'|'unchanged', changes: {messages:{added,removed},returnTypes:{added,removed}} } }
     }
@@ -320,6 +322,9 @@ export class FcFlowGraph extends BaseElement {
         this.runId = null
         this.runMessages = null
         this.runResults = null
+        this.runRetries = null
+        this._retryTooltip = null
+        this._retryTooltipTimer = null
         this.selectedStep = null
         this.stepDiff = null
         injectAnimation()
@@ -533,6 +538,12 @@ export class FcFlowGraph extends BaseElement {
         const flowMessages = this.runMessages ?? this.flow.flowMessages ?? []
         const flowExceptions = this.runExceptions ?? this.flow.flowExceptions ?? []
         const flowResults = this.runResults ?? this.flow.flowResults ?? []
+        const flowRetries = this.runRetries ?? this.flow.flowRetries ?? []
+
+        const retriesByStep = {}
+        for (const r of flowRetries) {
+            ;(retriesByStep[r.stepSource] = retriesByStep[r.stepSource] ?? []).push(r)
+        }
 
         // Step timing: read pre-computed timings from the run's flowStepTimings array
         const currentRun = this.runId !== null ? ((this.flow?.flowRuns ?? []).find(r => r.flowRuntimeHash === this.runId) ?? null) : null
@@ -638,6 +649,7 @@ export class FcFlowGraph extends BaseElement {
                             const msgs = msgsOf(step.source)
                             const excs = excsOf(step.source)
                             const ress = ressOf(step.source)
+                            const stepRetries = retriesByStep[step.source] ?? []
                             const selected = this.selectedStep === step.source
                             const nh = nodeHeight(step, hasTimings)
                             const maxPorts = Math.max(step.messages.length, step.returnTypes.length, 1)
@@ -648,11 +660,11 @@ export class FcFlowGraph extends BaseElement {
                                     @click=${() => (this.selectedStep = selected ? null : step.source)}
                                     style="
                      position:absolute; left:${pos.x}px; top:${pos.y}px;
-                     width:${NODE_W}px; height:${nh}px;
+                     width:${NODE_W}px; height:${nh + 6}px;
                      background:${st.bg};
                      border:1.5px solid ${selected ? st.color : st.color + '55'};
                      border-left:5px solid ${st.color};
-                     border-radius:10px; cursor:pointer; overflow:hidden;
+                     border-radius:10px; cursor:pointer; overflow:${stepRetries.length > 0 ? 'visible' : 'hidden'};
                      box-shadow:${selected ? `0 0 0 2px ${st.color}44, 0 4px 20px ${st.color}22` : '0 2px 8px rgba(0,0,0,0.4)'};
                    "
                                 >
@@ -868,6 +880,52 @@ export class FcFlowGraph extends BaseElement {
                                             `
                                         })}
                                     </div>
+
+                                    <!-- Retry badge -->
+                                    ${stepRetries.length > 0
+                                        ? html`
+                                              <div
+                                                  style="position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+                                                      display:flex; align-items:center; gap:3px;
+                                                      background:#ea580c; color:#fff; border-radius:8px;
+                                                      padding:1px 7px; font-size:9px; font-weight:700;
+                                                      font-family:monospace; white-space:nowrap; z-index:2;
+                                                      box-shadow:0 1px 4px rgba(234,88,12,0.4);"
+                                                  @mouseenter=${e => {
+                                                      e.stopPropagation()
+                                                      clearTimeout(this._retryTooltipTimer)
+                                                      const hostRect = this.getBoundingClientRect()
+                                                      const elRect = e.currentTarget.getBoundingClientRect()
+                                                      this._retryTooltip = {
+                                                          x: elRect.left - hostRect.left + elRect.width / 2,
+                                                          y: elRect.bottom - hostRect.top + 6,
+                                                          retries: stepRetries,
+                                                          stepSource: step.source,
+                                                          hasException: excs.length > 0,
+                                                          hasWarning: ress.some(r => r.result === false),
+                                                      }
+                                                  }}
+                                                  @mouseleave=${() => {
+                                                      this._retryTooltipTimer = setTimeout(() => (this._retryTooltip = null), 150)
+                                                  }}
+                                              >
+                                                  <svg
+                                                      viewBox="0 0 24 24"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="3"
+                                                      style="width:10px;height:10px;"
+                                                  >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                                      />
+                                                  </svg>
+                                                  ${stepRetries.length}
+                                              </div>
+                                          `
+                                        : ''}
                                 </div>
                             `
                         })}
@@ -1126,6 +1184,81 @@ ${JSON.stringify(this._maskingRules ? masking.maskObject(this._tooltip.data, thi
                                       <div class="font-mono text-[10px] text-base-content/40">
                                           ${this._excTooltip.exc.file}:${this._excTooltip.exc.line}
                                       </div>
+                                  </div>
+                              </div>
+                          </div>
+                      `
+                    : ''}
+
+                <!-- ── Retry tooltip ── -->
+                ${this._retryTooltip
+                    ? html`
+                          <div
+                              style="position:absolute; left:${this._retryTooltip.x}px; top:${this._retryTooltip.y}px;
+                                  transform:translateX(-50%); z-index:50; max-width:320px;"
+                              @mouseenter=${() => clearTimeout(this._retryTooltipTimer)}
+                              @mouseleave=${() => {
+                                  this._retryTooltipTimer = setTimeout(() => (this._retryTooltip = null), 150)
+                              }}
+                          >
+                              <div class="rounded-box border border-base-300 bg-base-100 shadow-lg">
+                                  <div class="bg-base-200 px-4 py-2 rounded-t-box flex items-center gap-2">
+                                      <svg
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="#ea580c"
+                                          stroke-width="2.5"
+                                          style="width:12px;height:12px;"
+                                      >
+                                          <path
+                                              stroke-linecap="round"
+                                              stroke-linejoin="round"
+                                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                          />
+                                      </svg>
+                                      <span class="text-xs font-semibold" style="color:#ea580c;">
+                                          ${this._retryTooltip.retries.length} Retry${this._retryTooltip.retries.length > 1 ? 's' : ''}
+                                      </span>
+                                  </div>
+                                  <div class="px-4 py-2">
+                                      <table class="w-full">
+                                          ${this._retryTooltip.retries.map(
+                                              r => html`
+                                                  <tr>
+                                                      <td
+                                                          class="text-[10px] font-mono text-base-content/40 pr-3 py-0.5 align-top whitespace-nowrap"
+                                                      >
+                                                          #${r.attempt}
+                                                      </td>
+                                                      <td class="text-[10px] text-base-content/70 py-0.5 break-words">${r.message}</td>
+                                                      <td
+                                                          class="text-[10px] font-mono text-base-content/30 pl-3 py-0.5 align-top whitespace-nowrap"
+                                                      >
+                                                          ${r.time ? new Date(r.time).toLocaleTimeString('de-DE') : ''}
+                                                      </td>
+                                                  </tr>
+                                              `
+                                          )}
+                                          ${!this._retryTooltip.hasException
+                                              ? html`
+                                                    <tr>
+                                                        <td
+                                                            class="text-[10px] font-mono pr-3 py-0.5 align-top whitespace-nowrap"
+                                                            style="color:${this._retryTooltip.hasWarning ? '#f97316' : '#22c55e'};"
+                                                        >
+                                                            #${this._retryTooltip.retries.length + 1}
+                                                        </td>
+                                                        <td
+                                                            class="text-[10px] font-semibold py-0.5"
+                                                            style="color:${this._retryTooltip.hasWarning ? '#f97316' : '#22c55e'};"
+                                                        >
+                                                            ${this._retryTooltip.hasWarning ? 'Warning' : 'Success'}
+                                                        </td>
+                                                        <td></td>
+                                                    </tr>
+                                                `
+                                              : ''}
+                                      </table>
                                   </div>
                               </div>
                           </div>

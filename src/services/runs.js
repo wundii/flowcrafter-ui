@@ -11,6 +11,7 @@ export function buildRuns(flow) {
     const msgs = flow.flowMessages ?? []
     const excs = flow.flowExceptions ?? []
     const ress = flow.flowResults ?? []
+    const retries = flow.flowRetries ?? []
 
     const sortedRuns = [...flow.flowRuns].sort(byTime)
 
@@ -19,6 +20,7 @@ export function buildRuns(flow) {
         const runMessages = msgs.filter(m => m.flowRuntimeHash === runtimeHash).sort(byTime)
         const runExceptions = excs.filter(e => e.flowRuntimeHash === runtimeHash).sort(byTime)
         const runResults = ress.filter(r => r.flowRuntimeHash === runtimeHash).sort(byTime)
+        const runRetries = retries.filter(r => r.flowRuntimeHash === runtimeHash).sort(byTime)
 
         const startTime = new Date(run.time)
         const allTimes = [...runMessages, ...runExceptions, ...runResults].map(e => new Date(e.time))
@@ -35,6 +37,7 @@ export function buildRuns(flow) {
             messages: runMessages,
             exceptions: runExceptions,
             results: runResults,
+            retries: runRetries,
         }
     })
 }

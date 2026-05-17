@@ -276,7 +276,9 @@ export class FcSchemaList extends BaseElement {
                       </div>`
                     : ''}
                 ${step.retries > 0
-                    ? html`<div class="bg-base-100 -mx-4 px-4 pt-2.5 pb-1.5 border-t border-base-300 flex items-baseline justify-between gap-3">
+                    ? html`<div
+                          class="bg-base-100 -mx-4 px-4 pt-2.5 pb-1.5 border-t border-base-300 flex items-baseline justify-between gap-3"
+                      >
                           <span class="text-xs text-base-content/50 shrink-0">Retry</span>
                           <span class="text-xs text-right text-base-content/60 font-mono">${step.retries}× / ${step.delay}ms</span>
                       </div>`
