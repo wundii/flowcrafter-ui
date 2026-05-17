@@ -600,6 +600,7 @@ export class FcSchemaList extends BaseElement {
                                 ? html`<fc-flow-graph
                                       .flow=${this._graphFlow}
                                       readonly
+                                      .showStepConfig=${true}
                                       @source-requested=${e => this._openSourceModal({ source: e.detail.source })}
                                   ></fc-flow-graph>`
                                 : ''}

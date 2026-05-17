@@ -290,6 +290,7 @@ export class FcFlowGraph extends BaseElement {
         messageSchemas: { type: Object }, // { [fqClassName]: { [propName]: typeString } } — optional, only passed from devtool
         priorRuns: { type: Array }, // all runs up to and including the selected run (oldest first)
         readonly: { type: Boolean },
+        showStepConfig: { type: Boolean },
         runExceptions: { type: Array }, // overrides flow.flowExceptions for a specific run
         runId: { type: String },
         runMessages: { type: Array }, // overrides flow.flowMessages for a specific run
@@ -320,6 +321,7 @@ export class FcFlowGraph extends BaseElement {
         this.flow = null
         this.priorRuns = null
         this.readonly = false
+        this.showStepConfig = false
         this.runExceptions = null
         this.runId = null
         this.runMessages = null
@@ -666,7 +668,9 @@ export class FcFlowGraph extends BaseElement {
                      background:${st.bg};
                      border:1.5px solid ${selected ? st.color : st.color + '55'};
                      border-left:5px solid ${st.color};
-                     border-radius:10px; cursor:pointer; overflow:${stepRetries.length > 0 ? 'visible' : 'hidden'};
+                     border-radius:10px; cursor:pointer; overflow:${stepRetries.length > 0 || (this.showStepConfig && step.retries > 0)
+                                        ? 'visible'
+                                        : 'hidden'};
                      box-shadow:${selected ? `0 0 0 2px ${st.color}44, 0 4px 20px ${st.color}22` : '0 2px 8px rgba(0,0,0,0.4)'};
                    "
                                 >
@@ -882,6 +886,35 @@ export class FcFlowGraph extends BaseElement {
                                             `
                                         })}
                                     </div>
+
+                                    <!-- Step config badge (devtool only) -->
+                                    ${this.showStepConfig && step.retries > 0 && stepRetries.length === 0 && flowMessages.length === 0
+                                        ? html`
+                                              <div
+                                                  style="position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+                                                      display:flex; align-items:center; gap:3px;
+                                                      background:#374151; color:#fff; border-radius:8px;
+                                                      padding:1px 7px; font-size:9px; font-weight:700;
+                                                      font-family:monospace; white-space:nowrap; z-index:2;
+                                                      box-shadow:0 1px 4px rgba(0,0,0,0.2);"
+                                              >
+                                                  <svg
+                                                      viewBox="0 0 24 24"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="3"
+                                                      style="width:10px;height:10px;"
+                                                  >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                                      />
+                                                  </svg>
+                                                  ${step.retries} × ${step.delay}ms
+                                              </div>
+                                          `
+                                        : ''}
 
                                     <!-- Retry badge -->
                                     ${stepRetries.length > 0

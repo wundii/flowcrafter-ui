@@ -1212,6 +1212,7 @@ export class FcDev extends BaseElement {
                                           .runExceptions=${graphRun?.exceptions ?? null}
                                           .runResults=${graphRun?.results ?? null}
                                           .readonly=${true}
+                                          .showStepConfig=${true}
                                           .stepDiff=${stepDiff}
                                           .messageSchemas=${this._lastRunFlow ? null : (this._detail?.messageSchemas ?? null)}
                                           @source-requested=${e => this._handleSourceRequested(e)}
