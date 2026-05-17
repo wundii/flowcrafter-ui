@@ -23,12 +23,14 @@ const LONG_EDGE_AREA = 40 // extra canvas space at top for arced long edges
 const TIMING_ROW_H = 16 // height of the per-step timing row shown below the header
 
 // ─── Node sizing ──────────────────────────────────────────────────────────────
+const NODE_PAD_BOTTOM = 6
 function nodeHeight(step, withTimingRow = false) {
     return (
         HEADER_H +
         (withTimingRow ? TIMING_ROW_H : 0) +
         PORT_PAD_V * 2 +
-        Math.max(step.messages.length, step.returnTypes.length, 1) * PORT_ROW_H
+        Math.max(step.messages.length, step.returnTypes.length, 1) * PORT_ROW_H +
+        NODE_PAD_BOTTOM
     )
 }
 
@@ -660,7 +662,7 @@ export class FcFlowGraph extends BaseElement {
                                     @click=${() => (this.selectedStep = selected ? null : step.source)}
                                     style="
                      position:absolute; left:${pos.x}px; top:${pos.y}px;
-                     width:${NODE_W}px; height:${nh + 6}px;
+                     width:${NODE_W}px; height:${nh}px;
                      background:${st.bg};
                      border:1.5px solid ${selected ? st.color : st.color + '55'};
                      border-left:5px solid ${st.color};
