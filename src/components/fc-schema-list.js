@@ -77,6 +77,8 @@ export class FcSchemaList extends BaseElement {
                 messageEnum: s.messageEnum,
                 messages: s.messages ?? [],
                 returnTypes: s.returnTypes ?? [],
+                retries: s.retries ?? 0,
+                delay: s.delay ?? 200,
             }))
             for (const s of steps) {
                 if (!stepUsage.has(s.source)) stepUsage.set(s.source, new Set())
@@ -187,16 +189,32 @@ export class FcSchemaList extends BaseElement {
         const css = ENUM_BADGE[step.messageEnum] ?? 'badge-ghost'
         const usage = this._stepUsageMap.get(step.source)
         const shared = usage && usage.size > 1
+        const hasRetry = step.retries > 0
 
         return html`
             <button
-                class="badge badge-sm ${css} ${shared ? 'badge-outline' : ''} cursor-pointer hover:brightness-125 transition-all gap-1"
+                class="badge badge-sm ${css} ${shared ? 'badge-outline' : ''} cursor-pointer hover:brightness-125 transition-all gap-0.5"
                 title=${shared ? `Wird in ${usage.size} Flows verwendet` : ''}
                 @mouseenter=${e => this._onStepEnter(e, step)}
                 @mouseleave=${() => this._onStepLeave()}
                 @click=${e => this._onStepClick(e, step)}
             >
                 ${name}
+                ${hasRetry
+                    ? html`<svg
+                          class="w-2.5 h-2.5 opacity-60 shrink-0"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                      >
+                          <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                      </svg>`
+                    : ''}
                 ${shared
                     ? html`<svg
                           class="w-2.5 h-2.5 opacity-60 shrink-0"
@@ -257,8 +275,14 @@ export class FcSchemaList extends BaseElement {
                               : ''}
                       </div>`
                     : ''}
+                ${step.retries > 0
+                    ? html`<div class="bg-base-100 -mx-4 px-4 pt-2.5 pb-1.5 border-t border-base-300 flex items-baseline justify-between gap-3">
+                          <span class="text-xs text-base-content/50 shrink-0">Retry</span>
+                          <span class="text-xs text-right text-base-content/60 font-mono">${step.retries}× / ${step.delay}ms</span>
+                      </div>`
+                    : ''}
                 ${shared
-                    ? html`<div class="bg-base-100 -mx-4 px-4 py-3 rounded-b-box flex items-baseline justify-between gap-3">
+                    ? html`<div class="bg-base-100 -mx-4 px-4 py-1.5 rounded-b-box flex items-baseline justify-between gap-3">
                           <span class="text-xs text-base-content/50 shrink-0">Shared by</span>
                           <span class="text-xs text-right text-base-content/60">${usage.size} flows</span>
                       </div>`
