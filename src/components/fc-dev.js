@@ -1094,18 +1094,14 @@ export class FcDev extends BaseElement {
                                       <div class="space-y-1.5">
                                           ${(selected.steps ?? []).map(s => {
                                               const inCurrent = currentSources.has(s.source)
-                                              const gradientColor = !inCurrent
-                                                  ? 'from-error/10 to-info/5'
-                                                  : 'from-primary/10 to-info/5'
+                                              const gradientColor = !inCurrent ? 'from-error/10 to-info/5' : 'from-primary/10 to-info/5'
                                               return html`
                                                   <details
                                                       class="rounded-lg border cursor-pointer overflow-hidden ${inCurrent
                                                           ? 'border-base-300/60'
                                                           : 'border-error/20'}"
                                                   >
-                                                      <summary
-                                                          class="px-3 py-2 flex items-center gap-2 bg-gradient-to-r ${gradientColor}"
-                                                      >
+                                                      <summary class="px-3 py-2 flex items-center gap-2 bg-gradient-to-r ${gradientColor}">
                                                           ${!inCurrent
                                                               ? html`<span class="text-[10px] font-mono text-error shrink-0">−</span>`
                                                               : ''}
