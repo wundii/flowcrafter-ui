@@ -8,6 +8,7 @@ import { unsafeSVG } from 'lit/directives/unsafe-svg.js'
 import './fc-info-box.js'
 import './fc-json-editor.js'
 import './fc-source-viewer.js'
+import './fc-tooltip.js'
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 const NODE_W = 220
@@ -1311,20 +1312,30 @@ ${JSON.stringify(this._maskingRules ? masking.maskObject(this._tooltip.data, thi
                                       ${(() => {
                                           const firstMsg = selMsgs[0]
                                           const stepHash = firstMsg?.stepHash
-                                          return html`<button
-                                              class="btn btn-xs btn-outline btn-info"
-                                              title="Step Source anzeigen"
-                                              @click=${() => this._openSourceModal(selStep.source, stepHash)}
-                                          >
-                                              <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                  <path
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round"
-                                                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                                                  />
-                                              </svg>
-                                              Source
-                                          </button>`
+                                          return html`<fc-tooltip
+                                              text="Step Source anzeigen"
+                                              .content=${html`
+                                                  <button
+                                                      class="btn btn-xs btn-outline btn-info"
+                                                      @click=${() => this._openSourceModal(selStep.source, stepHash)}
+                                                  >
+                                                      <svg
+                                                          class="w-3 h-3"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                                                          />
+                                                      </svg>
+                                                      Source
+                                                  </button>
+                                              `}
+                                          ></fc-tooltip>`
                                       })()}
                                   </div>
                                   <div class="flex items-center gap-1">
@@ -1348,31 +1359,36 @@ ${JSON.stringify(this._maskingRules ? masking.maskObject(this._tooltip.data, thi
                                                                 ${short(msgClass)}
                                                             </span>
                                                             ${!this.readonly && received.length > 0
-                                                                ? html`<button
-                                                                      class="btn btn-xs btn-outline btn-primary"
-                                                                      title="Message-Input editieren"
-                                                                      @click=${() => this._openModal(selStep.source, msgClass, received[0])}
-                                                                  >
-                                                                      <svg
-                                                                          class="w-3.5 h-3.5"
-                                                                          fill="none"
-                                                                          stroke="currentColor"
-                                                                          stroke-width="2"
-                                                                          viewBox="0 0 24 24"
-                                                                      >
-                                                                          <path
-                                                                              stroke-linecap="round"
-                                                                              stroke-linejoin="round"
-                                                                              d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
-                                                                          />
-                                                                          <path
-                                                                              stroke-linecap="round"
-                                                                              stroke-linejoin="round"
-                                                                              d="M19.5 7.125L18 8.625"
-                                                                          />
-                                                                      </svg>
-                                                                      Editieren
-                                                                  </button>`
+                                                                ? html`<fc-tooltip
+                                                                      text="Message-Input editieren"
+                                                                      .content=${html`
+                                                                          <button
+                                                                              class="btn btn-xs btn-outline btn-primary"
+                                                                              @click=${() =>
+                                                                                  this._openModal(selStep.source, msgClass, received[0])}
+                                                                          >
+                                                                              <svg
+                                                                                  class="w-3.5 h-3.5"
+                                                                                  fill="none"
+                                                                                  stroke="currentColor"
+                                                                                  stroke-width="2"
+                                                                                  viewBox="0 0 24 24"
+                                                                              >
+                                                                                  <path
+                                                                                      stroke-linecap="round"
+                                                                                      stroke-linejoin="round"
+                                                                                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
+                                                                                  />
+                                                                                  <path
+                                                                                      stroke-linecap="round"
+                                                                                      stroke-linejoin="round"
+                                                                                      d="M19.5 7.125L18 8.625"
+                                                                                  />
+                                                                              </svg>
+                                                                              Editieren
+                                                                          </button>
+                                                                      `}
+                                                                  ></fc-tooltip>`
                                                                 : ''}
                                                         </div>
                                                         ${msgProps(msgClass)}
@@ -1402,77 +1418,94 @@ ${JSON.stringify(this._maskingRules ? masking.maskObject(this._tooltip.data, thi
                                                                                       <span class="text-xs text-base-content/40"
                                                                                           >${fmtDate(m.time)}</span
                                                                                       >
-                                                                                      <button
-                                                                                          class="btn btn-ghost btn-xs px-1 ml-auto ${revealed
-                                                                                              ? 'text-warning'
-                                                                                              : 'text-base-content/30 hover:text-base-content/70'}"
-                                                                                          title="${revealed
+                                                                                      <fc-tooltip
+                                                                                          class="ml-auto"
+                                                                                          text="${revealed
                                                                                               ? 'Sensible Daten maskieren'
                                                                                               : 'Sensible Daten anzeigen'}"
-                                                                                          @click=${() => this._toggleReveal(blockId)}
-                                                                                      >
-                                                                                          <svg
-                                                                                              class="w-4 h-4 ${revealed ? '' : 'hidden'}"
-                                                                                              fill="none"
-                                                                                              stroke="currentColor"
-                                                                                              stroke-width="1.5"
-                                                                                              viewBox="0 0 24 24"
-                                                                                              xmlns="http://www.w3.org/2000/svg"
-                                                                                          >
-                                                                                              <path
-                                                                                                  stroke-linecap="round"
-                                                                                                  stroke-linejoin="round"
-                                                                                                  d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-                                                                                              />
-                                                                                              <circle cx="12" cy="12" r="3" />
-                                                                                          </svg>
-                                                                                          <svg
-                                                                                              class="w-4 h-4 ${revealed ? 'hidden' : ''}"
-                                                                                              fill="none"
-                                                                                              stroke="currentColor"
-                                                                                              stroke-width="1.5"
-                                                                                              viewBox="0 0 24 24"
-                                                                                              xmlns="http://www.w3.org/2000/svg"
-                                                                                          >
-                                                                                              <path
-                                                                                                  stroke-linecap="round"
-                                                                                                  stroke-linejoin="round"
-                                                                                                  d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
-                                                                                              />
-                                                                                          </svg>
-                                                                                      </button>
-                                                                                      <button
-                                                                                          class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
-                                                                                          title="Inhalt kopieren"
-                                                                                          @click=${() =>
-                                                                                              navigator.clipboard.writeText(
-                                                                                                  JSON.stringify(
-                                                                                                      this._maskMessage(m.message, blockId),
-                                                                                                      null,
-                                                                                                      2
-                                                                                                  )
-                                                                                              )}
-                                                                                      >
-                                                                                          <svg
-                                                                                              class="w-3 h-3"
-                                                                                              fill="none"
-                                                                                              stroke="currentColor"
-                                                                                              stroke-width="2"
-                                                                                              viewBox="0 0 24 24"
-                                                                                          >
-                                                                                              <rect
-                                                                                                  x="9"
-                                                                                                  y="9"
-                                                                                                  width="13"
-                                                                                                  height="13"
-                                                                                                  rx="2"
-                                                                                                  ry="2"
-                                                                                              ></rect>
-                                                                                              <path
-                                                                                                  d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
-                                                                                              ></path>
-                                                                                          </svg>
-                                                                                      </button>
+                                                                                          .content=${html`
+                                                                                              <button
+                                                                                                  class="btn btn-ghost btn-xs px-1 ${revealed
+                                                                                                      ? 'text-warning'
+                                                                                                      : 'text-base-content/30 hover:text-base-content/70'}"
+                                                                                                  @click=${() =>
+                                                                                                      this._toggleReveal(blockId)}
+                                                                                              >
+                                                                                                  <svg
+                                                                                                      class="w-4 h-4 ${revealed
+                                                                                                          ? ''
+                                                                                                          : 'hidden'}"
+                                                                                                      fill="none"
+                                                                                                      stroke="currentColor"
+                                                                                                      stroke-width="1.5"
+                                                                                                      viewBox="0 0 24 24"
+                                                                                                      xmlns="http://www.w3.org/2000/svg"
+                                                                                                  >
+                                                                                                      <path
+                                                                                                          stroke-linecap="round"
+                                                                                                          stroke-linejoin="round"
+                                                                                                          d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                                                                                                      />
+                                                                                                      <circle cx="12" cy="12" r="3" />
+                                                                                                  </svg>
+                                                                                                  <svg
+                                                                                                      class="w-4 h-4 ${revealed
+                                                                                                          ? 'hidden'
+                                                                                                          : ''}"
+                                                                                                      fill="none"
+                                                                                                      stroke="currentColor"
+                                                                                                      stroke-width="1.5"
+                                                                                                      viewBox="0 0 24 24"
+                                                                                                      xmlns="http://www.w3.org/2000/svg"
+                                                                                                  >
+                                                                                                      <path
+                                                                                                          stroke-linecap="round"
+                                                                                                          stroke-linejoin="round"
+                                                                                                          d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
+                                                                                                      />
+                                                                                                  </svg>
+                                                                                              </button>
+                                                                                          `}
+                                                                                      ></fc-tooltip>
+                                                                                      <fc-tooltip
+                                                                                          text="Inhalt kopieren"
+                                                                                          .content=${html`
+                                                                                              <button
+                                                                                                  class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
+                                                                                                  @click=${() =>
+                                                                                                      navigator.clipboard.writeText(
+                                                                                                          JSON.stringify(
+                                                                                                              this._maskMessage(
+                                                                                                                  m.message,
+                                                                                                                  blockId
+                                                                                                              ),
+                                                                                                              null,
+                                                                                                              2
+                                                                                                          )
+                                                                                                      )}
+                                                                                              >
+                                                                                                  <svg
+                                                                                                      class="w-3 h-3"
+                                                                                                      fill="none"
+                                                                                                      stroke="currentColor"
+                                                                                                      stroke-width="2"
+                                                                                                      viewBox="0 0 24 24"
+                                                                                                  >
+                                                                                                      <rect
+                                                                                                          x="9"
+                                                                                                          y="9"
+                                                                                                          width="13"
+                                                                                                          height="13"
+                                                                                                          rx="2"
+                                                                                                          ry="2"
+                                                                                                      ></rect>
+                                                                                                      <path
+                                                                                                          d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                                                                      ></path>
+                                                                                                  </svg>
+                                                                                              </button>
+                                                                                          `}
+                                                                                      ></fc-tooltip>
                                                                                   </div>
                                                                                   <pre
                                                                                       class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"
@@ -1583,34 +1616,43 @@ ${ex.traceString}</pre
                                                                                   <span class="text-xs text-base-content/40"
                                                                                       >${fmtDate(outData.time)}</span
                                                                                   >
-                                                                                  <button
-                                                                                      class="btn btn-ghost btn-xs px-1 ml-auto text-base-content/30 hover:text-base-content/70"
-                                                                                      title="Inhalt kopieren"
-                                                                                      @click=${() =>
-                                                                                          navigator.clipboard.writeText(
-                                                                                              JSON.stringify(outData.message, null, 2)
-                                                                                          )}
-                                                                                  >
-                                                                                      <svg
-                                                                                          class="w-3 h-3"
-                                                                                          fill="none"
-                                                                                          stroke="currentColor"
-                                                                                          stroke-width="2"
-                                                                                          viewBox="0 0 24 24"
-                                                                                      >
-                                                                                          <rect
-                                                                                              x="9"
-                                                                                              y="9"
-                                                                                              width="13"
-                                                                                              height="13"
-                                                                                              rx="2"
-                                                                                              ry="2"
-                                                                                          ></rect>
-                                                                                          <path
-                                                                                              d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
-                                                                                          ></path>
-                                                                                      </svg>
-                                                                                  </button>
+                                                                                  <fc-tooltip
+                                                                                      class="ml-auto"
+                                                                                      text="Inhalt kopieren"
+                                                                                      .content=${html`
+                                                                                          <button
+                                                                                              class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
+                                                                                              @click=${() =>
+                                                                                                  navigator.clipboard.writeText(
+                                                                                                      JSON.stringify(
+                                                                                                          outData.message,
+                                                                                                          null,
+                                                                                                          2
+                                                                                                      )
+                                                                                                  )}
+                                                                                          >
+                                                                                              <svg
+                                                                                                  class="w-3 h-3"
+                                                                                                  fill="none"
+                                                                                                  stroke="currentColor"
+                                                                                                  stroke-width="2"
+                                                                                                  viewBox="0 0 24 24"
+                                                                                              >
+                                                                                                  <rect
+                                                                                                      x="9"
+                                                                                                      y="9"
+                                                                                                      width="13"
+                                                                                                      height="13"
+                                                                                                      rx="2"
+                                                                                                      ry="2"
+                                                                                                  ></rect>
+                                                                                                  <path
+                                                                                                      d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                                                                  ></path>
+                                                                                              </svg>
+                                                                                          </button>
+                                                                                      `}
+                                                                                  ></fc-tooltip>
                                                                               </div>
                                                                               <pre
                                                                                   class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"

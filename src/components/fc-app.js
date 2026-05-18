@@ -939,7 +939,7 @@ export class FcApp extends BaseElement {
 
                         <!-- Theme toggle -->
                         <fc-tooltip
-                            position="bottom"
+                            position="left"
                             text="${this._isDark ? 'Light Mode' : 'Dark Mode'}"
                             .content=${html`
                                 <label class="swap swap-rotate btn btn-ghost btn-sm btn-circle">
@@ -962,7 +962,7 @@ export class FcApp extends BaseElement {
 
                         <!-- Masking settings -->
                         <fc-tooltip
-                            position="bottom"
+                            position="left"
                             text="Datenschutz-Maskierung"
                             .content=${html`
                                 <button class="hidden sm:flex btn btn-ghost btn-sm btn-circle" @click=${() => (this._maskingModal = true)}>
@@ -979,7 +979,7 @@ export class FcApp extends BaseElement {
 
                         <!-- AI config -->
                         <fc-tooltip
-                            position="bottom"
+                            position="left"
                             text="AI-Analyse konfigurieren"
                             .content=${html`
                                 <button class="hidden sm:flex btn btn-ghost btn-sm btn-circle" @click=${() => this._openAiModal()}>
@@ -1002,7 +1002,7 @@ export class FcApp extends BaseElement {
 
                         <!-- Edit connection -->
                         <fc-tooltip
-                            position="bottom"
+                            position="left"
                             text="Verbindung bearbeiten"
                             .content=${html`
                                 <button class="hidden sm:flex btn btn-ghost btn-sm btn-circle" @click=${() => this._onEditConnection()}>
@@ -1019,7 +1019,7 @@ export class FcApp extends BaseElement {
 
                         <!-- Change password -->
                         <fc-tooltip
-                            position="bottom"
+                            position="left"
                             text="Passwort ändern"
                             .content=${html`
                                 <button class="hidden sm:flex btn btn-ghost btn-sm btn-circle" @click=${() => this._openPwModal()}>
@@ -1036,7 +1036,7 @@ export class FcApp extends BaseElement {
 
                         <!-- Logout -->
                         <fc-tooltip
-                            position="bottom"
+                            position="left"
                             text="Abmelden"
                             .content=${html`
                                 <button class="btn btn-ghost btn-sm btn-circle" @click=${() => this._onLogout()}>

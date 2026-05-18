@@ -341,7 +341,6 @@ export class FcFlowDetail extends BaseElement {
                         ${this.flow
                             ? html`
                                   <fc-tooltip
-                                      position="bottom"
                                       text=${this.aiConfigured ? 'AI-Analyse starten' : 'AI nicht konfiguriert'}
                                       .content=${html`
                                           <button
@@ -368,7 +367,6 @@ export class FcFlowDetail extends BaseElement {
                                       `}
                                   ></fc-tooltip>
                                   <fc-tooltip
-                                      position="bottom"
                                       text="Link kopieren"
                                       .content=${html`
                                           <button
@@ -392,7 +390,6 @@ export class FcFlowDetail extends BaseElement {
                                       `}
                                   ></fc-tooltip>
                                   <fc-tooltip
-                                      position="bottom"
                                       text="Raw JSON anzeigen"
                                       .content=${html`
                                           <button
@@ -423,7 +420,6 @@ export class FcFlowDetail extends BaseElement {
                               `
                             : ''}
                         <fc-tooltip
-                            position="bottom"
                             text="Neu laden"
                             .content=${html`
                                 <button

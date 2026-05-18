@@ -37,3 +37,7 @@
 .fc-shake {
     animation: fc-shake 0.4s ease-in-out;
 }
+
+summary.list-none::-webkit-details-marker {
+    display: none;
+}

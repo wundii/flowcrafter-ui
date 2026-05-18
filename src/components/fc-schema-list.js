@@ -192,45 +192,51 @@ export class FcSchemaList extends BaseElement {
         const hasRetry = step.retries > 0
 
         return html`
-            <button
-                class="badge badge-sm ${css} ${shared ? 'badge-outline' : ''} cursor-pointer hover:brightness-125 transition-all gap-0.5"
-                title=${shared ? `Wird in ${usage.size} Flows verwendet` : ''}
-                @mouseenter=${e => this._onStepEnter(e, step)}
-                @mouseleave=${() => this._onStepLeave()}
-                @click=${e => this._onStepClick(e, step)}
-            >
-                ${name}
-                ${hasRetry
-                    ? html`<svg
-                          class="w-2.5 h-2.5 opacity-60 shrink-0"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2.5"
-                      >
-                          <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                          />
-                      </svg>`
-                    : ''}
-                ${shared
-                    ? html`<svg
-                          class="w-2.5 h-2.5 opacity-60 shrink-0"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2.5"
-                      >
-                          <circle cx="18" cy="5" r="3" />
-                          <circle cx="6" cy="12" r="3" />
-                          <circle cx="18" cy="19" r="3" />
-                          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-                      </svg>`
-                    : ''}
-            </button>
+            <fc-tooltip
+                text=${shared ? `Wird in ${usage.size} Flows verwendet` : ''}
+                .content=${html`
+                    <button
+                        class="badge badge-sm ${css} ${shared
+                            ? 'badge-outline'
+                            : ''} cursor-pointer hover:brightness-125 transition-all gap-1.5"
+                        @mouseenter=${e => this._onStepEnter(e, step)}
+                        @mouseleave=${() => this._onStepLeave()}
+                        @click=${e => this._onStepClick(e, step)}
+                    >
+                        ${name}
+                        ${hasRetry
+                            ? html`<svg
+                                  class="w-2.5 h-2.5 opacity-60 shrink-0"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-width="2.5"
+                              >
+                                  <path
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                  />
+                              </svg>`
+                            : ''}
+                        ${shared
+                            ? html`<svg
+                                  class="w-2.5 h-2.5 opacity-60 shrink-0"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-width="2.5"
+                              >
+                                  <circle cx="18" cy="5" r="3" />
+                                  <circle cx="6" cy="12" r="3" />
+                                  <circle cx="18" cy="19" r="3" />
+                                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                              </svg>`
+                            : ''}
+                    </button>
+                `}
+            ></fc-tooltip>
         `
     }
 
@@ -321,7 +327,6 @@ export class FcSchemaList extends BaseElement {
                         >
                         <div class="flex items-center gap-1">
                             <fc-tooltip
-                                position="bottom"
                                 text=${this._sortAsc ? 'A → Z' : 'Z → A'}
                                 .content=${html`
                                     <button
@@ -347,7 +352,6 @@ export class FcSchemaList extends BaseElement {
                                 `}
                             ></fc-tooltip>
                             <fc-tooltip
-                                position="bottom"
                                 text="Neu laden"
                                 .content=${html`
                                     <button
@@ -398,16 +402,22 @@ export class FcSchemaList extends BaseElement {
                                       class="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-4 py-3 rounded-box border border-base-300 bg-base-200 hover:bg-base-100 hover:border-base-content/25 transition-all cursor-pointer"
                                       @click=${() => this._openGraphModal(f)}
                                   >
-                                      <div class="font-mono shrink-0 sm:w-1/3 min-w-0 overflow-hidden" title=${f.label}>
-                                          ${namespacePart(f.label)
-                                              ? html`<div class="text-[10px] text-base-content/35 leading-tight truncate">
-                                                    ${namespacePart(f.label)}
-                                                </div>`
-                                              : ''}
-                                          <div class="text-xs text-base-content/85 font-semibold leading-tight truncate">
-                                              ${shortName(f.label)}
-                                          </div>
-                                      </div>
+                                      <fc-tooltip
+                                          class="font-mono shrink-0 sm:w-1/3 min-w-0 overflow-hidden"
+                                          text=${f.label}
+                                          .content=${html`
+                                              <div>
+                                                  ${namespacePart(f.label)
+                                                      ? html`<div class="text-[10px] text-base-content/35 leading-tight truncate">
+                                                            ${namespacePart(f.label)}
+                                                        </div>`
+                                                      : ''}
+                                                  <div class="text-xs text-base-content/85 font-semibold leading-tight truncate">
+                                                      ${shortName(f.label)}
+                                                  </div>
+                                              </div>
+                                          `}
+                                      ></fc-tooltip>
                                       <div class="flex flex-wrap items-center gap-1 flex-1 min-w-0">
                                           ${initSteps.map(s => this._renderStepBadge(s))}
                                           ${hasBoth

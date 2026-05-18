@@ -73,7 +73,6 @@ export class FcQueueList extends BaseElement {
                     ${isEmpty ? '' : html`<span class="font-semibold">${this._queues.length}</span> Einträge in der Queue`}
                 </span>
                 <fc-tooltip
-                    position="bottom"
                     text="Neu laden"
                     .content=${html`
                         <button

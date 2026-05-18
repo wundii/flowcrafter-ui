@@ -610,7 +610,6 @@ ${ex.traceString}</pre
                               <span class="text-base-content/40">· ${loadedCount} ${loadedCount === 1 ? 'Exception' : 'Exceptions'}</span>
                           </span>`}
                     <fc-tooltip
-                        position="bottom"
                         text="Neu laden"
                         .content=${html`
                             <button

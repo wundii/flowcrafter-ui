@@ -6,6 +6,7 @@ import { skeletonOverview } from '../utils/skeleton.js'
 import { timeEl } from '../utils/time.js'
 import './fc-exception-chart.js'
 import './fc-flow-chart.js'
+import './fc-tooltip.js'
 
 function shortClass(fqn) {
     return fqn?.split('\\').pop() ?? fqn
@@ -327,31 +328,36 @@ export class FcOverview extends BaseElement {
                         <h2 class="text-base font-semibold text-base-content">Übersicht</h2>
                         ${lastLoadedLabel ? html`<p class="text-xs text-base-content/40 mt-0.5">Stand: ${lastLoadedLabel}</p>` : ''}
                     </div>
-                    <div class="relative inline-flex items-center justify-center" title="Nächster Refresh in ${this._countdown}s">
-                        <svg class="absolute w-9 h-9 -rotate-90 pointer-events-none" viewBox="0 0 36 36">
-                            <circle cx="18" cy="18" r="15" fill="none" class="stroke-base-content/15" stroke-width="2" />
-                            <circle
-                                cx="18"
-                                cy="18"
-                                r="15"
-                                fill="none"
-                                class="stroke-primary/70"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-dasharray="${2 * Math.PI * 15}"
-                                stroke-dashoffset="${2 * Math.PI * 15 * (this._countdown / 30)}"
-                            />
-                        </svg>
-                        <button class="btn btn-sm btn-ghost btn-circle border-0" @click=${this._load}>
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                />
-                            </svg>
-                        </button>
-                    </div>
+                    <fc-tooltip
+                        text="Nächster Refresh in ${this._countdown}s"
+                        .content=${html`
+                            <div class="relative inline-flex items-center justify-center">
+                                <svg class="absolute w-9 h-9 -rotate-90 pointer-events-none" viewBox="0 0 36 36">
+                                    <circle cx="18" cy="18" r="15" fill="none" class="stroke-base-content/15" stroke-width="2" />
+                                    <circle
+                                        cx="18"
+                                        cy="18"
+                                        r="15"
+                                        fill="none"
+                                        class="stroke-primary/70"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-dasharray="${2 * Math.PI * 15}"
+                                        stroke-dashoffset="${2 * Math.PI * 15 * (this._countdown / 30)}"
+                                    />
+                                </svg>
+                                <button class="btn btn-sm btn-ghost btn-circle border-0" @click=${this._load}>
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+                        `}
+                    ></fc-tooltip>
                 </div>
 
                 <!-- Row 1: KPI-Karten -->

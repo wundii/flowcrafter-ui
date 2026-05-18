@@ -239,7 +239,6 @@ export class FcTypeList extends BaseElement {
                 </div>
                 <div class="flex items-center gap-1">
                     <fc-tooltip
-                        position="bottom"
                         text=${this._sortAsc ? 'A → Z' : 'Z → A'}
                         .content=${html`
                             <button
@@ -259,7 +258,6 @@ export class FcTypeList extends BaseElement {
                         `}
                     ></fc-tooltip>
                     <fc-tooltip
-                        position="bottom"
                         text="Neu laden"
                         .content=${html`
                             <button

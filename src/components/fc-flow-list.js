@@ -313,7 +313,6 @@ export class FcFlowList extends BaseElement {
                                   ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                               </span>`}
                         <fc-tooltip
-                            position="bottom"
                             text="Neu laden"
                             .content=${html`
                                 <button
@@ -415,7 +414,6 @@ export class FcFlowList extends BaseElement {
                               ${this._total !== null ? html`<span class="text-base-content/40">von ${this._total}</span>` : ''}
                           </span>`}
                     <fc-tooltip
-                        position="bottom"
                         text="Neu laden"
                         .content=${html`
                             <button

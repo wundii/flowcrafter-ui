@@ -359,7 +359,6 @@ export class FcScheduleList extends BaseElement {
                         ${isEmpty ? '' : html`<span class="font-semibold">${this._schedules.length}</span> Schedule(s)`}
                     </span>
                     <fc-tooltip
-                        position="bottom"
                         text="Neu laden"
                         .content=${html`
                             <button
