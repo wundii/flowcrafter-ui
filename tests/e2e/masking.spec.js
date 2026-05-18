@@ -129,14 +129,14 @@ test.describe('Datenschutz-Maskierung', () => {
         await expect(preContent).toContainText('"vorname": "***"')
         await expect(preContent).toContainText('"password": "***"')
 
-        const revealBtn = messageBlock.locator('button[title="Sensible Daten anzeigen"]')
+        const revealBtn = messageBlock.locator('fc-tooltip[text="Sensible Daten anzeigen"] button')
         await revealBtn.click()
 
         await expect(preContent).toContainText('"email": "max@example.com"')
         await expect(preContent).toContainText('"vorname": "Max"')
         await expect(preContent).toContainText('"password": "geheim123"')
 
-        const maskBtn = messageBlock.locator('button[title="Sensible Daten maskieren"]')
+        const maskBtn = messageBlock.locator('fc-tooltip[text="Sensible Daten maskieren"] button')
         await maskBtn.click()
 
         await expect(preContent).toContainText('"email": "***"')
@@ -181,7 +181,7 @@ test.describe('Datenschutz-Maskierung', () => {
         const messageBlock = page.locator('.rounded-lg.bg-base-300').first()
         await expect(messageBlock).toBeVisible()
 
-        const copyBtn = messageBlock.locator('button[title="Inhalt kopieren"]')
+        const copyBtn = messageBlock.locator('fc-tooltip[text="Inhalt kopieren"] button')
         await copyBtn.click()
 
         const clipboardText = await page.evaluate(() => navigator.clipboard.readText())
