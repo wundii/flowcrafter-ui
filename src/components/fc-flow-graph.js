@@ -131,15 +131,44 @@ function buildLayout(steps, withTimingRow = false) {
     const hasLongEdge = edges.some(e => (col[e.to] ?? 0) - (col[e.from] ?? 0) > 1)
     const topOffset = hasLongEdge ? LONG_EDGE_AREA : 0
 
+    const inEdges = {}
+    for (const e of edges) {
+        ;(inEdges[e.to] = inEdges[e.to] ?? []).push(e)
+    }
+
     const positions = {}
     let svgH = 0
     for (let c = 0; c < numCols; c++) {
-        let y = PAD_Y + topOffset
-        for (const src of byCol[c] ?? []) {
-            positions[src] = { x: PAD_X + c * (NODE_W + COL_GAP), y }
-            y += nodeHeight(stepMap[src], withTimingRow) + ROW_GAP
+        const colSteps = byCol[c] ?? []
+        const x = PAD_X + c * (NODE_W + COL_GAP)
+
+        if (c === 0 || colSteps.every(src => !(inEdges[src]?.some(e => positions[e.from])))) {
+            let y = PAD_Y + topOffset
+            for (const src of colSteps) {
+                positions[src] = { x, y }
+                y += nodeHeight(stepMap[src], withTimingRow) + ROW_GAP
+            }
+            svgH = Math.max(svgH, y - ROW_GAP + PAD_Y)
+        } else {
+            const desired = colSteps.map(src => {
+                const incoming = (inEdges[src] ?? []).filter(e => positions[e.from])
+                if (incoming.length === 0) return { src, y: PAD_Y + topOffset }
+                const e = incoming[0]
+                const predPos = positions[e.from]
+                const outY = predPos.y + outputPortY(stepMap[e.from], e.outIdx, withTimingRow)
+                const inY = inputPortY(stepMap[src], e.inIdx, withTimingRow)
+                return { src, y: outY - inY }
+            })
+            desired.sort((a, b) => a.y - b.y)
+
+            let minY = PAD_Y + topOffset
+            for (const d of desired) {
+                const y = Math.max(d.y, minY)
+                positions[d.src] = { x, y }
+                minY = y + nodeHeight(stepMap[d.src], withTimingRow) + ROW_GAP
+            }
+            svgH = Math.max(svgH, minY - ROW_GAP + PAD_Y)
         }
-        svgH = Math.max(svgH, y - ROW_GAP + PAD_Y)
     }
     const svgW = PAD_X * 2 + numCols * NODE_W + (numCols - 1) * COL_GAP
 
@@ -198,7 +227,7 @@ function buildSvgString(
 
     parts.push('<defs>')
     for (const [key, val] of Object.entries(STATUS)) {
-        parts.push(`<marker id="arr-${key}" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        parts.push(`<marker id="arr-${key}" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto">
       <polygon points="0 0,8 3,0 6" fill="${esc(val.color)}" fill-opacity="0.85"/>
     </marker>`)
     }
@@ -210,7 +239,7 @@ function buildSvgString(
         if (!fp || !tp) continue
         const x1 = fp.x + NODE_W,
             y1 = fp.y + outputPortY(stepMap[e.from], e.outIdx, withTimingRow)
-        const x2 = tp.x,
+        const x2 = tp.x - 14,
             y2 = tp.y + inputPortY(stepMap[e.to], e.inIdx, withTimingRow)
         const colSpan = (colOf[e.to] ?? 0) - (colOf[e.from] ?? 0)
         const isLong = colSpan > 1
@@ -1008,9 +1037,11 @@ export class FcFlowGraph extends BaseElement {
                                       >${this._diffTooltip.source}</span
                                   >
                               </div>
-                              ${this._diffTooltip.diff.status === 'added'
+                              ${!this._diffTooltip.diff
                                   ? ''
-                                  : this._diffTooltip.diff.status === 'unchanged'
+                                  : this._diffTooltip.diff.status === 'added'
+                                    ? ''
+                                    : this._diffTooltip.diff.status === 'unchanged'
                                     ? html`
                                           <div class="space-y-1.5 text-xs text-base-content/70">
                                               <div class="flex gap-2">
