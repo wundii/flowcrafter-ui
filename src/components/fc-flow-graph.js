@@ -142,7 +142,7 @@ function buildLayout(steps, withTimingRow = false) {
         const colSteps = byCol[c] ?? []
         const x = PAD_X + c * (NODE_W + COL_GAP)
 
-        if (c === 0 || colSteps.every(src => !(inEdges[src]?.some(e => positions[e.from])))) {
+        if (c === 0 || colSteps.every(src => !inEdges[src]?.some(e => positions[e.from]))) {
             let y = PAD_Y + topOffset
             for (const src of colSteps) {
                 positions[src] = { x, y }
@@ -413,6 +413,9 @@ export class FcFlowGraph extends BaseElement {
     _openModal(stepSource, messageClass, msgData) {
         const originalMessage = msgData?.message ?? {}
         const maskedMessage = this._maskingRules ? masking.maskObject(originalMessage, this._maskingRules) : originalMessage
+        const steps = this.flow?.flowSchema?.steps ?? []
+        const stepMeta = steps.find(s => s.source === stepSource)
+        const targetCount = steps.filter(s => s.messages.includes(messageClass)).length
         this._modalMsg = {
             stepSource,
             messageClass,
@@ -420,6 +423,8 @@ export class FcFlowGraph extends BaseElement {
             originalMessage,
             revealed: false,
             valid: true,
+            runOnce: stepMeta?.runOnce ?? false,
+            multiTarget: targetCount > 1,
         }
         api.getInfo()
             .then(info => {
@@ -504,8 +509,12 @@ export class FcFlowGraph extends BaseElement {
 
         const targetSteps = this._getStepsForMessageSource(this._modalMsg.messageClass)
         if (targetSteps.length > 1) {
+            const flowMessages = this.runMessages ?? this.flow?.flowMessages ?? []
             this._stepSelection = {
-                steps: targetSteps.map(s => ({ source: s.source, checked: true })),
+                steps: targetSteps.map(s => {
+                    const executed = s.runOnce && flowMessages.some(m => m.stepSource === s.source && m.messageType === 'finish')
+                    return { source: s.source, checked: !executed, disabled: executed }
+                }),
                 queued,
             }
             this.updateComplete.then(() => {
@@ -711,6 +720,7 @@ export class FcFlowGraph extends BaseElement {
                                             ? ''
                                             : `background-image:linear-gradient(to right,transparent 10px,${st.color}33 10px,${st.color}33 calc(100% - 10px),transparent calc(100% - 10px));background-size:100% 1px;background-repeat:no-repeat;background-position:bottom;`}"
                                         @mouseenter=${e => {
+                                            if (!this.showStepConfig) return
                                             clearTimeout(this._diffTooltipTimer)
                                             const elRect = e.currentTarget.getBoundingClientRect()
                                             this._diffTooltip = {
@@ -732,6 +742,18 @@ export class FcFlowGraph extends BaseElement {
                                overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
                                             >${short(step.source)}</span
                                         >
+                                        ${step.runOnce
+                                            ? html`<svg
+                                                  viewBox="0 0 24 24"
+                                                  fill="none"
+                                                  stroke="#a5b4fc"
+                                                  stroke-width="2.5"
+                                                  style="width:11px;height:11px;flex-shrink:0;"
+                                              >
+                                                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                                  <path d="M7 11V7a5 5 0 0110 0v4" />
+                                              </svg>`
+                                            : ''}
                                         <span
                                             style="font-size:8px; color:oklch(from var(--color-base-content) l c h / 0.4); text-transform:uppercase;
                                letter-spacing:.06em; flex-shrink:0;"
@@ -923,8 +945,8 @@ export class FcFlowGraph extends BaseElement {
                                               <div
                                                   style="position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
                                                       display:flex; align-items:center; gap:3px;
-                                                      background:#374151; color:#fff; border-radius:8px;
-                                                      padding:1px 7px; font-size:9px; font-weight:700;
+                                                      background:#374151; color:#fff; border:1.5px solid #6b7280;
+                                                      border-radius:8px; padding:1px 7px; font-size:9px; font-weight:700;
                                                       font-family:monospace; white-space:nowrap; z-index:2;
                                                       box-shadow:0 1px 4px rgba(0,0,0,0.2);"
                                               >
@@ -952,8 +974,8 @@ export class FcFlowGraph extends BaseElement {
                                               <div
                                                   style="position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
                                                       display:flex; align-items:center; gap:3px;
-                                                      background:#ea580c; color:#fff; border-radius:8px;
-                                                      padding:1px 7px; font-size:9px; font-weight:700;
+                                                      background:#ea580c; color:#fff; border:1.5px solid #9a3412;
+                                                      border-radius:8px; padding:1px 7px; font-size:9px; font-weight:700;
                                                       font-family:monospace; white-space:nowrap; z-index:2;
                                                       box-shadow:0 1px 4px rgba(234,88,12,0.4);"
                                                   @mouseenter=${e => {
@@ -1033,172 +1055,198 @@ export class FcFlowGraph extends BaseElement {
                                                 ? 'Nachrichtenstruktur geändert'
                                                 : 'Schema geändert'}
                                   </span>
-                                  <span class="text-xs text-base-content/40 font-normal normal-case tracking-normal font-mono truncate"
-                                      >${this._diffTooltip.source}</span
-                                  >
+                                  ${this._diffTooltip.diff !== null && this._diffTooltip.diff.status !== 'added'
+                                      ? html`<span
+                                            class="text-xs text-base-content/40 font-normal normal-case tracking-normal font-mono truncate"
+                                            >${this._diffTooltip.source}</span
+                                        >`
+                                      : ''}
                               </div>
                               ${!this._diffTooltip.diff
-                                  ? ''
+                                  ? html`<span class="text-xs font-mono"
+                                        >${(() => {
+                                            const s = this._diffTooltip.source
+                                            const i = s.lastIndexOf('\\')
+                                            return i === -1
+                                                ? html`<span class="text-base-content/80">${s}</span>`
+                                                : html`<span class="text-base-content/40 break-all">${s.slice(0, i + 1)}</span><wbr /><span
+                                                          class="text-base-content/80"
+                                                          >${s.slice(i + 1)}</span
+                                                      >`
+                                        })()}</span
+                                    >`
                                   : this._diffTooltip.diff.status === 'added'
-                                    ? ''
+                                    ? html`<span class="text-xs font-mono"
+                                          >${(() => {
+                                              const s = this._diffTooltip.source
+                                              const i = s.lastIndexOf('\\')
+                                              return i === -1
+                                                  ? html`<span class="text-base-content/80">${s}</span>`
+                                                  : html`<span class="text-base-content/40 break-all">${s.slice(0, i + 1)}</span
+                                                        ><wbr /><span class="text-base-content/80">${s.slice(i + 1)}</span>`
+                                          })()}</span
+                                      >`
                                     : this._diffTooltip.diff.status === 'unchanged'
-                                    ? html`
-                                          <div class="space-y-1.5 text-xs text-base-content/70">
-                                              <div class="flex gap-2">
-                                                  <span class="text-success shrink-0">✓</span>
-                                                  <span>Step entspricht dem gespeicherten Schema</span>
-                                              </div>
-                                              <div class="flex gap-2">
-                                                  <span class="text-success shrink-0">✓</span>
-                                                  <span>Input- und Output-Messages unverändert</span>
-                                              </div>
-                                          </div>
-                                      `
-                                    : this._diffTooltip.diff.status === 'messageDrift' && this._diffTooltip.diff.changes?.properties?.length
                                       ? html`
-                                            ${this._diffTooltip.diff.changes.properties.map(p => {
-                                                const mainClass = p.class.split('\\').pop()
-                                                const allClasses = [
-                                                    ...new Set([
-                                                        ...Object.keys(p.livePropertyNames ?? {}),
-                                                        ...Object.keys(p.storedPropertyNames ?? {}),
-                                                    ]),
-                                                ].sort((a, b) => (a === mainClass ? -1 : b === mainClass ? 1 : 0))
-
-                                                const renderPropCell = prop => {
-                                                    if (!prop) return html`<span class="text-base-content/30">—</span>`
-                                                    const colonIdx = prop.indexOf(':')
-                                                    if (colonIdx === -1) return html`${prop}`
-                                                    return html`${prop.slice(0, colonIdx)}<span class="text-base-content/30"
-                                                            >${prop.slice(colonIdx)}</span
-                                                        >`
-                                                }
-
-                                                const renderTable = (cls, liveArr, storedArr) => {
-                                                    const liveSet = new Set(liveArr)
-                                                    const storedSet = new Set(storedArr)
-                                                    return html`
-                                                        <div class="mb-2">
-                                                            <div
-                                                                class="text-[10px] uppercase tracking-wider mb-1 ${cls === mainClass
-                                                                    ? 'text-base-content/60 font-semibold'
-                                                                    : 'text-base-content/30'}"
-                                                            >
-                                                                ${cls}
-                                                            </div>
-                                                            <table class="w-full text-[10px] font-mono border-collapse">
-                                                                <thead>
-                                                                    <tr>
-                                                                        <th
-                                                                            class="text-left text-base-content/40 font-semibold pb-0.5 pr-3 w-1/2"
-                                                                            style="border-bottom:1px solid rgba(75,85,99,0.2)"
-                                                                        >
-                                                                            Alt
-                                                                        </th>
-                                                                        <th
-                                                                            class="text-left text-base-content/40 font-semibold pb-0.5 w-1/2"
-                                                                            style="border-bottom:1px solid rgba(75,85,99,0.2)"
-                                                                        >
-                                                                            Neu
-                                                                        </th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    ${Array.from({
-                                                                        length: Math.max(storedArr.length, liveArr.length),
-                                                                    }).map((_, i) => {
-                                                                        const storedProp = storedArr[i]
-                                                                        const liveProp = liveArr[i]
-                                                                        const removed =
-                                                                            storedProp &&
-                                                                            !storedSet.has(liveProp) &&
-                                                                            !liveSet.has(storedProp)
-                                                                        const added =
-                                                                            liveProp && !liveSet.has(storedProp) && !storedSet.has(liveProp)
-                                                                        return html`
-                                                                            <tr>
-                                                                                <td
-                                                                                    class="py-0.5 pr-3 break-all align-top"
-                                                                                    style="color:${removed ? '#f97316' : 'inherit'}"
-                                                                                >
-                                                                                    ${renderPropCell(storedProp)}
-                                                                                </td>
-                                                                                <td
-                                                                                    class="py-0.5 break-all align-top"
-                                                                                    style="color:${added ? '#22c55e' : 'inherit'}"
-                                                                                >
-                                                                                    ${renderPropCell(liveProp)}
-                                                                                </td>
-                                                                            </tr>
-                                                                        `
-                                                                    })}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    `
-                                                }
-
-                                                return html`${allClasses.map(cls =>
-                                                    renderTable(cls, p.livePropertyNames?.[cls] ?? [], p.storedPropertyNames?.[cls] ?? [])
-                                                )}`
-                                            })}
+                                            <div class="space-y-1.5 text-xs text-base-content/70">
+                                                <div class="flex gap-2">
+                                                    <span class="text-success shrink-0">✓</span>
+                                                    <span>Step entspricht dem gespeicherten Schema</span>
+                                                </div>
+                                                <div class="flex gap-2">
+                                                    <span class="text-success shrink-0">✓</span>
+                                                    <span>Input- und Output-Messages unverändert</span>
+                                                </div>
+                                            </div>
                                         `
-                                      : this._diffTooltip.diff.changes
+                                      : this._diffTooltip.diff.status === 'messageDrift' &&
+                                          this._diffTooltip.diff.changes?.properties?.length
                                         ? html`
-                                              ${this._diffTooltip.diff.changes.messages.added.length
-                                                  ? html`<div class="mb-1">
-                                                        <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
-                                                            >Input +</span
-                                                        >
-                                                        ${this._diffTooltip.diff.changes.messages.added.map(
-                                                            m =>
-                                                                html`<div class="text-xs font-mono text-success truncate ml-1">
-                                                                    + ${m.split('\\').pop()}
-                                                                </div>`
-                                                        )}
-                                                    </div>`
-                                                  : ''}
-                                              ${this._diffTooltip.diff.changes.messages.removed.length
-                                                  ? html`<div class="mb-1">
-                                                        <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
-                                                            >Input −</span
-                                                        >
-                                                        ${this._diffTooltip.diff.changes.messages.removed.map(
-                                                            m =>
-                                                                html`<div class="text-xs font-mono text-error truncate ml-1">
-                                                                    − ${m.split('\\').pop()}
-                                                                </div>`
-                                                        )}
-                                                    </div>`
-                                                  : ''}
-                                              ${this._diffTooltip.diff.changes.returnTypes.added.length
-                                                  ? html`<div class="mb-1">
-                                                        <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
-                                                            >Output +</span
-                                                        >
-                                                        ${this._diffTooltip.diff.changes.returnTypes.added.map(
-                                                            m =>
-                                                                html`<div class="text-xs font-mono text-success truncate ml-1">
-                                                                    + ${m.split('\\').pop()}
-                                                                </div>`
-                                                        )}
-                                                    </div>`
-                                                  : ''}
-                                              ${this._diffTooltip.diff.changes.returnTypes.removed.length
-                                                  ? html`<div>
-                                                        <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
-                                                            >Output −</span
-                                                        >
-                                                        ${this._diffTooltip.diff.changes.returnTypes.removed.map(
-                                                            m =>
-                                                                html`<div class="text-xs font-mono text-error truncate ml-1">
-                                                                    − ${m.split('\\').pop()}
-                                                                </div>`
-                                                        )}
-                                                    </div>`
-                                                  : ''}
+                                              ${this._diffTooltip.diff.changes.properties.map(p => {
+                                                  const mainClass = p.class.split('\\').pop()
+                                                  const allClasses = [
+                                                      ...new Set([
+                                                          ...Object.keys(p.livePropertyNames ?? {}),
+                                                          ...Object.keys(p.storedPropertyNames ?? {}),
+                                                      ]),
+                                                  ].sort((a, b) => (a === mainClass ? -1 : b === mainClass ? 1 : 0))
+
+                                                  const renderPropCell = prop => {
+                                                      if (!prop) return html`<span class="text-base-content/30">—</span>`
+                                                      const colonIdx = prop.indexOf(':')
+                                                      if (colonIdx === -1) return html`${prop}`
+                                                      return html`${prop.slice(0, colonIdx)}<span class="text-base-content/30"
+                                                              >${prop.slice(colonIdx)}</span
+                                                          >`
+                                                  }
+
+                                                  const renderTable = (cls, liveArr, storedArr) => {
+                                                      const liveSet = new Set(liveArr)
+                                                      const storedSet = new Set(storedArr)
+                                                      return html`
+                                                          <div class="mb-2">
+                                                              <div
+                                                                  class="text-[10px] uppercase tracking-wider mb-1 ${cls === mainClass
+                                                                      ? 'text-base-content/60 font-semibold'
+                                                                      : 'text-base-content/30'}"
+                                                              >
+                                                                  ${cls}
+                                                              </div>
+                                                              <table class="w-full text-[10px] font-mono border-collapse">
+                                                                  <thead>
+                                                                      <tr>
+                                                                          <th
+                                                                              class="text-left text-base-content/40 font-semibold pb-0.5 pr-3 w-1/2"
+                                                                              style="border-bottom:1px solid rgba(75,85,99,0.2)"
+                                                                          >
+                                                                              Alt
+                                                                          </th>
+                                                                          <th
+                                                                              class="text-left text-base-content/40 font-semibold pb-0.5 w-1/2"
+                                                                              style="border-bottom:1px solid rgba(75,85,99,0.2)"
+                                                                          >
+                                                                              Neu
+                                                                          </th>
+                                                                      </tr>
+                                                                  </thead>
+                                                                  <tbody>
+                                                                      ${Array.from({
+                                                                          length: Math.max(storedArr.length, liveArr.length),
+                                                                      }).map((_, i) => {
+                                                                          const storedProp = storedArr[i]
+                                                                          const liveProp = liveArr[i]
+                                                                          const removed =
+                                                                              storedProp &&
+                                                                              !storedSet.has(liveProp) &&
+                                                                              !liveSet.has(storedProp)
+                                                                          const added =
+                                                                              liveProp &&
+                                                                              !liveSet.has(storedProp) &&
+                                                                              !storedSet.has(liveProp)
+                                                                          return html`
+                                                                              <tr>
+                                                                                  <td
+                                                                                      class="py-0.5 pr-3 break-all align-top"
+                                                                                      style="color:${removed ? '#f97316' : 'inherit'}"
+                                                                                  >
+                                                                                      ${renderPropCell(storedProp)}
+                                                                                  </td>
+                                                                                  <td
+                                                                                      class="py-0.5 break-all align-top"
+                                                                                      style="color:${added ? '#22c55e' : 'inherit'}"
+                                                                                  >
+                                                                                      ${renderPropCell(liveProp)}
+                                                                                  </td>
+                                                                              </tr>
+                                                                          `
+                                                                      })}
+                                                                  </tbody>
+                                                              </table>
+                                                          </div>
+                                                      `
+                                                  }
+
+                                                  return html`${allClasses.map(cls =>
+                                                      renderTable(cls, p.livePropertyNames?.[cls] ?? [], p.storedPropertyNames?.[cls] ?? [])
+                                                  )}`
+                                              })}
                                           `
-                                        : ''}
+                                        : this._diffTooltip.diff.changes
+                                          ? html`
+                                                ${this._diffTooltip.diff.changes.messages.added.length
+                                                    ? html`<div class="mb-1">
+                                                          <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
+                                                              >Input +</span
+                                                          >
+                                                          ${this._diffTooltip.diff.changes.messages.added.map(
+                                                              m =>
+                                                                  html`<div class="text-xs font-mono text-success truncate ml-1">
+                                                                      + ${m.split('\\').pop()}
+                                                                  </div>`
+                                                          )}
+                                                      </div>`
+                                                    : ''}
+                                                ${this._diffTooltip.diff.changes.messages.removed.length
+                                                    ? html`<div class="mb-1">
+                                                          <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
+                                                              >Input −</span
+                                                          >
+                                                          ${this._diffTooltip.diff.changes.messages.removed.map(
+                                                              m =>
+                                                                  html`<div class="text-xs font-mono text-error truncate ml-1">
+                                                                      − ${m.split('\\').pop()}
+                                                                  </div>`
+                                                          )}
+                                                      </div>`
+                                                    : ''}
+                                                ${this._diffTooltip.diff.changes.returnTypes.added.length
+                                                    ? html`<div class="mb-1">
+                                                          <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
+                                                              >Output +</span
+                                                          >
+                                                          ${this._diffTooltip.diff.changes.returnTypes.added.map(
+                                                              m =>
+                                                                  html`<div class="text-xs font-mono text-success truncate ml-1">
+                                                                      + ${m.split('\\').pop()}
+                                                                  </div>`
+                                                          )}
+                                                      </div>`
+                                                    : ''}
+                                                ${this._diffTooltip.diff.changes.returnTypes.removed.length
+                                                    ? html`<div>
+                                                          <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
+                                                              >Output −</span
+                                                          >
+                                                          ${this._diffTooltip.diff.changes.returnTypes.removed.map(
+                                                              m =>
+                                                                  html`<div class="text-xs font-mono text-error truncate ml-1">
+                                                                      − ${m.split('\\').pop()}
+                                                                  </div>`
+                                                          )}
+                                                      </div>`
+                                                    : ''}
+                                            `
+                                          : ''}
                           </div>
                       `
                     : ''}
@@ -1858,12 +1906,15 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                               ?disabled=${!this._modalMsg?.valid ||
                                               this._sending ||
                                               !this._observerRunning ||
-                                              this.flow?.isExecutable === false}
-                                              title=${this.flow?.isExecutable === false
-                                                  ? 'Flow ist nicht ausführbar'
-                                                  : this._observerRunning
-                                                    ? 'In Queue legen'
-                                                    : 'Observer ist nicht aktiv'}
+                                              this.flow?.isExecutable === false ||
+                                              (this._modalMsg?.runOnce && !this._modalMsg?.multiTarget)}
+                                              title=${this._modalMsg?.runOnce && !this._modalMsg?.multiTarget
+                                                  ? 'Run-Once Step — kann nicht erneut ausgeführt werden'
+                                                  : this.flow?.isExecutable === false
+                                                    ? 'Flow ist nicht ausführbar'
+                                                    : this._observerRunning
+                                                      ? 'In Queue legen'
+                                                      : 'Observer ist nicht aktiv'}
                                               @click=${() => this._onSend(true)}
                                           >
                                               ${this._sending ? html`<span class="loading loading-spinner loading-xs"></span>` : ''} In
@@ -1871,8 +1922,15 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                           </button>
                                           <button
                                               class="btn btn-primary btn-sm"
-                                              ?disabled=${!this._modalMsg?.valid || this._sending || this.flow?.isExecutable === false}
-                                              title=${this.flow?.isExecutable === false ? 'Flow ist nicht ausführbar' : ''}
+                                              ?disabled=${!this._modalMsg?.valid ||
+                                              this._sending ||
+                                              this.flow?.isExecutable === false ||
+                                              (this._modalMsg?.runOnce && !this._modalMsg?.multiTarget)}
+                                              title=${this._modalMsg?.runOnce && !this._modalMsg?.multiTarget
+                                                  ? 'Run-Once Step — kann nicht erneut ausgeführt werden'
+                                                  : this.flow?.isExecutable === false
+                                                    ? 'Flow ist nicht ausführbar'
+                                                    : ''}
                                               @click=${() => this._onSend(false)}
                                           >
                                               ${this._sending ? html`<span class="loading loading-spinner loading-xs"></span>` : ''} Direkt
@@ -2003,14 +2061,31 @@ ${JSON.stringify(outData.message, null, 2)}</pre
                                   <div class="flex flex-col gap-2 px-5 py-4">
                                       ${this._stepSelection.steps.map(
                                           (s, i) => html`
-                                              <label class="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-base-200">
+                                              <label
+                                                  class="flex items-center gap-3 p-2 rounded-lg ${s.disabled
+                                                      ? 'opacity-50 cursor-not-allowed'
+                                                      : 'cursor-pointer hover:bg-base-200'}"
+                                              >
                                                   <input
                                                       type="checkbox"
                                                       class="checkbox checkbox-sm checkbox-primary"
                                                       .checked=${s.checked}
+                                                      ?disabled=${s.disabled}
                                                       @change=${() => this._toggleStepSelection(i)}
                                                   />
                                                   <span class="font-mono text-sm">${short(s.source)}</span>
+                                                  ${s.disabled
+                                                      ? html`<svg
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="#a5b4fc"
+                                                            stroke-width="2.5"
+                                                            class="w-3.5 h-3.5 flex-shrink-0"
+                                                        >
+                                                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                                            <path d="M7 11V7a5 5 0 0110 0v4" />
+                                                        </svg>`
+                                                      : ''}
                                               </label>
                                           `
                                       )}

@@ -79,6 +79,7 @@ export class FcSchemaList extends BaseElement {
                 returnTypes: s.returnTypes ?? [],
                 retries: s.retries ?? 0,
                 delay: s.delay ?? 200,
+                runOnce: s.runOnce ?? false,
             }))
             for (const s of steps) {
                 if (!stepUsage.has(s.source)) stepUsage.set(s.source, new Set())
@@ -190,7 +191,6 @@ export class FcSchemaList extends BaseElement {
         const usage = this._stepUsageMap.get(step.source)
         const shared = usage && usage.size > 1
         const hasRetry = step.retries > 0
-
         return html`
             <fc-tooltip
                 text=${shared ? `Wird in ${usage.size} Flows verwendet` : ''}
