@@ -326,7 +326,10 @@ export class FcDev extends BaseElement {
                 }
             }
             this._detail = data
-            this._validationCache = { ...this._validationCache, [className]: data.valid && !data.hashDrift }
+            this._validationCache = {
+                ...this._validationCache,
+                [className]: resolveFlowStatus(data, this._storedSchemas).config.showButton,
+            }
         } catch (err) {
             this._detailError = err
         } finally {
@@ -985,7 +988,7 @@ export class FcDev extends BaseElement {
             })
             .sort((a, b) => b.vNum - a.vNum)
 
-        const selected = this._versionsSelected ?? versions[0] ?? null
+        const selected = this._versionsSelected ?? versions.find(v => v.type === d.schema.type) ?? versions[0] ?? null
         const currentSources = new Set((d.schema.steps ?? []).map(s => s.source))
         const selectedSources = new Set((selected?.steps ?? []).map(s => s.source))
 
@@ -1000,7 +1003,8 @@ export class FcDev extends BaseElement {
             >
                 <div class="modal-box w-[960px] max-w-[95vw] flex flex-col gap-0 p-0 overflow-hidden">
                     <div
-                        class="bg-gradient-to-r from-info/10 via-info/5 to-transparent px-5 pt-4 pb-3 border-b border-base-300/50 shrink-0"
+                        class="bg-gradient-to-r from-info/10 via-info/5 to-transparent px-5 pt-4 pb-3 border-b border-base-300/50 shrink-0 cursor-move select-none"
+                        @mousedown=${e => this._startModalDrag(e, 'fc-dev-versions-modal')}
                     >
                         <div class="flex items-center justify-between gap-3">
                             <div class="flex items-center gap-3 min-w-0">
@@ -1097,6 +1101,7 @@ export class FcDev extends BaseElement {
                                               const gradientColor = !inCurrent ? 'from-error/10 to-info/5' : 'from-primary/10 to-info/5'
                                               return html`
                                                   <details
+                                                      open
                                                       class="rounded-lg border cursor-pointer overflow-hidden ${inCurrent
                                                           ? 'border-base-300/60'
                                                           : 'border-error/20'}"
@@ -1158,6 +1163,12 @@ export class FcDev extends BaseElement {
                                                                     <span class="font-mono text-base-content/50">${s.delay}ms</span>
                                                                 `
                                                               : ''}
+                                                          ${s.runOnce
+                                                              ? html`
+                                                                    <span class="text-base-content/35">RunOnce</span>
+                                                                    <span class="font-mono text-base-content/50">ja</span>
+                                                                `
+                                                              : ''}
                                                       </div>
                                                   </details>
                                               `
@@ -1169,6 +1180,7 @@ export class FcDev extends BaseElement {
                                                         const cs = (d.schema.steps ?? []).find(st => st.source === src)
                                                         return html`
                                                             <details
+                                                                open
                                                                 class="rounded-lg border border-success/20 cursor-pointer overflow-hidden"
                                                             >
                                                                 <summary
@@ -1244,6 +1256,12 @@ export class FcDev extends BaseElement {
                                                                               >
                                                                           `
                                                                         : ''}
+                                                                    ${cs?.runOnce
+                                                                        ? html`
+                                                                              <span class="text-base-content/35">RunOnce</span>
+                                                                              <span class="font-mono text-base-content/50">ja</span>
+                                                                          `
+                                                                        : ''}
                                                                 </div>
                                                             </details>
                                                         `
@@ -1310,16 +1328,36 @@ export class FcDev extends BaseElement {
                     class="px-5 py-3 border-b border-base-300/50 shrink-0 bg-gradient-to-br via-transparent to-transparent ${cfg.headerBg}"
                 >
                     <div class="flex items-start gap-3">
-                        <div
-                            class="w-9 h-9 rounded-lg bg-${cfg.color}/10 text-${cfg.color} flex items-center justify-center shrink-0 mt-0.5"
-                        >
-                            <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
-                                />
-                            </svg>
+                        <div class="flex flex-col items-center shrink-0 mt-0.5 self-stretch">
+                            <div class="w-9 h-9 rounded-lg text-${cfg.color} flex items-center justify-center">
+                                <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
+                                    />
+                                </svg>
+                            </div>
+                            ${allVersions.length >= 1
+                                ? html`<fc-tooltip
+                                      class="mt-auto"
+                                      text="${allVersions.length} Versionen"
+                                      .content=${html`
+                                          <button
+                                              class="w-9 h-9 rounded-lg bg-info/10 text-info flex items-center justify-center hover:bg-info/20 transition-colors cursor-pointer"
+                                              @click=${() => this._openVersionsModal()}
+                                          >
+                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                                                  />
+                                              </svg>
+                                          </button>
+                                      `}
+                                  ></fc-tooltip>`
+                                : ''}
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="font-bold text-base leading-tight">${shortClass(this._selected)}</div>
@@ -1332,14 +1370,6 @@ export class FcDev extends BaseElement {
                                 ${cfg.showButton ? this._renderRunButton(cfg.buttonColor) : ''}
                             </div>
                             ${this._renderChangedMessages(status, d)}
-                            ${allVersions.length > 1
-                                ? html`<button
-                                      class="text-xs text-base-content/40 hover:text-base-content/70 transition-colors mt-1 cursor-pointer"
-                                      @click=${() => this._openVersionsModal()}
-                                  >
-                                      ↳ ${allVersions.length} Versionen verfügbar
-                                  </button>`
-                                : ''}
                         </div>
                         ${d.hash
                             ? html`

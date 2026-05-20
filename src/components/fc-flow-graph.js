@@ -1040,7 +1040,7 @@ export class FcFlowGraph extends BaseElement {
                                   this._diffTooltipTimer = setTimeout(() => (this._diffTooltip = null), 150)
                               }}
                           >
-                              <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box flex items-baseline gap-2 mb-3">
+                              <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box flex items-baseline gap-2 mb-0">
                                   <span
                                       class="text-xs font-semibold uppercase tracking-wider shrink-0"
                                       style="color:${DIFF_STATUS[this._diffTooltip.diff?.status]?.color ?? 'var(--color-base-content)'}"
@@ -1055,7 +1055,9 @@ export class FcFlowGraph extends BaseElement {
                                                 ? 'Nachrichtenstruktur geändert'
                                                 : 'Schema geändert'}
                                   </span>
-                                  ${this._diffTooltip.diff !== null && this._diffTooltip.diff.status !== 'added'
+                                  ${this._diffTooltip.diff !== null &&
+                                  this._diffTooltip.diff.status !== 'added' &&
+                                  this._diffTooltip.diff.status !== 'messageDrift'
                                       ? html`<span
                                             class="text-xs text-base-content/40 font-normal normal-case tracking-normal font-mono truncate"
                                             >${this._diffTooltip.source}</span
@@ -1102,6 +1104,16 @@ export class FcFlowGraph extends BaseElement {
                                       : this._diffTooltip.diff.status === 'messageDrift' &&
                                           this._diffTooltip.diff.changes?.properties?.length
                                         ? html`
+                                              <span class="text-xs font-mono mt-1.5 mb-2 inline-block"
+                                                  >${(() => {
+                                                      const s = this._diffTooltip.source
+                                                      const i = s.lastIndexOf('\\')
+                                                      return i === -1
+                                                          ? html`<span class="text-base-content/80">${s}</span>`
+                                                          : html`<span class="text-base-content/40 break-all">${s.slice(0, i + 1)}</span
+                                                                ><wbr /><span class="text-base-content/80">${s.slice(i + 1)}</span>`
+                                                  })()}</span
+                                              >
                                               ${this._diffTooltip.diff.changes.properties.map(p => {
                                                   const mainClass = p.class.split('\\').pop()
                                                   const allClasses = [
