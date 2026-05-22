@@ -134,6 +134,24 @@ function saveMaskingRules(rules) {
     mkdirSync(dirname(MASKING_RULES_FILE), { recursive: true })
     writeFileSync(MASKING_RULES_FILE, JSON.stringify(rules, null, 2))
 }
+function maskFlowData(obj, rules) {
+    if (obj === null || obj === undefined) return obj
+    if (Array.isArray(obj)) return obj.map(item => maskFlowData(item, rules))
+    if (typeof obj !== 'object') return obj
+
+    const masked = {}
+    for (const [key, value] of Object.entries(obj)) {
+        if (rules.some(r => r.enabled && key.toLowerCase() === r.field.toLowerCase())) {
+            masked[key] = '***'
+        } else if (typeof value === 'object' && value !== null) {
+            masked[key] = maskFlowData(value, rules)
+        } else {
+            masked[key] = value
+        }
+    }
+    return masked
+}
+
 // ─── Dev import store ─────────────────────────────────────────────────────────
 function loadDevImport() {
     if (!existsSync(DEV_IMPORT_FILE)) return null
@@ -930,13 +948,16 @@ const server = createServer(async (req, res) => {
             }
             const flowData = await flowRes.json()
 
+            const maskingRules = loadMaskingRules()
+            const maskedFlowData = maskingRules?.length > 0 ? maskFlowData(flowData, maskingRules) : flowData
+
             const apiKey = aiProvider === 'anthropic' && aiConfig.encryptedApiKey ? decryptSecret(aiConfig.encryptedApiKey) : null
             const { analysis, usage } = await analyzeFlow(
                 aiProvider,
                 apiKey,
                 ollamaUrl,
                 aiModel,
-                flowData,
+                maskedFlowData,
                 runtimeHash,
                 conn.url,
                 phpHeaders,
