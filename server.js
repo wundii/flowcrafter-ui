@@ -1,6 +1,6 @@
 import { createServer } from 'node:http'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, createReadStream } from 'node:fs'
-import { join, extname, dirname } from 'node:path'
+import { join, extname, dirname, resolve } from 'node:path'
 import { scryptSync, randomBytes, timingSafeEqual, createHash, createCipheriv, createDecipheriv } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import Anthropic from '@anthropic-ai/sdk'
@@ -527,6 +527,47 @@ setInterval(() => {
     }
 }, 60_000).unref()
 
+// ─── URL validation (SSRF) ───────────────────────────────────────────────────
+const BLOCKED_HOSTS = new Set(['metadata.google.internal', 'metadata.internal', 'kubernetes.default', 'kubernetes.default.svc'])
+
+function isPrivateIp(host) {
+    // IPv4-mapped IPv6
+    const v4match = host.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/)
+    const ip = v4match ? v4match[1] : host
+
+    const parts = ip.split('.')
+    if (parts.length === 4 && parts.every(p => /^\d+$/.test(p))) {
+        const [a, b] = parts.map(Number)
+        if (a === 127) return true // 127.0.0.0/8 loopback
+        if (a === 10) return true // 10.0.0.0/8
+        if (a === 172 && b >= 16 && b <= 31) return true // 172.16.0.0/12
+        if (a === 192 && b === 168) return true // 192.168.0.0/16
+        if (a === 169 && b === 254) return true // 169.254.0.0/16 link-local
+        if (a === 0) return true // 0.0.0.0/8
+    }
+
+    // IPv6
+    const lower = host.toLowerCase()
+    if (lower === '::1' || lower === '::') return true
+    if (lower.startsWith('fc') || lower.startsWith('fd')) return true // fc00::/7 unique-local
+    if (lower.startsWith('fe80')) return true // fe80::/10 link-local
+
+    return false
+}
+
+function isUrlAllowed(urlStr) {
+    try {
+        const parsed = new URL(urlStr)
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+        const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '')
+        if (BLOCKED_HOSTS.has(host)) return false
+        if (isPrivateIp(host)) return false
+        return true
+    } catch {
+        return false
+    }
+}
+
 // ─── Metrics ─────────────────────────────────────────────────────────────────
 const metrics = {
     requests: new Map(), // key: "method:path:status" → count
@@ -804,6 +845,7 @@ const server = createServer(async (req, res) => {
                 // Server-side fetch: { url, secret }
                 const { url: importUrl, secret } = body
                 if (!importUrl) return json(res, { error: 'url fehlt.' }, 400)
+                if (!isUrlAllowed(importUrl)) return json(res, { error: 'Ungültige URL.' }, 403)
 
                 const baseUrl = importUrl.replace(/\/$/, '')
                 const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
@@ -898,6 +940,7 @@ const server = createServer(async (req, res) => {
 
             const conn = loadConnection()
             if (!conn.url) return json(res, { error: 'Keine FlowCrafter-Verbindung konfiguriert.' }, 503)
+            if (!isUrlAllowed(conn.url)) return json(res, { error: 'Ungültige Ziel-URL.' }, 403)
 
             const phpSecret = conn.encryptedSecret ? decryptSecret(conn.encryptedSecret) : null
             const targetPath = path.replace('/api/fc', '') + url.search
@@ -932,6 +975,7 @@ const server = createServer(async (req, res) => {
 
             const { url: pingUrl, secret } = await readBody(req)
             if (!pingUrl) return json(res, { error: 'url fehlt.' }, 400)
+            if (!isUrlAllowed(pingUrl)) return json(res, { error: 'Ungültige URL.' }, 403)
 
             try {
                 const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
@@ -958,6 +1002,7 @@ const server = createServer(async (req, res) => {
 
             const conn = loadConnection()
             if (!conn.url) return json(res, { error: 'Keine FlowCrafter-Verbindung konfiguriert.' }, 503)
+            if (!isUrlAllowed(conn.url)) return json(res, { error: 'Ungültige Ziel-URL.' }, 403)
 
             const { flowHash, runtimeHash } = await readBody(req)
             if (!flowHash) return json(res, { error: 'flowHash fehlt.' }, 400)
@@ -1026,11 +1071,19 @@ const server = createServer(async (req, res) => {
         }
 
         // ── Static files ─────────────────────────────────────────────────────────
-        let filePath = join(DIST, path === '' ? '/index.html' : path)
+        let filePath = resolve(join(DIST, path === '' ? '/index.html' : path))
+        if (!filePath.startsWith(DIST)) return json(res, { error: 'Forbidden.' }, 403)
         if (!existsSync(filePath)) filePath = join(DIST, 'index.html') // SPA fallback
 
         const mime = MIME[extname(filePath)] ?? 'application/octet-stream'
-        res.writeHead(200, { 'Content-Type': mime })
+        const headers = { 'Content-Type': mime, 'X-Content-Type-Options': 'nosniff' }
+        if (mime === 'text/html') {
+            headers['Content-Security-Policy'] =
+                "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'"
+            headers['X-Frame-Options'] = 'DENY'
+            headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        }
+        res.writeHead(200, headers)
         createReadStream(filePath).pipe(res)
     } catch (err) {
         if (res.headersSent) return res.end()
