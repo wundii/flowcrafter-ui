@@ -8,6 +8,7 @@ import Anthropic from '@anthropic-ai/sdk'
 const APP_VERSION = existsSync('./VERSION') ? readFileSync('./VERSION', 'utf8').trim() : 'dev'
 const DIST = join(dirname(fileURLToPath(import.meta.url)), 'dist')
 const PORT = Number(process.env.PORT ?? 3000)
+const MAX_BODY_SIZE = 1_048_576
 
 const AI_FILE = './data/ai.json'
 const AUTH_FILE = './data/auth.json'
@@ -475,9 +476,17 @@ function bearerToken(req) {
 }
 
 function readBody(req) {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
         let raw = ''
-        req.on('data', c => (raw += c))
+        let bytes = 0
+        req.on('data', c => {
+            bytes += c.length
+            if (bytes > MAX_BODY_SIZE) {
+                req.destroy()
+                return reject(Object.assign(new Error('Anfrage zu groß.'), { statusCode: 413 }))
+            }
+            raw += c
+        })
         req.on('end', () => resolve(JSON.parse(raw || '{}')))
     })
 }
@@ -489,6 +498,34 @@ function json(res, data, status = 200) {
     })
     res.end(JSON.stringify(data))
 }
+
+// ─── Rate limiting ───────────────────────────────────────────────────────────
+const rateLimits = new Map()
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000
+const RATE_LIMIT_MAX = 10
+
+function getClientIp(req) {
+    return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ?? req.socket.remoteAddress
+}
+
+function checkRateLimit(req) {
+    const ip = getClientIp(req)
+    const now = Date.now()
+    const entry = rateLimits.get(ip)
+    if (!entry || now > entry.resetAt) {
+        rateLimits.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
+        return false
+    }
+    entry.count++
+    return entry.count > RATE_LIMIT_MAX
+}
+
+setInterval(() => {
+    const now = Date.now()
+    for (const [key, entry] of rateLimits) {
+        if (now > entry.resetAt) rateLimits.delete(key)
+    }
+}, 60_000).unref()
 
 // ─── Metrics ─────────────────────────────────────────────────────────────────
 const metrics = {
@@ -560,433 +597,446 @@ const server = createServer(async (req, res) => {
         recordMetric(method, path, res.statusCode, Date.now() - reqStart)
     })
 
-    // CORS preflight
-    if (method === 'OPTIONS') {
-        res.writeHead(204, {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        })
-        return res.end()
-    }
-
-    // ── Metrics endpoint ─────────────────────────────────────────────────────
-    if (method === 'GET' && path === '/metrics') {
-        const body = renderMetrics()
-        res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4; charset=utf-8' })
-        return res.end(body)
-    }
-
-    // ── Version endpoint ─────────────────────────────────────────────────────
-    if (method === 'GET' && path === '/api/version') {
-        return json(res, { version: APP_VERSION })
-    }
-
-    // ── Auth API ─────────────────────────────────────────────────────────────
-    if (path.startsWith('/api/auth')) {
-        const db = loadDb()
-
-        if (method === 'GET' && path === '/api/auth/status') {
-            return json(res, {
-                hasPassword: db.passwordHash !== null,
-                authenticated: validToken(db, bearerToken(req)),
+    try {
+        // CORS preflight
+        if (method === 'OPTIONS') {
+            res.writeHead(204, {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
             })
+            return res.end()
         }
 
-        if (method === 'POST' && path === '/api/auth/setup') {
-            if (db.passwordHash) return json(res, { error: 'Bereits gesetzt.' }, 409)
-            const { password } = await readBody(req)
-            if (!password || password.length < 6) return json(res, { error: 'Min. 6 Zeichen.' }, 400)
-            db.passwordHash = hashPassword(password)
-            return json(res, { token: createToken(db) })
-        }
-
-        if (method === 'POST' && path === '/api/auth/login') {
-            if (!db.passwordHash) return json(res, { error: 'Kein Passwort gesetzt.' }, 404)
-            const { password } = await readBody(req)
-            if (!password || !verifyPassword(password, db.passwordHash)) return json(res, { error: 'Falsches Passwort.' }, 401)
-            return json(res, { token: createToken(db) })
-        }
-
-        if (method === 'POST' && path === '/api/auth/change-password') {
+        // ── Metrics endpoint ─────────────────────────────────────────────────────
+        if (method === 'GET' && path === '/metrics') {
+            const db = loadDb()
             if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
-            const { currentPassword, newPassword } = await readBody(req)
-            if (!db.passwordHash || !verifyPassword(currentPassword, db.passwordHash))
-                return json(res, { error: 'Aktuelles Passwort falsch.' }, 401)
-            if (!newPassword || newPassword.length < 6) return json(res, { error: 'Min. 6 Zeichen.' }, 400)
-            db.passwordHash = hashPassword(newPassword)
-            db.sessions = {} // invalidate all sessions
-            return json(res, { token: createToken(db) })
+            const body = renderMetrics()
+            res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4; charset=utf-8' })
+            return res.end(body)
         }
 
-        if (method === 'POST' && path === '/api/auth/logout') {
-            const token = bearerToken(req)
-            if (token) {
-                delete db.sessions[token]
-                saveDb(db)
+        // ── Version endpoint ─────────────────────────────────────────────────────
+        if (method === 'GET' && path === '/api/version') {
+            const db = loadDb()
+            if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+            return json(res, { version: APP_VERSION })
+        }
+
+        // ── Auth API ─────────────────────────────────────────────────────────────
+        if (path.startsWith('/api/auth')) {
+            const db = loadDb()
+
+            if (method === 'GET' && path === '/api/auth/status') {
+                return json(res, {
+                    hasPassword: db.passwordHash !== null,
+                    authenticated: validToken(db, bearerToken(req)),
+                })
             }
-            return json(res, { ok: true })
-        }
 
-        return json(res, { error: 'Not found.' }, 404)
-    }
+            if (method === 'POST' && path === '/api/auth/setup') {
+                if (checkRateLimit(req)) return json(res, { error: 'Zu viele Versuche. Bitte später erneut versuchen.' }, 429)
+                if (db.passwordHash) return json(res, { error: 'Bereits gesetzt.' }, 409)
+                const { password } = await readBody(req)
+                if (!password || password.length < 6) return json(res, { error: 'Min. 6 Zeichen.' }, 400)
+                db.passwordHash = hashPassword(password)
+                return json(res, { token: createToken(db) })
+            }
 
-    // ── Connection API ───────────────────────────────────────────────────────
-    if (path === '/api/connection') {
-        const db = loadDb()
-        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+            if (method === 'POST' && path === '/api/auth/login') {
+                if (checkRateLimit(req)) return json(res, { error: 'Zu viele Versuche. Bitte später erneut versuchen.' }, 429)
+                if (!db.passwordHash) return json(res, { error: 'Kein Passwort gesetzt.' }, 404)
+                const { password } = await readBody(req)
+                if (!password || !verifyPassword(password, db.passwordHash)) return json(res, { error: 'Falsches Passwort.' }, 401)
+                return json(res, { token: createToken(db) })
+            }
 
-        if (method === 'GET') {
-            const conn = loadConnection()
-            const configured = !!conn.url
-            return json(res, {
-                configured,
-                url: conn.url ?? '',
-                secret: configured && conn.encryptedSecret ? decryptSecret(conn.encryptedSecret) : '',
-            })
-        }
+            if (method === 'POST' && path === '/api/auth/change-password') {
+                if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+                const { currentPassword, newPassword } = await readBody(req)
+                if (!db.passwordHash || !verifyPassword(currentPassword, db.passwordHash))
+                    return json(res, { error: 'Aktuelles Passwort falsch.' }, 401)
+                if (!newPassword || newPassword.length < 6) return json(res, { error: 'Min. 6 Zeichen.' }, 400)
+                db.passwordHash = hashPassword(newPassword)
+                db.sessions = {} // invalidate all sessions
+                return json(res, { token: createToken(db) })
+            }
 
-        if (method === 'POST') {
-            const { url: serviceUrl, secret } = await readBody(req)
-            if (!serviceUrl) return json(res, { error: 'url fehlt.' }, 400)
-            saveConnection(serviceUrl.replace(/\/$/, ''), secret || null)
-            return json(res, { ok: true })
-        }
-
-        if (method === 'DELETE') {
-            clearConnection()
-            return json(res, { ok: true })
-        }
-
-        return json(res, { error: 'Not found.' }, 404)
-    }
-
-    // ── AI config API ─────────────────────────────────────────────────────────
-    if (path === '/api/ai-config') {
-        const db = loadDb()
-        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
-
-        if (method === 'GET') {
-            const config = loadAiConfig()
-            const isOllama = config.provider === 'ollama'
-            const ollamaUrl = config.ollamaUrl ?? DEFAULT_OLLAMA_URL
-            const ollamaResult = isOllama ? await fetchOllamaModels(ollamaUrl) : null
-            const models = isOllama ? ollamaResult.models : AI_MODELS_ANTHROPIC
-            const configured = isOllama ? !!config.ollamaUrl : !!config.encryptedApiKey
-            return json(res, {
-                configured,
-                provider: config.provider ?? 'anthropic',
-                model: config.model ?? DEFAULT_MODEL,
-                models,
-                anthropicModels: AI_MODELS_ANTHROPIC,
-                ollamaUrl,
-            })
-        }
-
-        if (method === 'POST') {
-            const { apiKey, provider, model, ollamaUrl } = await readBody(req)
-            const resolvedProvider = provider || 'anthropic'
-
-            if (resolvedProvider === 'ollama') {
-                const url = (ollamaUrl || DEFAULT_OLLAMA_URL).replace(/\/$/, '')
-                const { reachable, models } = await fetchOllamaModels(url)
-                if (!reachable) {
-                    return json(res, { error: `Ollama nicht erreichbar unter ${url}. Bitte URL prüfen.` }, 400)
+            if (method === 'POST' && path === '/api/auth/logout') {
+                const token = bearerToken(req)
+                if (token) {
+                    delete db.sessions[token]
+                    saveDb(db)
                 }
-                if (models.length === 0) {
-                    return json(
-                        res,
-                        {
-                            error: `Ollama ist erreichbar, aber es sind keine Modelle installiert. Bitte zuerst ein Modell laden (z.B. "ollama pull qwen2.5-coder:7b").`,
-                        },
-                        400
-                    )
-                }
-                const selectedModel = models.some(m => m.id === model) ? model : models[0].id
-                saveAiConfig('ollama', null, selectedModel, url)
                 return json(res, { ok: true })
             }
 
-            // Anthropic
-            const selectedModel = AI_MODELS_ANTHROPIC.some(m => m.id === model) ? model : DEFAULT_MODEL
-            if (apiKey) {
-                try {
-                    const client = new Anthropic({ apiKey })
-                    await client.messages.create({
-                        model: selectedModel,
-                        max_tokens: 10,
-                        messages: [{ role: 'user', content: 'ping' }],
-                    })
-                } catch (err) {
-                    const msg = err.error?.error?.message ?? err.message ?? 'API-Key ungültig.'
-                    return json(res, { error: msg }, 400)
-                }
-            }
-            saveAiConfig('anthropic', apiKey, selectedModel, null)
-            return json(res, { ok: true })
+            return json(res, { error: 'Not found.' }, 404)
         }
 
-        if (method === 'DELETE') {
-            clearAiConfig()
-            return json(res, { ok: true })
-        }
+        // ── Connection API ───────────────────────────────────────────────────────
+        if (path === '/api/connection') {
+            const db = loadDb()
+            if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
 
-        return json(res, { error: 'Not found.' }, 404)
-    }
-
-    // ── Dev import API ───────────────────────────────────────────────────────
-    if (path.startsWith('/api/dev-import')) {
-        const db = loadDb()
-        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
-
-        if (method === 'GET' && path === '/api/dev-import') {
-            return json(res, loadDevImport())
-        }
-
-        if (method === 'DELETE' && path === '/api/dev-import') {
-            clearDevImport()
-            return json(res, { ok: true })
-        }
-
-        if (method === 'POST' && path === '/api/dev-import') {
-            const body = await readBody(req)
-
-            // Save pre-built snapshot (from client-side fetch)
-            if (body?.schemas) {
-                saveDevImport(body)
-                return json(res, body)
+            if (method === 'GET') {
+                const conn = loadConnection()
+                const configured = !!conn.url
+                return json(res, {
+                    configured,
+                    url: conn.url ?? '',
+                    secret: configured && conn.encryptedSecret ? decryptSecret(conn.encryptedSecret) : '',
+                })
             }
 
-            // Server-side fetch: { url, secret }
-            const { url: importUrl, secret } = body
-            if (!importUrl) return json(res, { error: 'url fehlt.' }, 400)
+            if (method === 'POST') {
+                const { url: serviceUrl, secret } = await readBody(req)
+                if (!serviceUrl) return json(res, { error: 'url fehlt.' }, 400)
+                saveConnection(serviceUrl.replace(/\/$/, ''), secret || null)
+                return json(res, { ok: true })
+            }
 
-            const baseUrl = importUrl.replace(/\/$/, '')
-            const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
+            if (method === 'DELETE') {
+                clearConnection()
+                return json(res, { ok: true })
+            }
 
-            try {
-                const [schemasRes, messageSourcesRes] = await Promise.all([
-                    fetch(`${baseUrl}/api/flow/schema-list`, { headers }),
-                    fetch(`${baseUrl}/api/flow/message-source-list`, { headers }),
-                ])
+            return json(res, { error: 'Not found.' }, 404)
+        }
 
-                if (schemasRes.status === 401) return json(res, { error: 'Authentifizierung fehlgeschlagen — Bearer Secret prüfen.' }, 401)
-                if (!schemasRes.ok) return json(res, { error: `Fehler vom Server: HTTP ${schemasRes.status}` }, 502)
+        // ── AI config API ─────────────────────────────────────────────────────────
+        if (path === '/api/ai-config') {
+            const db = loadDb()
+            if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
 
-                const rawText = await schemasRes.text()
-                let schemas
-                try {
-                    schemas = JSON.parse(rawText)
-                } catch {
-                    return json(
-                        res,
-                        { error: 'Kein gültiges JSON erhalten. Bitte die PHP-Backend-URL angeben, nicht die UI-Server-URL.' },
-                        502
-                    )
+            if (method === 'GET') {
+                const config = loadAiConfig()
+                const isOllama = config.provider === 'ollama'
+                const ollamaUrl = config.ollamaUrl ?? DEFAULT_OLLAMA_URL
+                const ollamaResult = isOllama ? await fetchOllamaModels(ollamaUrl) : null
+                const models = isOllama ? ollamaResult.models : AI_MODELS_ANTHROPIC
+                const configured = isOllama ? !!config.ollamaUrl : !!config.encryptedApiKey
+                return json(res, {
+                    configured,
+                    provider: config.provider ?? 'anthropic',
+                    model: config.model ?? DEFAULT_MODEL,
+                    models,
+                    anthropicModels: AI_MODELS_ANTHROPIC,
+                    ollamaUrl,
+                })
+            }
+
+            if (method === 'POST') {
+                const { apiKey, provider, model, ollamaUrl } = await readBody(req)
+                const resolvedProvider = provider || 'anthropic'
+
+                if (resolvedProvider === 'ollama') {
+                    const url = (ollamaUrl || DEFAULT_OLLAMA_URL).replace(/\/$/, '')
+                    const { reachable, models } = await fetchOllamaModels(url)
+                    if (!reachable) {
+                        return json(res, { error: `Ollama nicht erreichbar unter ${url}. Bitte URL prüfen.` }, 400)
+                    }
+                    if (models.length === 0) {
+                        return json(
+                            res,
+                            {
+                                error: `Ollama ist erreichbar, aber es sind keine Modelle installiert. Bitte zuerst ein Modell laden (z.B. "ollama pull qwen2.5-coder:7b").`,
+                            },
+                            400
+                        )
+                    }
+                    const selectedModel = models.some(m => m.id === model) ? model : models[0].id
+                    saveAiConfig('ollama', null, selectedModel, url)
+                    return json(res, { ok: true })
                 }
 
-                const messageSources = {}
-                if (messageSourcesRes.ok) {
-                    const rawMsgText = await messageSourcesRes.text()
+                // Anthropic
+                const selectedModel = AI_MODELS_ANTHROPIC.some(m => m.id === model) ? model : DEFAULT_MODEL
+                if (apiKey) {
                     try {
-                        const msgSourcesArr = JSON.parse(rawMsgText)
-                        if (Array.isArray(msgSourcesArr)) {
-                            for (const entry of msgSourcesArr) {
-                                if (entry.messageSource) {
-                                    messageSources[entry.messageSource] = entry.propertyNames ?? {}
-                                }
-                            }
-                        }
-                    } catch {
-                        // message-sources nicht verfügbar — kein Fehler
+                        const client = new Anthropic({ apiKey })
+                        await client.messages.create({
+                            model: selectedModel,
+                            max_tokens: 10,
+                            messages: [{ role: 'user', content: 'ping' }],
+                        })
+                    } catch (err) {
+                        const msg = err.error?.error?.message ?? err.message ?? 'API-Key ungültig.'
+                        return json(res, { error: msg }, 400)
                     }
                 }
-
-                const schemasMap = {}
-                for (const s of schemas) {
-                    schemasMap[s.type] = { storedHash: s.schemaHash, steps: s.steps }
-                }
-                const snapshot = {
-                    importedAt: new Date().toISOString(),
-                    sourceUrl: baseUrl,
-                    schemaCount: Object.keys(schemasMap).length,
-                    messageSourceCount: Object.keys(messageSources).length,
-                    schemas: schemasMap,
-                    messageSources,
-                }
-                saveDevImport(snapshot)
-                return json(res, snapshot)
-            } catch (err) {
-                const cause = err.cause?.code ?? err.cause?.message ?? err.message
-                console.error('Dev import error:', cause)
-                return json(res, { error: `Verbindung fehlgeschlagen: ${cause}` }, 502)
+                saveAiConfig('anthropic', apiKey, selectedModel, null)
+                return json(res, { ok: true })
             }
+
+            if (method === 'DELETE') {
+                clearAiConfig()
+                return json(res, { ok: true })
+            }
+
+            return json(res, { error: 'Not found.' }, 404)
         }
 
-        return json(res, { error: 'Not found.' }, 404)
-    }
+        // ── Dev import API ───────────────────────────────────────────────────────
+        if (path.startsWith('/api/dev-import')) {
+            const db = loadDb()
+            if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
 
-    // ── Masking rules API ────────────────────────────────────────────────
-    if (path === '/api/masking-rules') {
-        const db = loadDb()
-        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+            if (method === 'GET' && path === '/api/dev-import') {
+                return json(res, loadDevImport())
+            }
 
-        if (method === 'GET') {
-            const rules = loadMaskingRules()
-            return json(res, rules ?? [])
-        }
+            if (method === 'DELETE' && path === '/api/dev-import') {
+                clearDevImport()
+                return json(res, { ok: true })
+            }
 
-        if (method === 'POST') {
-            const rules = await readBody(req)
-            if (!Array.isArray(rules)) return json(res, { error: 'Ungültiges Format.' }, 400)
-            saveMaskingRules(rules)
-            return json(res, { ok: true })
-        }
-
-        return json(res, { error: 'Not found.' }, 404)
-    }
-
-    // ── FlowCrafter proxy ─────────────────────────────────────────────────
-    if (path.startsWith('/api/fc/')) {
-        const db = loadDb()
-        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
-
-        const conn = loadConnection()
-        if (!conn.url) return json(res, { error: 'Keine FlowCrafter-Verbindung konfiguriert.' }, 503)
-
-        const phpSecret = conn.encryptedSecret ? decryptSecret(conn.encryptedSecret) : null
-        const targetPath = path.replace('/api/fc', '') + url.search
-        const targetUrl = `${conn.url}${targetPath}`
-
-        const proxyHeaders = {
-            ...(phpSecret ? { Authorization: `Bearer ${phpSecret}` } : {}),
-        }
-
-        try {
-            const fetchOpts = { method, headers: proxyHeaders }
-            if (method === 'POST') {
+            if (method === 'POST' && path === '/api/dev-import') {
                 const body = await readBody(req)
-                fetchOpts.body = JSON.stringify(body)
-                proxyHeaders['Content-Type'] = 'application/json'
+
+                // Save pre-built snapshot (from client-side fetch)
+                if (body?.schemas) {
+                    saveDevImport(body)
+                    return json(res, body)
+                }
+
+                // Server-side fetch: { url, secret }
+                const { url: importUrl, secret } = body
+                if (!importUrl) return json(res, { error: 'url fehlt.' }, 400)
+
+                const baseUrl = importUrl.replace(/\/$/, '')
+                const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
+
+                try {
+                    const [schemasRes, messageSourcesRes] = await Promise.all([
+                        fetch(`${baseUrl}/api/flow/schema-list`, { headers }),
+                        fetch(`${baseUrl}/api/flow/message-source-list`, { headers }),
+                    ])
+
+                    if (schemasRes.status === 401)
+                        return json(res, { error: 'Authentifizierung fehlgeschlagen — Bearer Secret prüfen.' }, 401)
+                    if (!schemasRes.ok) return json(res, { error: `Fehler vom Server: HTTP ${schemasRes.status}` }, 502)
+
+                    const rawText = await schemasRes.text()
+                    let schemas
+                    try {
+                        schemas = JSON.parse(rawText)
+                    } catch {
+                        return json(
+                            res,
+                            { error: 'Kein gültiges JSON erhalten. Bitte die PHP-Backend-URL angeben, nicht die UI-Server-URL.' },
+                            502
+                        )
+                    }
+
+                    const messageSources = {}
+                    if (messageSourcesRes.ok) {
+                        const rawMsgText = await messageSourcesRes.text()
+                        try {
+                            const msgSourcesArr = JSON.parse(rawMsgText)
+                            if (Array.isArray(msgSourcesArr)) {
+                                for (const entry of msgSourcesArr) {
+                                    if (entry.messageSource) {
+                                        messageSources[entry.messageSource] = entry.propertyNames ?? {}
+                                    }
+                                }
+                            }
+                        } catch {
+                            // message-sources nicht verfügbar — kein Fehler
+                        }
+                    }
+
+                    const schemasMap = {}
+                    for (const s of schemas) {
+                        schemasMap[s.type] = { storedHash: s.schemaHash, steps: s.steps }
+                    }
+                    const snapshot = {
+                        importedAt: new Date().toISOString(),
+                        sourceUrl: baseUrl,
+                        schemaCount: Object.keys(schemasMap).length,
+                        messageSourceCount: Object.keys(messageSources).length,
+                        schemas: schemasMap,
+                        messageSources,
+                    }
+                    saveDevImport(snapshot)
+                    return json(res, snapshot)
+                } catch (err) {
+                    const cause = err.cause?.code ?? err.cause?.message ?? err.message
+                    console.error('Dev import error:', cause)
+                    return json(res, { error: `Verbindung fehlgeschlagen: ${cause}` }, 502)
+                }
             }
-            const proxyRes = await fetch(targetUrl, fetchOpts)
-            const contentType = proxyRes.headers.get('content-type') ?? 'application/json'
-            res.writeHead(proxyRes.status, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' })
-            const buffer = Buffer.from(await proxyRes.arrayBuffer())
-            return res.end(buffer)
-        } catch (err) {
-            console.error('Proxy error:', err.message)
-            return json(res, { error: 'FlowCrafter nicht erreichbar.' }, 502)
+
+            return json(res, { error: 'Not found.' }, 404)
         }
-    }
 
-    // ── Ping proxy ───────────────────────────────────────────────────────────
-    if (path === '/api/fc-ping' && method === 'POST') {
-        const db = loadDb()
-        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+        // ── Masking rules API ────────────────────────────────────────────────
+        if (path === '/api/masking-rules') {
+            const db = loadDb()
+            if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
 
-        const { url: pingUrl, secret } = await readBody(req)
-        if (!pingUrl) return json(res, { error: 'url fehlt.' }, 400)
+            if (method === 'GET') {
+                const rules = loadMaskingRules()
+                return json(res, rules ?? [])
+            }
 
-        try {
-            const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
-            const pingRes = await fetch(`${pingUrl.replace(/\/$/, '')}/api/ping`, { headers })
-            if (pingRes.status === 401) return json(res, { error: '401' })
-            if (!pingRes.ok) return json(res, { error: 'unreachable' })
-            const data = await pingRes.json().catch(() => null)
-            if (data === 'pong' || data?.pong) return json(res, { ok: true })
-            return json(res, { error: 'unexpected' })
-        } catch {
-            return json(res, { error: 'unreachable' })
+            if (method === 'POST') {
+                const rules = await readBody(req)
+                if (!Array.isArray(rules)) return json(res, { error: 'Ungültiges Format.' }, 400)
+                saveMaskingRules(rules)
+                return json(res, { ok: true })
+            }
+
+            return json(res, { error: 'Not found.' }, 404)
         }
-    }
 
-    // ── Analyze API ─────────────────────────────────────────────────────────
-    if (path === '/api/analyze' && method === 'POST') {
-        const db = loadDb()
-        if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+        // ── FlowCrafter proxy ─────────────────────────────────────────────────
+        if (path.startsWith('/api/fc/')) {
+            const db = loadDb()
+            if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
 
-        const aiConfig = loadAiConfig()
-        const aiProvider = aiConfig.provider ?? 'anthropic'
-        const isConfigured = aiProvider === 'ollama' ? !!aiConfig.ollamaUrl : !!aiConfig.encryptedApiKey
-        if (!isConfigured) return json(res, { error: 'AI nicht konfiguriert.' }, 503)
+            const conn = loadConnection()
+            if (!conn.url) return json(res, { error: 'Keine FlowCrafter-Verbindung konfiguriert.' }, 503)
 
-        const conn = loadConnection()
-        if (!conn.url) return json(res, { error: 'Keine FlowCrafter-Verbindung konfiguriert.' }, 503)
-
-        const { flowHash, runtimeHash } = await readBody(req)
-        if (!flowHash) return json(res, { error: 'flowHash fehlt.' }, 400)
-
-        res.writeHead(200, {
-            'Content-Type': 'application/x-ndjson',
-            'Cache-Control': 'no-cache',
-            'Access-Control-Allow-Origin': '*',
-        })
-
-        const send = data => res.write(JSON.stringify(data) + '\n')
-
-        const abort = new AbortController()
-        const ollamaUrl = aiConfig.ollamaUrl ?? DEFAULT_OLLAMA_URL
-        const aiModel = aiConfig.model ?? DEFAULT_MODEL
-        let analysisCompleted = false
-        res.on('close', () => {
-            abort.abort()
-            if (aiProvider === 'ollama' && !analysisCompleted) ollamaUnloadModel(ollamaUrl, aiModel)
-        })
-
-        try {
-            send({ type: 'status', message: 'Flow-Daten werden geladen…' })
             const phpSecret = conn.encryptedSecret ? decryptSecret(conn.encryptedSecret) : null
-            const phpHeaders = phpSecret ? { Authorization: `Bearer ${phpSecret}` } : {}
-            const flowRes = await fetch(`${conn.url}/api/flow/flow-details?hash=${encodeURIComponent(flowHash)}`, {
-                headers: phpHeaders,
-                signal: abort.signal,
-            })
-            if (!flowRes.ok) {
-                send({ type: 'error', error: `FlowCrafter API: HTTP ${flowRes.status}` })
-                return res.end()
+            const targetPath = path.replace('/api/fc', '') + url.search
+            const targetUrl = `${conn.url}${targetPath}`
+
+            const proxyHeaders = {
+                ...(phpSecret ? { Authorization: `Bearer ${phpSecret}` } : {}),
             }
-            const flowData = await flowRes.json()
 
-            const maskingRules = loadMaskingRules()
-            const maskedFlowData = maskingRules?.length > 0 ? maskFlowData(flowData, maskingRules) : flowData
-
-            const apiKey = aiProvider === 'anthropic' && aiConfig.encryptedApiKey ? decryptSecret(aiConfig.encryptedApiKey) : null
-            const { analysis, usage } = await analyzeFlow(
-                aiProvider,
-                apiKey,
-                ollamaUrl,
-                aiModel,
-                maskedFlowData,
-                runtimeHash,
-                conn.url,
-                phpHeaders,
-                send,
-                abort.signal
-            )
-
-            analysisCompleted = true
-            send({ type: 'result', analysis, model: aiModel, provider: aiProvider, usage, timestamp: new Date().toISOString() })
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                console.error('Analyze error:', err)
-                const detail = {}
-                if (err.status) detail.status = err.status
-                if (err.error) detail.body = err.error
-                const message = err.error?.error?.message ?? err.message ?? 'Analyse fehlgeschlagen.'
-                send({ type: 'error', error: message, detail: Object.keys(detail).length > 0 ? detail : undefined })
+            try {
+                const fetchOpts = { method, headers: proxyHeaders }
+                if (method === 'POST') {
+                    const body = await readBody(req)
+                    fetchOpts.body = JSON.stringify(body)
+                    proxyHeaders['Content-Type'] = 'application/json'
+                }
+                const proxyRes = await fetch(targetUrl, fetchOpts)
+                const contentType = proxyRes.headers.get('content-type') ?? 'application/json'
+                res.writeHead(proxyRes.status, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' })
+                const buffer = Buffer.from(await proxyRes.arrayBuffer())
+                return res.end(buffer)
+            } catch (err) {
+                console.error('Proxy error:', err.message)
+                return json(res, { error: 'FlowCrafter nicht erreichbar.' }, 502)
             }
         }
-        return res.end()
+
+        // ── Ping proxy ───────────────────────────────────────────────────────────
+        if (path === '/api/fc-ping' && method === 'POST') {
+            const db = loadDb()
+            if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+
+            const { url: pingUrl, secret } = await readBody(req)
+            if (!pingUrl) return json(res, { error: 'url fehlt.' }, 400)
+
+            try {
+                const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
+                const pingRes = await fetch(`${pingUrl.replace(/\/$/, '')}/api/ping`, { headers })
+                if (pingRes.status === 401) return json(res, { error: '401' })
+                if (!pingRes.ok) return json(res, { error: 'unreachable' })
+                const data = await pingRes.json().catch(() => null)
+                if (data === 'pong' || data?.pong) return json(res, { ok: true })
+                return json(res, { error: 'unexpected' })
+            } catch {
+                return json(res, { error: 'unreachable' })
+            }
+        }
+
+        // ── Analyze API ─────────────────────────────────────────────────────────
+        if (path === '/api/analyze' && method === 'POST') {
+            const db = loadDb()
+            if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
+
+            const aiConfig = loadAiConfig()
+            const aiProvider = aiConfig.provider ?? 'anthropic'
+            const isConfigured = aiProvider === 'ollama' ? !!aiConfig.ollamaUrl : !!aiConfig.encryptedApiKey
+            if (!isConfigured) return json(res, { error: 'AI nicht konfiguriert.' }, 503)
+
+            const conn = loadConnection()
+            if (!conn.url) return json(res, { error: 'Keine FlowCrafter-Verbindung konfiguriert.' }, 503)
+
+            const { flowHash, runtimeHash } = await readBody(req)
+            if (!flowHash) return json(res, { error: 'flowHash fehlt.' }, 400)
+
+            res.writeHead(200, {
+                'Content-Type': 'application/x-ndjson',
+                'Cache-Control': 'no-cache',
+                'Access-Control-Allow-Origin': '*',
+            })
+
+            const send = data => res.write(JSON.stringify(data) + '\n')
+
+            const abort = new AbortController()
+            const ollamaUrl = aiConfig.ollamaUrl ?? DEFAULT_OLLAMA_URL
+            const aiModel = aiConfig.model ?? DEFAULT_MODEL
+            let analysisCompleted = false
+            res.on('close', () => {
+                abort.abort()
+                if (aiProvider === 'ollama' && !analysisCompleted) ollamaUnloadModel(ollamaUrl, aiModel)
+            })
+
+            try {
+                send({ type: 'status', message: 'Flow-Daten werden geladen…' })
+                const phpSecret = conn.encryptedSecret ? decryptSecret(conn.encryptedSecret) : null
+                const phpHeaders = phpSecret ? { Authorization: `Bearer ${phpSecret}` } : {}
+                const flowRes = await fetch(`${conn.url}/api/flow/flow-details?hash=${encodeURIComponent(flowHash)}`, {
+                    headers: phpHeaders,
+                    signal: abort.signal,
+                })
+                if (!flowRes.ok) {
+                    send({ type: 'error', error: `FlowCrafter API: HTTP ${flowRes.status}` })
+                    return res.end()
+                }
+                const flowData = await flowRes.json()
+
+                const maskingRules = loadMaskingRules()
+                const maskedFlowData = maskingRules?.length > 0 ? maskFlowData(flowData, maskingRules) : flowData
+
+                const apiKey = aiProvider === 'anthropic' && aiConfig.encryptedApiKey ? decryptSecret(aiConfig.encryptedApiKey) : null
+                const { analysis, usage } = await analyzeFlow(
+                    aiProvider,
+                    apiKey,
+                    ollamaUrl,
+                    aiModel,
+                    maskedFlowData,
+                    runtimeHash,
+                    conn.url,
+                    phpHeaders,
+                    send,
+                    abort.signal
+                )
+
+                analysisCompleted = true
+                send({ type: 'result', analysis, model: aiModel, provider: aiProvider, usage, timestamp: new Date().toISOString() })
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('Analyze error:', err)
+                    const detail = {}
+                    if (err.status) detail.status = err.status
+                    if (err.error) detail.body = err.error
+                    const message = err.error?.error?.message ?? err.message ?? 'Analyse fehlgeschlagen.'
+                    send({ type: 'error', error: message, detail: Object.keys(detail).length > 0 ? detail : undefined })
+                }
+            }
+            return res.end()
+        }
+
+        // ── Static files ─────────────────────────────────────────────────────────
+        let filePath = join(DIST, path === '' ? '/index.html' : path)
+        if (!existsSync(filePath)) filePath = join(DIST, 'index.html') // SPA fallback
+
+        const mime = MIME[extname(filePath)] ?? 'application/octet-stream'
+        res.writeHead(200, { 'Content-Type': mime })
+        createReadStream(filePath).pipe(res)
+    } catch (err) {
+        if (res.headersSent) return res.end()
+        const status = err.statusCode ?? 500
+        return json(res, { error: status === 413 ? err.message : 'Interner Serverfehler.' }, status)
     }
-
-    // ── Static files ─────────────────────────────────────────────────────────
-    let filePath = join(DIST, path === '' ? '/index.html' : path)
-    if (!existsSync(filePath)) filePath = join(DIST, 'index.html') // SPA fallback
-
-    const mime = MIME[extname(filePath)] ?? 'application/octet-stream'
-    res.writeHead(200, { 'Content-Type': mime })
-    createReadStream(filePath).pipe(res)
 })
 
 server.listen(PORT, () => console.log(`FlowCrafter UI node service → http://localhost:${PORT}`))
