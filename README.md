@@ -14,6 +14,11 @@ Web-Frontend für [FlowCrafter](https://github.com/wundii/flowcrafter) — visua
 </p>
 <p align="center">
   <picture>
+    <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/03-flow-list.png" alt="Flow List" style="width: 100%; max-width: 600px; height: auto;">
+  </picture>
+</p>
+<p align="center">
+  <picture>
     <img src="https://raw.githubusercontent.com/wundii/flowcrafter-ui/refs/heads/main/assets/04-flow-detail.png" alt="Flow Detail" style="width: 100%; max-width: 600px; height: auto;">
   </picture>
 </p>
@@ -41,7 +46,7 @@ Web-Frontend für [FlowCrafter](https://github.com/wundii/flowcrafter) — visua
 ## Stack
 
 - [Lit v3](https://lit.dev/) — Web Components
-- [Vite v6](https://vitejs.dev/) — Build-Tool / Dev-Server
+- [Vite v8](https://vitejs.dev/) — Build-Tool / Dev-Server
 - [Tailwind CSS v4](https://tailwindcss.com/) — Utility-CSS
 - [DaisyUI v5](https://daisyui.com/) — Komponenten-Bibliothek
 - [CodeMirror 6](https://codemirror.net/) — JSON-Editor & PHP-Source-Viewer mit Syntax-Highlighting

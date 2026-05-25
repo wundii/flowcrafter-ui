@@ -2329,7 +2329,12 @@ export class FcDev extends BaseElement {
                                       <div class="flex flex-col gap-2 text-xs flex-1">
                                           <div class="flex flex-col gap-0.5">
                                               <span class="text-base-content/40 uppercase tracking-wide text-[10px]">Quelle</span>
-                                              <span class="font-mono text-base-content/70 break-all">${this._devImport.sourceUrl}</span>
+                                              <button
+                                                  class="font-mono text-base-content/70 break-all text-left hover:text-primary hover:underline cursor-pointer transition-colors"
+                                                  @click=${() => (this._importUrl = this._devImport.sourceUrl)}
+                                              >
+                                                  ${this._devImport.sourceUrl}
+                                              </button>
                                           </div>
                                           <div class="flex flex-col gap-0.5">
                                               <span class="text-base-content/40 uppercase tracking-wide text-[10px]">Importiert am</span>
