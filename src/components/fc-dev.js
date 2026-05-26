@@ -980,7 +980,7 @@ export class FcDev extends BaseElement {
         const storedTypes = new Set(storedVersions.map(s => s.type))
         const importedVersions = Object.entries(importedSchemas)
             .filter(([type]) => type.replace(/\.v\d+$/, '') === typeBase && !storedTypes.has(type))
-            .map(([type, imp]) => ({ type, steps: imp.steps ?? [], storedHash: imp.storedHash }))
+            .map(([type, imp]) => ({ type, steps: imp.steps ?? [], storedHash: imp.storedHash, fromImport: true }))
         const versions = [...storedVersions, ...importedVersions]
             .map(s => {
                 const vMatch = s.type.match(/v(\d+)$/)
@@ -1054,6 +1054,24 @@ export class FcDev extends BaseElement {
                                             <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                                                 <span class="font-mono text-xs font-semibold">${v.type}</span>
                                                 ${isCurrent ? html`<span class="badge badge-xs badge-primary">aktuell</span>` : ''}
+                                                ${v.fromImport
+                                                    ? html`<fc-tooltip
+                                                          text="Aus Schema Import"
+                                                          .content=${html`<svg
+                                                              class="w-3.5 h-3.5 text-warning/70 shrink-0"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              stroke-width="2"
+                                                              viewBox="0 0 24 24"
+                                                          >
+                                                              <path
+                                                                  stroke-linecap="round"
+                                                                  stroke-linejoin="round"
+                                                                  d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
+                                                              />
+                                                          </svg>`}
+                                                      ></fc-tooltip>`
+                                                    : ''}
                                             </div>
                                             <div class="text-[10px] text-base-content/40 mt-0.5">${(v.steps ?? []).length} Steps</div>
                                         </button>
@@ -1088,6 +1106,24 @@ export class FcDev extends BaseElement {
                                           <span class="font-mono text-sm font-semibold">${selected.type}</span>
                                           ${selected.type === d.schema.type
                                               ? html`<span class="badge badge-xs badge-primary">aktuell</span>`
+                                              : ''}
+                                          ${selected.fromImport
+                                              ? html`<fc-tooltip
+                                                    text="Aus Schema Import"
+                                                    .content=${html`<svg
+                                                        class="w-3.5 h-3.5 text-warning/70 shrink-0"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="2"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
+                                                        />
+                                                    </svg>`}
+                                                ></fc-tooltip>`
                                               : ''}
                                           ${(selected.hash ?? selected.storedHash)
                                               ? html`<span class="text-[10px] font-mono text-base-content/30 ml-auto"
