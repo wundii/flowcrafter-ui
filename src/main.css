@@ -45,15 +45,20 @@ summary.list-none::-webkit-details-marker {
 @keyframes fc-dev-glow {
     0%,
     100% {
-        text-shadow: 0 0 4px oklch(0.7 0.15 250 / 0.3);
-        filter: drop-shadow(0 0 2px oklch(0.7 0.15 250 / 0.15));
+        text-shadow:
+            0 0 3px oklch(0.7 0.14 55 / 0.25),
+            0 0 8px oklch(0.7 0.14 55 / 0.08);
+        filter: drop-shadow(0 0 1px oklch(0.7 0.14 55 / 0.1));
     }
-    50% {
-        text-shadow: 0 0 10px oklch(0.7 0.15 250 / 0.6);
-        filter: drop-shadow(0 0 6px oklch(0.7 0.15 250 / 0.35));
+    35% {
+        text-shadow:
+            0 0 6px oklch(0.75 0.16 55 / 0.5),
+            0 0 14px oklch(0.7 0.14 55 / 0.15);
+        filter: drop-shadow(0 0 3px oklch(0.7 0.14 55 / 0.2));
     }
 }
 
 .fc-dev-glow {
-    animation: fc-dev-glow 3s ease-in-out infinite;
+    color: oklch(0.82 0.12 70);
+    animation: fc-dev-glow 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
