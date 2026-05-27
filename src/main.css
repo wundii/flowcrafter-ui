@@ -41,3 +41,19 @@
 summary.list-none::-webkit-details-marker {
     display: none;
 }
+
+@keyframes fc-dev-glow {
+    0%,
+    100% {
+        text-shadow: 0 0 4px oklch(0.7 0.15 250 / 0.3);
+        filter: drop-shadow(0 0 2px oklch(0.7 0.15 250 / 0.15));
+    }
+    50% {
+        text-shadow: 0 0 10px oklch(0.7 0.15 250 / 0.6);
+        filter: drop-shadow(0 0 6px oklch(0.7 0.15 250 / 0.35));
+    }
+}
+
+.fc-dev-glow {
+    animation: fc-dev-glow 3s ease-in-out infinite;
+}

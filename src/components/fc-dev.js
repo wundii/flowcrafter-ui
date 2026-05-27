@@ -326,6 +326,9 @@ export class FcDev extends BaseElement {
                 }
             }
             this._detail = data
+            this._runMessage = data?.initMessageSchema ?? {}
+            this._runMessageValid = true
+            this._runPayload = JSON.stringify(data?.initMessageSchema ?? {}, null, 2)
             this._validationCache = {
                 ...this._validationCache,
                 [className]: resolveFlowStatus(data, this._storedSchemas).config.showButton,
@@ -404,15 +407,17 @@ export class FcDev extends BaseElement {
         return initStep?.messages?.[0] ?? null
     }
 
-    async _loadRunModalData() {
+    async _loadRunModalData(resetPayload = false) {
         this._runModalLoading = true
         try {
             const data = await api.getDevFlow(this._selected)
             this._detail = data
             this._validationCache = { ...this._validationCache, [this._selected]: data.valid && !data.hashDrift }
-            this._runMessage = this._detail?.initMessageSchema ?? {}
-            this._runMessageValid = true
-            this._runPayload = JSON.stringify(this._detail?.initMessageSchema ?? {}, null, 2)
+            if (resetPayload) {
+                this._runMessage = this._detail?.initMessageSchema ?? {}
+                this._runMessageValid = true
+                this._runPayload = JSON.stringify(this._detail?.initMessageSchema ?? {}, null, 2)
+            }
         } catch {
             // bei Fehler vorhandene Daten behalten
         } finally {
@@ -1733,7 +1738,7 @@ export class FcDev extends BaseElement {
                                             <button
                                                 class="btn btn-xs btn-ghost btn-circle shrink-0"
                                                 ?disabled=${this._runModalLoading}
-                                                @click=${() => this._loadRunModalData()}
+                                                @click=${() => this._loadRunModalData(true)}
                                             >
                                                 ${this._runModalLoading
                                                     ? html`<span class="loading loading-spinner loading-xs"></span>`
@@ -1869,6 +1874,7 @@ export class FcDev extends BaseElement {
                                               class="flex-1 min-h-0"
                                               .value=${this._runPayload}
                                               @change=${e => {
+                                                  this._runPayload = e.detail.value
                                                   this._runMessage = e.detail.valid ? e.detail.value : this._runMessage
                                                   this._runMessageValid = e.detail.valid
                                               }}

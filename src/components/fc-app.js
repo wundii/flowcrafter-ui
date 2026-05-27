@@ -1059,7 +1059,9 @@ export class FcApp extends BaseElement {
                             tab => html`
                                 <a
                                     role="tab"
-                                    class="tab gap-1.5 ${this.activeTab === tab ? 'tab-active' : ''}"
+                                    class="tab gap-1.5 ${this.activeTab === tab ? 'tab-active' : ''} ${tab === 'dev-tool'
+                                        ? 'fc-dev-glow'
+                                        : ''}"
                                     @click=${() => {
                                         this.activeTab = tab
                                         this.selectedPrefix = null
