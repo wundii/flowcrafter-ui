@@ -612,7 +612,8 @@ export class FcApp extends BaseElement {
             }
             return html`<fc-type-list @schema-selected=${this._onSchemaSelected}></fc-type-list>`
         }
-        if (this.activeTab === 'schedules') return html`<fc-schedule-list></fc-schedule-list>`
+        if (this.activeTab === 'schedules')
+            return html`<fc-schedule-list .schedulerActive=${this._serverInfo?.scheduler?.length > 0}></fc-schedule-list>`
         if (this.activeTab === 'queues') return html`<fc-queue-list></fc-queue-list>`
         if (this.activeTab === 'dev-tool') return html`<fc-dev></fc-dev>`
         return html`

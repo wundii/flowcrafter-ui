@@ -39,6 +39,7 @@ function cronToHuman(expr) {
 
 export class FcScheduleList extends BaseElement {
     static properties = {
+        schedulerActive: { type: Boolean },
         _activeGroup: { state: true },
         _error: { state: true },
         _filter: { state: true },
@@ -56,6 +57,7 @@ export class FcScheduleList extends BaseElement {
 
     constructor() {
         super()
+        this.schedulerActive = false
         this._activeGroup = null
         this._error = null
         this._filter = ''
@@ -440,13 +442,34 @@ export class FcScheduleList extends BaseElement {
         `
     }
 
+    _renderSchedulerBanner() {
+        if (this.schedulerActive) return ''
+        return html`
+            <div class="mb-5 rounded-box border border-warning/15 bg-warning/4 px-4 py-3 flex items-center gap-3 relative overflow-hidden">
+                <div
+                    class="absolute top-0 bottom-0 right-0 w-1/5 pointer-events-none"
+                    style="background: linear-gradient(to right, transparent, oklch(0.75 0.15 85 / 0.04));
+                           mask-image: repeating-linear-gradient(-45deg, transparent, transparent 8px, black 8px, black 16px);
+                           -webkit-mask-image: repeating-linear-gradient(-45deg, transparent, transparent 8px, black 8px, black 16px)"
+                ></div>
+                <span class="inline-block w-2 h-2 rounded-full bg-warning/50 shrink-0 fc-dot-glow"></span>
+                <p class="text-xs text-base-content/50 leading-relaxed">
+                    <span class="font-medium text-base-content/65">Kein Scheduler-Prozess aktiv</span> — Schedules werden derzeit nicht
+                    automatisch ausgeführt. Starte ihn über
+                    <code class="px-1 py-px rounded bg-base-content/5 text-[11px] font-mono">bin/flowcrafter scheduler</code> oder
+                    <code class="px-1 py-px rounded bg-base-content/5 text-[11px] font-mono">bin/flowcrafter dev</code>
+                </p>
+            </div>
+        `
+    }
+
     render() {
         if (this._loading) return skeletonScheduleGrid()
 
         if (this._error) return renderApiError(this._error, { compact: true, retry: this._load })
 
         return html`
-            ${this._activeGroup ? this._renderGroup() : this._renderRoot()}
+            ${this._renderSchedulerBanner()} ${this._activeGroup ? this._renderGroup() : this._renderRoot()}
 
             <!-- Source Modal -->
             <dialog

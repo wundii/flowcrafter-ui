@@ -62,3 +62,19 @@ summary.list-none::-webkit-details-marker {
     color: oklch(0.82 0.12 70);
     animation: fc-dev-glow 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
+
+@keyframes fc-dot-glow {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 oklch(0.75 0.15 85 / 0);
+        opacity: 0.5;
+    }
+    50% {
+        box-shadow: 0 0 4px 2px oklch(0.75 0.15 85 / 0.15);
+        opacity: 0.8;
+    }
+}
+
+.fc-dot-glow {
+    animation: fc-dot-glow 3s ease-in-out infinite;
+}
