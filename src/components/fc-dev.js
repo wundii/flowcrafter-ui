@@ -1401,7 +1401,21 @@ export class FcDev extends BaseElement {
                                 : ''}
                         </div>
                         <div class="min-w-0 flex-1">
-                            <div class="font-bold text-base leading-tight">${shortClass(this._selected)}</div>
+                            <div class="flex items-center gap-2">
+                                <div class="font-bold text-base leading-tight">${shortClass(this._selected)}</div>
+                                ${d.ephemeral !== null && d.ephemeral !== undefined
+                                    ? html`<span class="fc-ephemeral-badge">
+                                          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                              <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  d="M7.5 3.75H6A2.25 2.25 0 003.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0120.25 6v1.5m0 9V18A2.25 2.25 0 0118 20.25h-1.5m-9 0H6A2.25 2.25 0 013.75 18v-1.5M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                              />
+                                          </svg>
+                                          Ephemeral<span class="fc-ephemeral-sep">·</span>${d.ephemeral} Tage
+                                      </span>`
+                                    : ''}
+                            </div>
                             ${d.schema?.type ? html`<div class="text-xs font-mono text-base-content/50 mt-0.5">${d.schema.type}</div>` : ''}
                             ${selectedFlow?.file
                                 ? html`<div class="text-[10px] text-base-content/30 mt-1 truncate font-mono">${selectedFlow.file}</div>`
@@ -1808,79 +1822,96 @@ export class FcDev extends BaseElement {
                         <!-- Right: JSON editor + result -->
                         <div class="flex-1 min-w-0 flex flex-col p-4 gap-3 overflow-hidden">
                             ${this._detail?.schema
-                                ? html`
-                                      <div class="flex flex-col gap-1.5 flex-1 min-h-0">
-                                          <div class="flex items-center gap-2">
-                                              <span class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest"
-                                                  >Payload</span
-                                              >
-                                              <span class="text-[10px] font-mono text-base-content/25"
-                                                  >${shortClass(this._initMessageClass(this._detail?.schema))}</span
-                                              >
-                                              <div class="flex items-center gap-0.5 ml-auto">
-                                                  <fc-tooltip
-                                                      text="Inhalt kopieren"
-                                                      .content=${html`
-                                                          <button
-                                                              class="btn btn-xs btn-ghost btn-circle"
-                                                              @click=${() => navigator.clipboard.writeText(this._runPayload)}
-                                                          >
-                                                              <svg
-                                                                  class="w-3.5 h-3.5"
-                                                                  fill="none"
-                                                                  stroke="currentColor"
-                                                                  stroke-width="2"
-                                                                  viewBox="0 0 24 24"
-                                                              >
-                                                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
-                                                              </svg>
-                                                          </button>
-                                                      `}
-                                                  ></fc-tooltip>
-                                                  <fc-tooltip
-                                                      text="Aus Zwischenablage einfügen"
-                                                      .content=${html`
-                                                          <button
-                                                              class="btn btn-xs btn-ghost btn-circle"
-                                                              @click=${async () => {
-                                                                  try {
-                                                                      const text = await navigator.clipboard.readText()
-                                                                      this._runPayload = text
-                                                                  } catch {
-                                                                      // Clipboard-Zugriff verweigert
-                                                                  }
-                                                              }}
-                                                          >
-                                                              <svg
-                                                                  class="w-3.5 h-3.5"
-                                                                  fill="none"
-                                                                  stroke="currentColor"
-                                                                  stroke-width="2"
-                                                                  viewBox="0 0 24 24"
-                                                              >
-                                                                  <path
-                                                                      stroke-linecap="round"
-                                                                      stroke-linejoin="round"
-                                                                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                                                                  />
-                                                              </svg>
-                                                          </button>
-                                                      `}
-                                                  ></fc-tooltip>
+                                ? (() => {
+                                      const isEmptyInit = shortClass(this._initMessageClass(this._detail?.schema)) === 'EmptyInitMessage'
+                                      return html`
+                                          <div class="flex flex-col gap-1.5 flex-1 min-h-0">
+                                              <div class="flex items-center gap-2">
+                                                  <span class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest"
+                                                      >Payload</span
+                                                  >
+                                                  <span class="text-[10px] font-mono text-base-content/25"
+                                                      >${shortClass(this._initMessageClass(this._detail?.schema))}</span
+                                                  >
+                                                  ${isEmptyInit
+                                                      ? ''
+                                                      : html`
+                                                            <div class="flex items-center gap-0.5 ml-auto">
+                                                                <fc-tooltip
+                                                                    text="Inhalt kopieren"
+                                                                    .content=${html`
+                                                                        <button
+                                                                            class="btn btn-xs btn-ghost btn-circle"
+                                                                            @click=${() => navigator.clipboard.writeText(this._runPayload)}
+                                                                        >
+                                                                            <svg
+                                                                                class="w-3.5 h-3.5"
+                                                                                fill="none"
+                                                                                stroke="currentColor"
+                                                                                stroke-width="2"
+                                                                                viewBox="0 0 24 24"
+                                                                            >
+                                                                                <rect
+                                                                                    x="9"
+                                                                                    y="9"
+                                                                                    width="13"
+                                                                                    height="13"
+                                                                                    rx="2"
+                                                                                    ry="2"
+                                                                                ></rect>
+                                                                                <path
+                                                                                    d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                                                ></path>
+                                                                            </svg>
+                                                                        </button>
+                                                                    `}
+                                                                ></fc-tooltip>
+                                                                <fc-tooltip
+                                                                    text="Aus Zwischenablage einfügen"
+                                                                    .content=${html`
+                                                                        <button
+                                                                            class="btn btn-xs btn-ghost btn-circle"
+                                                                            @click=${async () => {
+                                                                                try {
+                                                                                    const text = await navigator.clipboard.readText()
+                                                                                    this._runPayload = text
+                                                                                } catch {
+                                                                                    // Clipboard-Zugriff verweigert
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            <svg
+                                                                                class="w-3.5 h-3.5"
+                                                                                fill="none"
+                                                                                stroke="currentColor"
+                                                                                stroke-width="2"
+                                                                                viewBox="0 0 24 24"
+                                                                            >
+                                                                                <path
+                                                                                    stroke-linecap="round"
+                                                                                    stroke-linejoin="round"
+                                                                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                                                                                />
+                                                                            </svg>
+                                                                        </button>
+                                                                    `}
+                                                                ></fc-tooltip>
+                                                            </div>
+                                                        `}
                                               </div>
+                                              <fc-json-editor
+                                                  class="flex-1 min-h-0"
+                                                  .value=${this._runPayload}
+                                                  .readonly=${isEmptyInit}
+                                                  @change=${e => {
+                                                      this._runPayload = e.detail.value
+                                                      this._runMessage = e.detail.valid ? e.detail.value : this._runMessage
+                                                      this._runMessageValid = e.detail.valid
+                                                  }}
+                                              ></fc-json-editor>
                                           </div>
-                                          <fc-json-editor
-                                              class="flex-1 min-h-0"
-                                              .value=${this._runPayload}
-                                              @change=${e => {
-                                                  this._runPayload = e.detail.value
-                                                  this._runMessage = e.detail.valid ? e.detail.value : this._runMessage
-                                                  this._runMessageValid = e.detail.valid
-                                              }}
-                                          ></fc-json-editor>
-                                      </div>
-                                  `
+                                      `
+                                  })()
                                 : ''}
                             ${this._renderRunError()}
                         </div>
