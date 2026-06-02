@@ -3,7 +3,7 @@ const TOKEN_KEY = 'fc_token'
 let _config = null // { configured, url, secret } — nur im Memory, nie persistiert
 
 function token() {
-    return sessionStorage.getItem(TOKEN_KEY) ?? ''
+    return localStorage.getItem(TOKEN_KEY) ?? ''
 }
 
 async function apiFetch(path, options = {}) {

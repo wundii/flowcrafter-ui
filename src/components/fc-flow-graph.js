@@ -22,6 +22,9 @@ const PAD_X = 36
 const PAD_Y = 32
 const LONG_EDGE_AREA = 40 // extra canvas space at top for arced long edges
 const TIMING_ROW_H = 16 // height of the per-step timing row shown below the header
+const PROJ_HEADER_H = 28 // projection node header (handler class title)
+const PROJ_ROW_H = 16 // height per registered projection message row
+const PROJ_PAD_Y = 8 // vertical padding inside the projection node body
 
 // ─── Node sizing ──────────────────────────────────────────────────────────────
 const NODE_PAD_BOTTOM = 6
@@ -198,7 +201,8 @@ function buildSvgString(
     topOffset,
     bgColor,
     bg2Color,
-    withTimingRow = false
+    withTimingRow = false,
+    highlightMessageClass = null
 ) {
     const statusOf = src => getNodeStatus(src, flowMessages, flowExceptions, flowResults)
     const colorOf = src => STATUS[statusOf(src)].color
@@ -231,6 +235,9 @@ function buildSvgString(
       <polygon points="0 0,8 3,0 6" fill="${esc(val.color)}" fill-opacity="0.85"/>
     </marker>`)
     }
+    parts.push(`<marker id="arr-proj" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#a855f7"/>
+    </marker>`)
     parts.push('</defs>')
 
     for (const e of edges) {
@@ -247,16 +254,18 @@ function buildSvgString(
         const st = statusOf(e.from)
         const col = STATUS[st].color
         const run = st === 'success' || st === 'error'
+        const hl = highlightMessageClass !== null && e.messageClass === highlightMessageClass
+        const strokeCol = hl ? '#a855f7' : col
 
         parts.push(`<path d="${esc(d)}"
-      stroke="${esc(col)}" stroke-width="${run ? 2 : 1.5}"
-      stroke-opacity="${run ? 0.85 : 0.3}"
+      stroke="${esc(strokeCol)}" stroke-width="${run ? 2 : 1.5}"
+      stroke-opacity="${hl ? 0.95 : run ? 0.85 : 0.3}"
       stroke-dasharray="${run ? 'none' : '6 4'}"
-      fill="none" marker-end="url(#arr-${st})"/>`)
+      fill="none" marker-end="url(#${hl ? 'arr-proj' : `arr-${st}`})"/>`)
 
         if (run) {
             parts.push(`<path d="${esc(d)}"
-        stroke="${esc(col)}" stroke-width="2" stroke-opacity="0.3"
+        stroke="${esc(strokeCol)}" stroke-width="2" stroke-opacity="0.3"
         stroke-dasharray="8 12" fill="none" class="fc-edge-flow"/>`)
         }
     }
@@ -287,6 +296,12 @@ function injectAnimation() {
     .fc-edge-flow { animation: fc-flow 0.6s linear infinite; }
     .fc-node { transition: box-shadow 0.15s, filter 0.15s; }
     .fc-node:hover { filter: brightness(1.15); }
+    @keyframes fc-proj-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+    .fc-proj-pulse { animation: fc-proj-pulse 2.5s ease-in-out infinite; }
+    .fc-proj-node { transition: filter 0.15s; }
+    .fc-proj-node:hover { filter: brightness(1.15); }
+    @keyframes fc-proj-ring { 0% { box-shadow: 0 0 0 0 rgba(168,85,247,0.3); } 70% { box-shadow: 0 0 0 6px rgba(168,85,247,0); } 100% { box-shadow: 0 0 0 0 rgba(168,85,247,0); } }
+    .fc-proj-node:hover .fc-proj-outer { animation: fc-proj-ring 1.5s ease-out; }
   `
     document.head.appendChild(s)
     animInjected = true
@@ -305,6 +320,8 @@ export class FcFlowGraph extends BaseElement {
     static properties = {
         _diffTooltip: { state: true }, // { x, y, source, diff } | null
         _excTooltip: { state: true }, // { x, y, exc } | null
+        _projTooltip: { state: true }, // { x, y, alignRight, rows } | null
+        _projHighlight: { state: true }, // messageClass of the hovered projection row | null
         _retryTooltip: { state: true }, // { x, y, retries } | null
         _modalMsg: { state: true }, // { stepSource, messageClass, payload, valid }
         _observerRunning: { state: true },
@@ -318,6 +335,8 @@ export class FcFlowGraph extends BaseElement {
         _tooltip: { state: true }, // { x, y, label, data } | null
         flow: { type: Object },
         messageSchemas: { type: Object }, // { [fqClassName]: { [propName]: typeString } } — optional, only passed from devtool
+        projectionHandler: { type: String }, // FQCN of projection handler class, if registered for this flow type
+        projectionMessageMethods: { type: Object }, // { [messageSource]: methodName } bound via #[FlowProjectionMessage]
         priorRuns: { type: Array }, // all runs up to and including the selected run (oldest first)
         readonly: { type: Boolean },
         showStepConfig: { type: Boolean },
@@ -336,6 +355,9 @@ export class FcFlowGraph extends BaseElement {
         this._diffTooltipTimer = null
         this._excTooltip = null
         this._excTooltipTimer = null
+        this._projTooltip = null
+        this._projTooltipTimer = null
+        this._projHighlight = null
         this._maskingRules = null
         this._modalMsg = null
         this._observerRunning = false
@@ -349,6 +371,8 @@ export class FcFlowGraph extends BaseElement {
         this._stepSourceName = null
         this._tooltip = null
         this.flow = null
+        this.projectionHandler = null
+        this.projectionMessageMethods = null
         this.priorRuns = null
         this.readonly = false
         this.showStepConfig = false
@@ -404,6 +428,28 @@ export class FcFlowGraph extends BaseElement {
 
     _hideTooltip() {
         this._tooltipTimer = setTimeout(() => (this._tooltip = null), 150)
+    }
+
+    _showProjTooltip(e, rows) {
+        clearTimeout(this._projTooltipTimer)
+        const hostRect = this.getBoundingClientRect()
+        const elRect = e.currentTarget.getBoundingClientRect()
+        const tooltipWidth = 360
+        const xLeft = elRect.left - hostRect.left
+        const alignRight = xLeft + tooltipWidth > hostRect.width
+        this._projTooltip = {
+            x: alignRight ? hostRect.width - (elRect.right - hostRect.left) : xLeft,
+            alignRight,
+            y: elRect.bottom - hostRect.top + 6,
+            rows,
+        }
+    }
+
+    _hideProjTooltip() {
+        this._projTooltipTimer = setTimeout(() => {
+            this._projTooltip = null
+            this._projHighlight = null
+        }, 150)
     }
 
     _onTooltipEnter() {
@@ -478,6 +524,30 @@ export class FcFlowGraph extends BaseElement {
         } catch (err) {
             if (err.message.includes('404')) {
                 this._stepSourceError = `${stepSource} ist nicht mehr verfügbar.`
+            } else {
+                this._stepSourceError = err
+            }
+            this.updateComplete.then(() => {
+                this.querySelector('#fc-step-source-modal')?.showModal()
+            })
+        }
+    }
+
+    async _openProjectionSourceModal(className) {
+        this._stepSource = null
+        this._stepSourceCurrent = true
+        this._stepSourceError = null
+        this._stepSourceName = className
+        try {
+            const data = await api.getProjectionHandlerSource(className)
+            this._stepSource = data.source ?? ''
+            this._stepSourceCurrent = data.current !== false
+            this.updateComplete.then(() => {
+                this.querySelector('#fc-step-source-modal')?.showModal()
+            })
+        } catch (err) {
+            if (err.message.includes('404')) {
+                this._stepSourceError = `${className} ist nicht mehr verfügbar.`
             } else {
                 this._stepSourceError = err
             }
@@ -598,7 +668,29 @@ export class FcFlowGraph extends BaseElement {
             }
         }
 
-        const { edges, positions, svgW, svgH, stepMap, colOf, topOffset } = buildLayout(steps, hasTimings)
+        const layout = buildLayout(steps, hasTimings)
+        const { edges, positions, stepMap, colOf, topOffset, svgW } = layout
+        let { svgH } = layout
+
+        // Projection: the handler binds methods to message sources via
+        // #[FlowProjectionMessage]. Render a single node directly under the init
+        // step — title = handler class, body = list of registered messages.
+        const projMethods = this.projectionMessageMethods ?? {}
+        const projSources = Object.keys(projMethods)
+        const hasProjection = Boolean(this.projectionHandler) && projSources.length > 0
+
+        let projNode = null
+        if (hasProjection) {
+            const initStep = steps.find(s => s.messageEnum === 'init') ?? steps[0]
+            const initPos = initStep ? positions[initStep.source] : null
+            if (initPos) {
+                const rows = projSources.map(ms => ({ method: projMethods[ms], messageClass: ms }))
+                const height = PROJ_HEADER_H + rows.length * PROJ_ROW_H + PROJ_PAD_Y * 2
+                const y = initPos.y + nodeHeight(initStep, hasTimings) + ROW_GAP
+                projNode = { x: initPos.x, y, w: NODE_W, h: height, rows }
+                svgH = Math.max(svgH, y + height + PAD_Y)
+            }
+        }
 
         const statusOf = src => getNodeStatus(src, flowMessages, flowExceptions, flowResults)
         const styleOf = src => {
@@ -639,7 +731,8 @@ export class FcFlowGraph extends BaseElement {
             topOffset,
             theme.bg1,
             theme.bg2,
-            hasTimings
+            hasTimings,
+            this._projHighlight
         )
 
         const selStep = this.selectedStep ? stepMap[this.selectedStep] : null
@@ -821,7 +914,6 @@ export class FcFlowGraph extends BaseElement {
                                                                           style="font-size:10px;color:${inColor};font-weight:600;
                                          font-family:monospace;white-space:nowrap;
                                          overflow:hidden;text-overflow:ellipsis;display:block;"
-                                                                          title="${inMsg}"
                                                                           >${short(inMsg)}</span
                                                                       >
                                                                       <span
@@ -921,7 +1013,6 @@ export class FcFlowGraph extends BaseElement {
                                                                               style="font-size:10px;color:#6b7280;font-weight:600;
                                          font-family:monospace;white-space:nowrap;
                                          overflow:hidden;text-overflow:ellipsis;display:block;text-align:left;"
-                                                                              title="${outRt}"
                                                                               >${short(outRt)}</span
                                                                           >
                                                                           <span
@@ -1026,6 +1117,81 @@ export class FcFlowGraph extends BaseElement {
                         >
                             ${unsafeSVG(svgContent)}
                         </svg>
+
+                        ${projNode
+                            ? html`
+                                  <div
+                                      class="fc-proj-node"
+                                      style="
+                                          position:absolute; left:${projNode.x}px; top:${projNode.y}px;
+                                          width:${projNode.w}px; height:${projNode.h}px;
+                                          cursor:pointer; overflow:visible; pointer-events:auto; z-index:4;
+                                      "
+                                      @click=${() => this._openProjectionSourceModal(this.projectionHandler)}
+                                      @mouseenter=${e => this._showProjTooltip(e, projNode.rows)}
+                                      @mouseleave=${() => this._hideProjTooltip()}
+                                  >
+                                      <div
+                                          class="fc-proj-outer"
+                                          style="position:absolute; inset:0; border:1.5px solid rgba(168,85,247,0.25); border-radius:12px;"
+                                      ></div>
+                                      <div
+                                          style="
+                                          position:absolute; inset:4px;
+                                          background:rgba(168,85,247,0.06);
+                                          border:1.5px solid rgba(168,85,247,0.45);
+                                          border-left:4px solid rgba(168,85,247,0.5);
+                                          border-radius:8px;
+                                          box-shadow:inset 0 0 12px rgba(168,85,247,0.06), 0 2px 8px rgba(0,0,0,0.4), 0 0 20px rgba(168,85,247,0.05);
+                                          display:flex; flex-direction:column;
+                                          padding:8px 12px 8px 14px;
+                                          overflow:hidden;
+                                      "
+                                      >
+                                          <div style="display:flex; align-items:center; gap:7px; margin-bottom:5px;">
+                                              <svg
+                                                  class="fc-proj-pulse"
+                                                  style="width:14px; height:14px; flex-shrink:0; color:rgba(168,85,247,0.75);"
+                                                  viewBox="0 0 24 24"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                              >
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0l4.179 2.25L12 17.25 6.429 14.25m5.571 3v4.5m0 0l-5.571-3m5.571 3l5.571-3"
+                                                  />
+                                              </svg>
+                                              <span
+                                                  style="font-weight:700; font-size:11px; color:var(--color-base-content); flex:1;
+                                                      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+                                                  >${short(this.projectionHandler)}</span
+                                              >
+                                          </div>
+                                          <div style="display:flex; flex-direction:column; gap:2px; padding-left:21px; overflow:hidden;">
+                                              ${projNode.rows.map(
+                                                  row => html`
+                                                      <div
+                                                          style="display:flex; align-items:baseline; gap:6px; white-space:nowrap; overflow:hidden;"
+                                                      >
+                                                          <span
+                                                              style="font-size:9px; font-weight:600; font-family:monospace; color:#a855f7; flex-shrink:0;"
+                                                              >${row.method}</span
+                                                          >
+                                                          <span
+                                                              style="font-size:9px; font-family:monospace; color:var(--color-base-content); opacity:0.4;
+                                                                  overflow:hidden; text-overflow:ellipsis;"
+                                                              >${short(row.messageClass)}</span
+                                                          >
+                                                      </div>
+                                                  `
+                                              )}
+                                          </div>
+                                      </div>
+                                  </div>
+                              `
+                            : ''}
                     </div>
                 </div>
 
@@ -1283,6 +1449,51 @@ export class FcFlowGraph extends BaseElement {
 ${JSON.stringify(this._maskingRules ? masking.maskObject(this._tooltip.data, this._maskingRules) : this._tooltip.data, null, 2)}</pre
                                   >`}
                               ></fc-info-box>
+                          </div>
+                      `
+                    : ''}
+
+                <!-- ── Projection tooltip ── -->
+                ${this._projTooltip
+                    ? html`
+                          <div
+                              style="position:absolute; ${this._projTooltip.alignRight
+                                  ? `right:${this._projTooltip.x}px`
+                                  : `left:${this._projTooltip.x}px`}; top:${this._projTooltip.y}px;
+                           z-index:50; max-width:360px;"
+                              @mouseenter=${() => clearTimeout(this._projTooltipTimer)}
+                              @mouseleave=${() => this._hideProjTooltip()}
+                          >
+                              <div class="rounded-box border border-base-300 bg-base-100 shadow-lg">
+                                  <div class="bg-base-200 px-4 py-3 rounded-t-box flex items-baseline gap-2">
+                                      <span class="text-xs font-semibold uppercase tracking-wider shrink-0" style="color:#a855f7;"
+                                          >Projection</span
+                                      >
+                                      <span class="text-xs text-base-content/40 font-normal font-mono truncate"
+                                          >${short(this.projectionHandler)}</span
+                                      >
+                                  </div>
+                                  <div class="px-2 py-2">
+                                      ${this._projTooltip.rows.map(
+                                          row => html`
+                                              <div
+                                                  class="flex items-baseline gap-3 px-2 py-1 rounded transition-colors cursor-default hover:bg-base-200"
+                                                  @mouseenter=${() => (this._projHighlight = row.messageClass)}
+                                                  @mouseleave=${() => (this._projHighlight = null)}
+                                              >
+                                                  <span
+                                                      class="text-xs font-mono font-semibold whitespace-nowrap"
+                                                      style="color:#a855f7; flex:0 0 auto; min-width:96px;"
+                                                      >${row.method}</span
+                                                  >
+                                                  <span class="text-xs font-mono text-base-content/70 break-all"
+                                                      >${short(row.messageClass)}</span
+                                                  >
+                                              </div>
+                                          `
+                                      )}
+                                  </div>
+                              </div>
                           </div>
                       `
                     : ''}
@@ -1857,10 +2068,7 @@ ${JSON.stringify(this._maskMessage(outData.message, outBlockId), null, 2)}</pre
                                                           : ''}
                                                   </div>
                                                   <div class="flex items-center gap-3 mt-1 flex-wrap">
-                                                      <span
-                                                          class="font-mono text-xs text-base-content/50"
-                                                          title="${this._modalMsg.messageClass}"
-                                                      >
+                                                      <span class="font-mono text-xs text-base-content/50">
                                                           ${this._modalMsg.messageClass}
                                                       </span>
                                                       <span class="text-base-content/30 text-xs">·</span>
@@ -1911,7 +2119,6 @@ ${JSON.stringify(this._maskMessage(outData.message, outBlockId), null, 2)}</pre
                                               </button>
                                               <button
                                                   class="btn btn-ghost btn-sm"
-                                                  title="JSON kopieren"
                                                   @click=${() => navigator.clipboard.writeText(this._modalMsg.payload)}
                                               >
                                                   <svg

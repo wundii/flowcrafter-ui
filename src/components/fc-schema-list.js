@@ -25,6 +25,7 @@ export class FcSchemaList extends BaseElement {
         _flows: { state: true },
         _graphFlow: { state: true },
         _graphFlowLabel: { state: true },
+        _graphProjectionHandler: { state: true },
 
         _hoveredStep: { state: true },
         _popupX: { state: true },
@@ -44,6 +45,10 @@ export class FcSchemaList extends BaseElement {
         this._flows = []
         this._graphFlow = null
         this._graphFlowLabel = null
+        this._graphProjectionHandler = null
+        this._graphProjectionMessageMethods = null
+        this._projectionHandlerMap = {}
+        this._projectionMessageMethodsMap = {}
         this._hoveredStep = null
         this._popupX = 0
         this._popupY = 0
@@ -63,7 +68,13 @@ export class FcSchemaList extends BaseElement {
     }
 
     async _load() {
-        const schemas = await api.getSchemas()
+        const [schemas, flowTypes] = await Promise.all([api.getSchemas(), api.getFlowTypes().catch(() => [])])
+        this._projectionHandlerMap = Object.fromEntries(
+            (flowTypes ?? []).filter(s => s.projectionHandlerClass).map(s => [s.flowType, s.projectionHandlerClass])
+        )
+        this._projectionMessageMethodsMap = Object.fromEntries(
+            (flowTypes ?? []).filter(s => s.projectionMessageMethods).map(s => [s.flowType, s.projectionMessageMethods])
+        )
         this._processSchemas(schemas)
     }
 
@@ -154,6 +165,8 @@ export class FcSchemaList extends BaseElement {
 
     _openGraphModal(flow) {
         this._graphFlowLabel = flow.label
+        this._graphProjectionHandler = this._projectionHandlerMap[flow.label] ?? null
+        this._graphProjectionMessageMethods = this._projectionMessageMethodsMap[flow.label] ?? null
         this._graphFlow = {
             flowSchema: { steps: flow.steps },
             flowMessages: [],
@@ -168,6 +181,8 @@ export class FcSchemaList extends BaseElement {
         this.renderRoot.querySelector('#flow-graph-modal')?.close()
         this._graphFlow = null
         this._graphFlowLabel = null
+        this._graphProjectionHandler = null
+        this._graphProjectionMessageMethods = null
     }
 
     _onStepEnter(e, step) {
@@ -609,6 +624,8 @@ export class FcSchemaList extends BaseElement {
                             ${this._graphFlow
                                 ? html`<fc-flow-graph
                                       .flow=${this._graphFlow}
+                                      .projectionHandler=${this._graphProjectionHandler}
+                                      .projectionMessageMethods=${this._graphProjectionMessageMethods}
                                       readonly
                                       .showStepConfig=${true}
                                       @source-requested=${e => this._openSourceModal({ source: e.detail.source })}

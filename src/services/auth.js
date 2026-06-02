@@ -1,7 +1,7 @@
 const TOKEN_KEY = 'fc_token'
 
 function token() {
-    return sessionStorage.getItem(TOKEN_KEY)
+    return localStorage.getItem(TOKEN_KEY)
 }
 
 async function call(path, options = {}) {
@@ -38,7 +38,7 @@ export const auth = {
             method: 'POST',
             body: JSON.stringify({ password }),
         })
-        if (res.token) sessionStorage.setItem(TOKEN_KEY, res.token)
+        if (res.token) localStorage.setItem(TOKEN_KEY, res.token)
         return res
     },
 
@@ -47,7 +47,7 @@ export const auth = {
             method: 'POST',
             body: JSON.stringify({ password }),
         })
-        if (res.token) sessionStorage.setItem(TOKEN_KEY, res.token)
+        if (res.token) localStorage.setItem(TOKEN_KEY, res.token)
         return res
     },
 
@@ -56,12 +56,12 @@ export const auth = {
             method: 'POST',
             body: JSON.stringify({ currentPassword, newPassword }),
         })
-        if (res.token) sessionStorage.setItem(TOKEN_KEY, res.token)
+        if (res.token) localStorage.setItem(TOKEN_KEY, res.token)
         return res
     },
 
     async logout() {
         await call('/api/auth/logout', { method: 'POST' })
-        sessionStorage.removeItem(TOKEN_KEY)
+        localStorage.removeItem(TOKEN_KEY)
     },
 }

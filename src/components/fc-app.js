@@ -782,6 +782,14 @@ export class FcApp extends BaseElement {
                                                         >
                                                     </div>`
                                                   : ''}
+                                              ${this._serverInfo?.queue
+                                                  ? html`<div class="flex items-baseline justify-between gap-3">
+                                                        <span class="text-xs text-base-content/50 shrink-0">Queue</span>
+                                                        <span class="font-mono text-xs text-right text-base-content/60"
+                                                            >${this._serverInfo.queue}</span
+                                                        >
+                                                    </div>`
+                                                  : ''}
                                               <div class="flex items-baseline justify-between gap-3">
                                                   <span class="text-xs text-base-content/50 shrink-0">Service URL</span>
                                                   <span class="font-mono text-xs text-right break-all text-base-content/60"
@@ -831,9 +839,33 @@ export class FcApp extends BaseElement {
                                                                 </span>`
                                                             })}
                                                         </div>`
-                                                      : html`<span class="flex items-center gap-1.5 text-xs text-error"
-                                                            ><span class="inline-block w-1.5 h-1.5 rounded-full bg-error"></span
-                                                            >stopped</span
+                                                      : html`<span class="flex items-center gap-1.5 text-xs text-base-content/30"
+                                                            ><span class="inline-block w-1.5 h-1.5 rounded-full bg-base-content/20"></span
+                                                            >not running</span
+                                                        >`}
+                                              </div>
+                                              <div class="flex items-start justify-between gap-3">
+                                                  <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Projection</span>
+                                                  ${this._serverInfo?.projection?.length > 0
+                                                      ? html`<div class="flex flex-col items-end gap-1">
+                                                            ${this._serverInfo.projection.map(p => {
+                                                                const secs = workerAgeSecs(p.lastHeartbeat)
+                                                                const color = workerAgeColor(secs)
+                                                                return html`<span
+                                                                    class="flex items-center gap-1.5 font-mono text-[10px] text-${color}"
+                                                                    title="Letzter Heartbeat: ${p.lastHeartbeat}"
+                                                                >
+                                                                    <span
+                                                                        class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
+                                                                    ></span>
+                                                                    ${p.hostname}:${p.pid}
+                                                                    <span class="text-base-content/40">(${workerAgeLabel(secs)})</span>
+                                                                </span>`
+                                                            })}
+                                                        </div>`
+                                                      : html`<span class="flex items-center gap-1.5 text-xs text-base-content/30"
+                                                            ><span class="inline-block w-1.5 h-1.5 rounded-full bg-base-content/20"></span
+                                                            >not running</span
                                                         >`}
                                               </div>
                                           </div>

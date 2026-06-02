@@ -31,7 +31,7 @@ const DEFAULT_RULES = [
 ]
 
 let _rules = null
-const _token = () => sessionStorage.getItem('fc_token')
+const _token = () => localStorage.getItem('fc_token')
 
 async function loadRules() {
     if (_rules) return _rules

@@ -21,6 +21,7 @@ const TYPE_OPTIONS = [
     { value: 'flow', label: 'Flow' },
     { value: 'schedule', label: 'Schedule' },
     { value: 'observer', label: 'Observer' },
+    { value: 'projection', label: 'Projection' },
 ]
 
 const STATUS_COLORS = {
@@ -52,6 +53,8 @@ function buildFingerprint(ex) {
             return `schedule|${ex.message}|${ex.scheduleName ?? ''}|${ex.scheduleExpression ?? ''}`
         case 'observer':
             return `observer|${ex.message}|${ex.observerFlowSource ?? ''}|${ex.observerMessageSource ?? ''}`
+        case 'projection':
+            return `projection|${ex.message}|${ex.projectionHandlerClass ?? ''}|${fileLine}`
         default:
             return `${ex.type}|${ex.message}`
     }
@@ -183,6 +186,7 @@ export class FcExceptionList extends BaseElement {
                 items = items.filter(i => !(i.type === 'flow' && i.flowStatus === 'FAILED'))
                 items = items.filter(i => i.type !== 'schedule')
                 items = items.filter(i => i.type !== 'observer')
+                items = items.filter(i => i.type !== 'projection')
             }
             this._offset = (res.items ?? []).length
             this._hasMore = res.hasMore ?? false
@@ -216,6 +220,7 @@ export class FcExceptionList extends BaseElement {
                 newItems = newItems.filter(i => !(i.type === 'flow' && i.flowStatus === 'FAILED'))
                 newItems = newItems.filter(i => i.type !== 'schedule')
                 newItems = newItems.filter(i => i.type !== 'observer')
+                newItems = newItems.filter(i => i.type !== 'projection')
             }
             this._offset += (res.items ?? []).length
             this._hasMore = res.hasMore ?? false
@@ -292,6 +297,7 @@ export class FcExceptionList extends BaseElement {
     _renderItem(ex, idx) {
         if (ex.type === 'schedule') return this._renderScheduleItem(ex, idx)
         if (ex.type === 'observer') return this._renderObserverItem(ex, idx)
+        if (ex.type === 'projection') return this._renderProjectionItem(ex, idx)
         return this._renderFlowItem(ex, idx)
     }
 
@@ -498,6 +504,74 @@ ${ex.traceString}</pre
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-baseline gap-3 min-w-0 text-xs text-base-content/50">
                             <span class="font-mono flex-shrink-0" style="font-size:11px;">${ex.scheduleExpression}</span>
+                            ${ex.file
+                                ? html`
+                                      <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
+                                          ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
+                                      </span>
+                                  `
+                                : ''}
+                        </div>
+                        ${this._renderRowAction(ex, id, hasTrace, open)}
+                    </div>
+                </div>
+                ${open && hasTrace
+                    ? html`
+                          <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
+                              <pre
+                                  class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
+                              >
+${ex.traceString}</pre
+                              >
+                          </div>
+                      `
+                    : ''}
+            </div>
+        `
+    }
+
+    _renderProjectionItem(ex, idx) {
+        const id = ex.hash ?? 'p' + idx
+        const open = ex._count > 1 ? false : this.expanded.has(id)
+        const hasTrace = !!ex.traceString
+        return html`
+            <div class="rounded-box border border-accent/25 bg-base-200 overflow-hidden">
+                <div class="px-4 py-3 flex flex-col gap-1.5">
+                    <!-- Row 1: Handler + Badge + Time -->
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="font-semibold text-sm text-base-content truncate" title="${ex.projectionHandlerClass}">
+                                ${shortClass(ex.projectionHandlerClass)}
+                            </span>
+                            <span class="badge badge-xs badge-accent flex-shrink-0">Projection</span>
+                        </div>
+                        ${this._renderTimeDisplay(ex)}
+                    </div>
+                    <!-- Row 2: Error message -->
+                    <div class="text-sm text-error leading-snug break-words">${ex.message}</div>
+                    <!-- Row 3: FlowType + FlowHash + File + Trace toggle -->
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-baseline gap-3 min-w-0 text-xs text-base-content/50">
+                            <span class="font-mono flex-shrink-0" style="font-size:11px;">${ex.flowType}</span>
+                            ${ex.flowHash
+                                ? html`
+                                      <fc-tooltip
+                                          text="Flow ${ex.flowHash} öffnen"
+                                          .content=${html`
+                                              <button
+                                                  class="font-mono text-primary/70 hover:text-primary flex-shrink-0"
+                                                  style="font-size:11px;"
+                                                  @click=${e => {
+                                                      e.stopPropagation()
+                                                      this._navigateToFlow(ex.flowHash)
+                                                  }}
+                                              >
+                                                  ⤢ ${ex.flowHash}
+                                              </button>
+                                          `}
+                                      ></fc-tooltip>
+                                  `
+                                : ''}
                             ${ex.file
                                 ? html`
                                       <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">

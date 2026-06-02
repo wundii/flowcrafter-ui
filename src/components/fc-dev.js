@@ -123,6 +123,8 @@ export class FcDev extends BaseElement {
         _devRawModal: { state: true },
         _loading: { state: true },
         _outputModalSelectedStep: { state: true },
+        _projectionHandler: { state: true },
+        _projectionMessageMethods: { state: true },
         _errorModalTab: { state: true },
         _runError: { state: true },
         _runMessage: { state: true },
@@ -165,6 +167,8 @@ export class FcDev extends BaseElement {
         this._devRawModal = false
         this._errorModalTab = 'error'
         this._loading = true
+        this._projectionHandler = null
+        this._projectionMessageMethods = null
         this._runError = null
         this._runMessage = {}
         this._runMessageValid = true
@@ -268,6 +272,8 @@ export class FcDev extends BaseElement {
         this._lastRunFlow = null
         this._lastRunMemory = null
         this._lastRunOutput = null
+        this._projectionHandler = null
+        this._projectionMessageMethods = null
         this._selected = className
         try {
             const data = await api.getDevFlow(className)
@@ -329,6 +335,15 @@ export class FcDev extends BaseElement {
             this._runMessage = data?.initMessageSchema ?? {}
             this._runMessageValid = true
             this._runPayload = JSON.stringify(data?.initMessageSchema ?? {}, null, 2)
+            if (data.schema?.type) {
+                api.getFlowTypes()
+                    .then(stats => {
+                        const match = stats?.find(s => s.flowType === data.schema.type)
+                        this._projectionHandler = match?.projectionHandlerClass ?? null
+                        this._projectionMessageMethods = match?.projectionMessageMethods ?? null
+                    })
+                    .catch(() => {})
+            }
             this._validationCache = {
                 ...this._validationCache,
                 [className]: resolveFlowStatus(data, this._storedSchemas).config.showButton,
@@ -1571,6 +1586,8 @@ export class FcDev extends BaseElement {
                                           .runMessages=${graphRun?.messages ?? null}
                                           .runExceptions=${graphRun?.exceptions ?? null}
                                           .runResults=${graphRun?.results ?? null}
+                                          .projectionHandler=${this._projectionHandler}
+                                          .projectionMessageMethods=${this._projectionMessageMethods}
                                           .readonly=${true}
                                           .showStepConfig=${true}
                                           .stepDiff=${stepDiff}

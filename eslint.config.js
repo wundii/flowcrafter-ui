@@ -57,6 +57,7 @@ export default [
                 console: 'readonly',
                 navigator: 'readonly',
                 process: 'readonly',
+                localStorage: 'readonly',
                 sessionStorage: 'readonly',
             },
         },

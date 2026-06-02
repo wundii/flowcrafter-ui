@@ -35,6 +35,8 @@ export class FcFlowDetail extends BaseElement {
         _readOnlyModal: { state: true },
         _refreshCountdown: { state: true },
         _toast: { state: true },
+        _projectionHandler: { state: true },
+        _projectionMessageMethods: { state: true },
         aiConfigured: { type: Boolean },
         aiModel: { type: String },
         aiProvider: { type: String },
@@ -66,6 +68,8 @@ export class FcFlowDetail extends BaseElement {
         this._maskingRules = null
         this._rawModal = false
         this._rawRevealed = false
+        this._projectionHandler = null
+        this._projectionMessageMethods = null
         this._readOnlyModal = false
         this._refreshCountdown = null
         this._refreshTimer = null
@@ -132,10 +136,23 @@ export class FcFlowDetail extends BaseElement {
                     composed: true,
                 })
             )
+            this._loadProjectionHandler(this.flow.flowType)
         } catch (err) {
             this.error = err
         } finally {
             this.loading = false
+        }
+    }
+
+    async _loadProjectionHandler(flowType) {
+        try {
+            const stats = await api.getFlowTypes()
+            const match = stats?.find(s => s.flowType === flowType)
+            this._projectionHandler = match?.projectionHandlerClass ?? null
+            this._projectionMessageMethods = match?.projectionMessageMethods ?? null
+        } catch {
+            this._projectionHandler = null
+            this._projectionMessageMethods = null
         }
     }
 
@@ -700,6 +717,8 @@ export class FcFlowDetail extends BaseElement {
                 .runResults=${graphRun?.results ?? null}
                 .runRetries=${graphRun?.retries ?? null}
                 .priorRuns=${priorRuns}
+                .projectionHandler=${this._projectionHandler}
+                .projectionMessageMethods=${this._projectionMessageMethods}
                 class="block mb-6"
             ></fc-flow-graph>
         `

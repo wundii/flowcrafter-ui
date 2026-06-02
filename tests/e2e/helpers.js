@@ -73,7 +73,7 @@ export async function mockAuthenticatedApp(page, overrides = {}) {
     await mockFlowcrafterApi(page, data)
 
     await page.addInitScript(token => {
-        sessionStorage.setItem('fc_token', token)
+        localStorage.setItem('fc_token', token)
     }, mocks.AUTH_TOKEN)
 }
 
