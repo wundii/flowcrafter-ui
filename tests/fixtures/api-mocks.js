@@ -195,6 +195,8 @@ export const flowTypeStats = [
     { prefix: 'App\\Flow\\NotificationFlow', group: null, total: 2, successRate: 100 },
 ]
 
+export const projections = {}
+
 export const schemas = {
     schemas: [],
 }

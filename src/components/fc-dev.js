@@ -336,9 +336,9 @@ export class FcDev extends BaseElement {
             this._runMessageValid = true
             this._runPayload = JSON.stringify(data?.initMessageSchema ?? {}, null, 2)
             if (data.schema?.type) {
-                api.getFlowTypes()
-                    .then(stats => {
-                        const match = stats?.find(s => s.flowType === data.schema.type)
+                api.getProjections()
+                    .then(projections => {
+                        const match = projections?.[data.schema.type]
                         this._projectionHandler = match?.projectionHandlerClass ?? null
                         this._projectionMessageMethods = match?.projectionMessageMethods ?? null
                     })

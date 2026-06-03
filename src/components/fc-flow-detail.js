@@ -146,8 +146,8 @@ export class FcFlowDetail extends BaseElement {
 
     async _loadProjectionHandler(flowType) {
         try {
-            const stats = await api.getFlowTypes()
-            const match = stats?.find(s => s.flowType === flowType)
+            const projections = await api.getProjections()
+            const match = projections?.[flowType]
             this._projectionHandler = match?.projectionHandlerClass ?? null
             this._projectionMessageMethods = match?.projectionMessageMethods ?? null
         } catch {

@@ -270,16 +270,23 @@ function buildSvgString(
         }
     }
 
+    const portDot = (cx, cy, messageClass, col) => {
+        const hl = highlightMessageClass !== null && messageClass === highlightMessageClass
+        if (hl) {
+            parts.push(`<circle cx="${cx}" cy="${cy}" r="${PORT_R + 4}" fill="#a855f7" fill-opacity="0.25"/>`)
+        }
+        parts.push(`<circle cx="${cx}" cy="${cy}"
+        r="${hl ? PORT_R + 1 : PORT_R}" fill="${esc(bg2Color)}" stroke="${hl ? '#a855f7' : esc(col)}" stroke-width="${hl ? 2.5 : 2}"/>`)
+    }
+
     for (const step of steps) {
         const pos = positions[step.source]
         const col = colorOf(step.source)
         for (let i = 0; i < step.messages.length; i++) {
-            parts.push(`<circle cx="${pos.x}" cy="${pos.y + inputPortY(step, i, withTimingRow)}"
-        r="${PORT_R}" fill="${esc(bg2Color)}" stroke="${esc(col)}" stroke-width="2"/>`)
+            portDot(pos.x, pos.y + inputPortY(step, i, withTimingRow), step.messages[i], col)
         }
         for (let j = 0; j < step.returnTypes.length; j++) {
-            parts.push(`<circle cx="${pos.x + NODE_W}" cy="${pos.y + outputPortY(step, j, withTimingRow)}"
-        r="${PORT_R}" fill="${esc(bg2Color)}" stroke="${esc(col)}" stroke-width="2"/>`)
+            portDot(pos.x + NODE_W, pos.y + outputPortY(step, j, withTimingRow), step.returnTypes[j], col)
         }
     }
 

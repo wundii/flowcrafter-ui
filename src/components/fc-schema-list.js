@@ -68,12 +68,13 @@ export class FcSchemaList extends BaseElement {
     }
 
     async _load() {
-        const [schemas, flowTypes] = await Promise.all([api.getSchemas(), api.getFlowTypes().catch(() => [])])
+        const [schemas, projections] = await Promise.all([api.getSchemas(), api.getProjections().catch(() => ({}))])
+        const entries = Object.entries(projections ?? {})
         this._projectionHandlerMap = Object.fromEntries(
-            (flowTypes ?? []).filter(s => s.projectionHandlerClass).map(s => [s.flowType, s.projectionHandlerClass])
+            entries.filter(([, p]) => p.projectionHandlerClass).map(([flowType, p]) => [flowType, p.projectionHandlerClass])
         )
         this._projectionMessageMethodsMap = Object.fromEntries(
-            (flowTypes ?? []).filter(s => s.projectionMessageMethods).map(s => [s.flowType, s.projectionMessageMethods])
+            entries.filter(([, p]) => p.projectionMessageMethods).map(([flowType, p]) => [flowType, p.projectionMessageMethods])
         )
         this._processSchemas(schemas)
     }

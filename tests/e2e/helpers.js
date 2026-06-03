@@ -101,6 +101,7 @@ export async function mockFlowcrafterApi(page, data = {}) {
     await page.route('**/api/fc/api/flow/exceptions-stats*', route => route.fulfill({ json: data.exceptionStats ?? mocks.exceptionStats }))
     await page.route('**/api/fc/api/flow/flow-stats*', route => route.fulfill({ json: data.flowStats ?? mocks.flowStats }))
     await page.route('**/api/fc/api/flow/flow-type-stats*', route => route.fulfill({ json: data.flowTypeStats ?? mocks.flowTypeStats }))
+    await page.route('**/api/fc/api/flow/flow-projection-list*', route => route.fulfill({ json: data.projections ?? mocks.projections }))
     await page.route('**/api/fc/api/flow/schema-list*', route => route.fulfill({ json: data.schemas ?? mocks.schemas }))
     await page.route('**/api/fc/api/queue/queue-list*', route => route.fulfill({ json: data.queueList ?? mocks.queueList }))
     await page.route('**/api/fc/api/queue/queue-count*', route => route.fulfill({ json: data.queueCount ?? mocks.queueCount }))

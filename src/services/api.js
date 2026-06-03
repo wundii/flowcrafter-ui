@@ -160,6 +160,10 @@ export const api = {
         return fetchJson(`/api/flow/flow-type-stats?${p}`)
     },
 
+    getProjections() {
+        return fetchJson('/api/flow/flow-projection-list')
+    },
+
     getDevFlows() {
         return fetchJson('/api/dev/flow-list')
     },
