@@ -254,7 +254,7 @@ function buildSvgString(
         const st = statusOf(e.from)
         const col = STATUS[st].color
         const run = st === 'success' || st === 'error'
-        const hl = highlightMessageClass !== null && e.messageClass === highlightMessageClass
+        const hl = highlightMessageClass !== null && highlightMessageClass.has(e.messageClass)
         const strokeCol = hl ? '#a855f7' : col
 
         parts.push(`<path d="${esc(d)}"
@@ -271,7 +271,7 @@ function buildSvgString(
     }
 
     const portDot = (cx, cy, messageClass, col) => {
-        const hl = highlightMessageClass !== null && messageClass === highlightMessageClass
+        const hl = highlightMessageClass !== null && highlightMessageClass.has(messageClass)
         if (hl) {
             parts.push(`<circle cx="${cx}" cy="${cy}" r="${PORT_R + 4}" fill="#a855f7" fill-opacity="0.25"/>`)
         }
@@ -328,7 +328,7 @@ export class FcFlowGraph extends BaseElement {
         _diffTooltip: { state: true }, // { x, y, source, diff } | null
         _excTooltip: { state: true }, // { x, y, exc } | null
         _projTooltip: { state: true }, // { x, y, alignRight, rows } | null
-        _projHighlight: { state: true }, // messageClass of the hovered projection row | null
+        _projHighlight: { state: true }, // Set<messageClass> of highlighted projection messages | null
         _retryTooltip: { state: true }, // { x, y, retries } | null
         _modalMsg: { state: true }, // { stepSource, messageClass, payload, valid }
         _observerRunning: { state: true },
@@ -450,6 +450,8 @@ export class FcFlowGraph extends BaseElement {
             y: elRect.bottom - hostRect.top + 6,
             rows,
         }
+        // Hovering the projection node highlights all its bound messages at once.
+        this._projHighlight = new Set(rows.map(r => r.messageClass))
     }
 
     _hideProjTooltip() {
@@ -1485,8 +1487,11 @@ ${JSON.stringify(this._maskingRules ? masking.maskObject(this._tooltip.data, thi
                                           row => html`
                                               <div
                                                   class="flex items-baseline gap-3 px-2 py-1 rounded transition-colors cursor-default hover:bg-base-200"
-                                                  @mouseenter=${() => (this._projHighlight = row.messageClass)}
-                                                  @mouseleave=${() => (this._projHighlight = null)}
+                                                  @mouseenter=${() => (this._projHighlight = new Set([row.messageClass]))}
+                                                  @mouseleave=${() =>
+                                                      (this._projHighlight = new Set(
+                                                          (this._projTooltip?.rows ?? []).map(r => r.messageClass)
+                                                      ))}
                                               >
                                                   <span
                                                       class="text-xs font-mono font-semibold whitespace-nowrap"

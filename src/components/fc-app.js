@@ -821,30 +821,6 @@ export class FcApp extends BaseElement {
                                                         >`}
                                               </div>
                                               <div class="flex items-start justify-between gap-3">
-                                                  <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Scheduler</span>
-                                                  ${this._serverInfo?.scheduler?.length > 0
-                                                      ? html`<div class="flex flex-col items-end gap-1">
-                                                            ${this._serverInfo.scheduler.map(s => {
-                                                                const secs = workerAgeSecs(s.lastHeartbeat)
-                                                                const color = schedulerAgeColor(secs)
-                                                                return html`<span
-                                                                    class="flex items-center gap-1.5 font-mono text-[10px] text-${color}"
-                                                                    title="Letzter Heartbeat: ${s.lastHeartbeat}"
-                                                                >
-                                                                    <span
-                                                                        class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
-                                                                    ></span>
-                                                                    ${s.hostname}:${s.pid}
-                                                                    <span class="text-base-content/40">(${workerAgeLabel(secs)})</span>
-                                                                </span>`
-                                                            })}
-                                                        </div>`
-                                                      : html`<span class="flex items-center gap-1.5 text-xs text-base-content/30"
-                                                            ><span class="inline-block w-1.5 h-1.5 rounded-full bg-base-content/20"></span
-                                                            >not running</span
-                                                        >`}
-                                              </div>
-                                              <div class="flex items-start justify-between gap-3">
                                                   <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Projection</span>
                                                   ${this._serverInfo?.projection?.length > 0
                                                       ? html`<div class="flex flex-col items-end gap-1">
@@ -859,6 +835,30 @@ export class FcApp extends BaseElement {
                                                                         class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
                                                                     ></span>
                                                                     ${p.hostname}:${p.pid}
+                                                                    <span class="text-base-content/40">(${workerAgeLabel(secs)})</span>
+                                                                </span>`
+                                                            })}
+                                                        </div>`
+                                                      : html`<span class="flex items-center gap-1.5 text-xs text-base-content/30"
+                                                            ><span class="inline-block w-1.5 h-1.5 rounded-full bg-base-content/20"></span
+                                                            >not running</span
+                                                        >`}
+                                              </div>
+                                              <div class="flex items-start justify-between gap-3">
+                                                  <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Scheduler</span>
+                                                  ${this._serverInfo?.scheduler?.length > 0
+                                                      ? html`<div class="flex flex-col items-end gap-1">
+                                                            ${this._serverInfo.scheduler.map(s => {
+                                                                const secs = workerAgeSecs(s.lastHeartbeat)
+                                                                const color = schedulerAgeColor(secs)
+                                                                return html`<span
+                                                                    class="flex items-center gap-1.5 font-mono text-[10px] text-${color}"
+                                                                    title="Letzter Heartbeat: ${s.lastHeartbeat}"
+                                                                >
+                                                                    <span
+                                                                        class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
+                                                                    ></span>
+                                                                    ${s.hostname}:${s.pid}
                                                                     <span class="text-base-content/40">(${workerAgeLabel(secs)})</span>
                                                                 </span>`
                                                             })}
