@@ -120,6 +120,9 @@ export class FcDev extends BaseElement {
         _importUrl: { state: true },
         _lastRunFlow: { state: true },
         _lastRunOutput: { state: true },
+        _lastRunProjectionOutput: { state: true },
+        _projectionRunError: { state: true },
+        _outputSidebarWidth: { state: true },
         _devRawModal: { state: true },
         _loading: { state: true },
         _outputModalSelectedStep: { state: true },
@@ -134,6 +137,7 @@ export class FcDev extends BaseElement {
         _lastRunMemory: { state: true },
         _runResult: { state: true },
         _runSending: { state: true },
+        _runElapsed: { state: true },
         _selected: { state: true },
         _sidebarWidth: { state: true },
         _srcContent: { state: true },
@@ -164,6 +168,9 @@ export class FcDev extends BaseElement {
         this._lastRunFlow = null
         this._lastRunMemory = null
         this._lastRunOutput = null
+        this._lastRunProjectionOutput = null
+        this._projectionRunError = null
+        this._outputSidebarWidth = 256
         this._devRawModal = false
         this._errorModalTab = 'error'
         this._loading = true
@@ -176,6 +183,8 @@ export class FcDev extends BaseElement {
         this._runPayload = '{}'
         this._runResult = null
         this._runSending = false
+        this._runElapsed = 0
+        this._runTimer = null
         this._selected = null
         this._sidebarWidth = 300
         this._srcContent = null
@@ -207,9 +216,33 @@ export class FcDev extends BaseElement {
         document.addEventListener('mouseup', onUp)
     }
 
+    _startOutputResize(e) {
+        e.preventDefault()
+        const startX = e.clientX
+        const startWidth = this._outputSidebarWidth
+        const minWidth = 256
+        const maxWidth = minWidth + 200
+
+        const onMove = mv => {
+            this._outputSidebarWidth = Math.min(maxWidth, Math.max(minWidth, startWidth + mv.clientX - startX))
+        }
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove)
+            document.removeEventListener('mouseup', onUp)
+        }
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
+    }
+
     connectedCallback() {
         super.connectedCallback()
         this._load()
+    }
+
+    disconnectedCallback() {
+        super.disconnectedCallback()
+        clearInterval(this._runTimer)
+        this._runTimer = null
     }
 
     async _load() {
@@ -272,6 +305,8 @@ export class FcDev extends BaseElement {
         this._lastRunFlow = null
         this._lastRunMemory = null
         this._lastRunOutput = null
+        this._lastRunProjectionOutput = null
+        this._projectionRunError = null
         this._projectionHandler = null
         this._projectionMessageMethods = null
         this._selected = className
@@ -546,25 +581,55 @@ export class FcDev extends BaseElement {
         this._runSending = true
         this._runResult = null
         this._runError = null
+        this._runElapsed = 0
+        clearInterval(this._runTimer)
+        const runStart = Date.now()
+        this._runTimer = setInterval(() => {
+            this._runElapsed = Math.floor((Date.now() - runStart) / 1000)
+        }, 1000)
         try {
             const message = typeof this._runMessage === 'string' ? JSON.parse(this._runMessage) : this._runMessage
             const result = await api.runDevFlow(this._selected, messageSource, message)
             this._runResult = result
-            this._lastRunOutput = result.output ?? null
-            this._outputModalSelectedStep = result.output?.[0]?.class ?? null
+            this._lastRunOutput = result.runnerOutput ?? null
+            this._lastRunProjectionOutput = result.projectionOutput ?? null
+            this._projectionRunError = result.projectionThrowable?.error ?? null
+            const visibleProjections = this._visibleProjectionEntries()
+            this._outputModalSelectedStep = result.runnerOutput?.length
+                ? `step:${result.runnerOutput[0].class}`
+                : visibleProjections.length
+                  ? `projection:${visibleProjections[0].i}`
+                  : null
             if (result.success && result.flow) {
                 this._lastRunFlow = result.flow
                 this._lastRunMemory = result.memory ?? null
                 this.querySelector('#fc-dev-run-modal')?.close()
-                if (result.output?.length) {
+                if (result.runnerOutput?.length || visibleProjections.length) {
                     this._openOutputModal()
                 }
             }
         } catch (err) {
             this._runError = err
         } finally {
+            clearInterval(this._runTimer)
+            this._runTimer = null
             this._runSending = false
         }
+    }
+
+    _formatElapsed(seconds) {
+        if (seconds < 60) return `${seconds}s`
+        const minutes = Math.floor(seconds / 60)
+        const rest = seconds % 60
+        return `${minutes}m ${rest}s`
+    }
+
+    // Projection entries that actually have something to show (output or error),
+    // keeping the original index so selection keys still resolve to the full list.
+    _visibleProjectionEntries() {
+        return (this._lastRunProjectionOutput ?? [])
+            .map((entry, i) => ({ entry, i }))
+            .filter(({ entry }) => (entry.content ?? '').trim() !== '' || entry.throwable)
     }
 
     _stepNameFromError(err) {
@@ -573,9 +638,14 @@ export class FcDev extends BaseElement {
         return match ? match[1] : null
     }
 
+    _resolveRunError() {
+        if (this._runError) return this._runError
+        const throwable = this._runResult?.runnerThrowable
+        return throwable ? { message: throwable.error, ...throwable } : null
+    }
+
     _renderRunError() {
-        const err =
-            this._runError ?? (this._runResult && !this._runResult.success ? { message: this._runResult.error, ...this._runResult } : null)
+        const err = this._resolveRunError()
         if (!err) return ''
         const stepName = this._stepNameFromError(err)
         const msg = err.message ?? ''
@@ -1940,16 +2010,33 @@ export class FcDev extends BaseElement {
                         <div class="flex gap-2">
                             <button class="btn btn-ghost btn-sm" @click=${() => this._closeRunModal()}>Abbrechen</button>
                             <button
-                                class="btn btn-success btn-sm"
+                                class="btn btn-success btn-sm grid place-items-center"
                                 ?disabled=${!this._runMessageValid || this._runSending}
                                 @click=${() => this._runFlow()}
                             >
-                                ${this._runSending
-                                    ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                    : html`<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                          <path stroke-linecap="round" stroke-linejoin="round" d="M5 3l14 9-14 9V3z" />
-                                      </svg>`}
-                                Ausführen
+                                <!-- invisible width reserver: keeps the button at least as wide as its default state -->
+                                <span class="col-start-1 row-start-1 invisible flex items-center gap-1.5" aria-hidden="true">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 3l14 9-14 9V3z" />
+                                    </svg>
+                                    Ausführen
+                                </span>
+                                <span class="col-start-1 row-start-1 flex items-center justify-center gap-1.5">
+                                    ${this._runSending
+                                        ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                        : html`<svg
+                                              class="w-3.5 h-3.5"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              stroke-width="2"
+                                              viewBox="0 0 24 24"
+                                          >
+                                              <path stroke-linecap="round" stroke-linejoin="round" d="M5 3l14 9-14 9V3z" />
+                                          </svg>`}
+                                    Ausführen${this._runSending
+                                        ? html`<span class="font-mono tabular-nums ml-1">${this._formatElapsed(this._runElapsed)}</span>`
+                                        : ''}
+                                </span>
                             </button>
                         </div>
                     </div>
@@ -2036,11 +2123,7 @@ export class FcDev extends BaseElement {
                     <div class="overflow-y-auto flex-1 ${this._errorModalTab === 'output' ? 'flex flex-col min-h-0 p-0' : 'p-6'}">
                         ${this._errorModalTab === 'error' || !(this._lastRunOutput ?? []).length
                             ? (() => {
-                                  const err =
-                                      this._runError ??
-                                      (this._runResult && !this._runResult.success
-                                          ? { message: this._runResult.error, ...this._runResult }
-                                          : null)
+                                  const err = this._resolveRunError()
                                   if (!err) return ''
                                   return html` ${renderApiError(err, { detailed: true })} `
                               })()
@@ -2052,21 +2135,22 @@ export class FcDev extends BaseElement {
                                                     class="w-48 shrink-0 border-r border-base-300/60 bg-base-200/40 flex flex-col overflow-y-auto"
                                                 >
                                                     <div class="flex flex-col py-1.5 gap-0.5 px-2">
-                                                        ${(this._lastRunOutput ?? []).map(
-                                                            entry => html`
+                                                        ${(this._lastRunOutput ?? []).map(entry => {
+                                                            const key = `step:${entry.class}`
+                                                            return html`
                                                                 <button
                                                                     class="px-3 py-1.5 text-left text-xs font-mono rounded-lg truncate transition-colors ${this
-                                                                        ._outputModalSelectedStep === entry.class
+                                                                        ._outputModalSelectedStep === key
                                                                         ? 'bg-base-300/60 text-base-content font-medium'
                                                                         : 'hover:bg-base-300/50 text-base-content/70'}"
                                                                     @click=${() => {
-                                                                        this._outputModalSelectedStep = entry.class
+                                                                        this._outputModalSelectedStep = key
                                                                     }}
                                                                 >
                                                                     ${entry.class.split('\\').at(-1)}
                                                                 </button>
                                                             `
-                                                        )}
+                                                        })}
                                                     </div>
                                                 </div>
                                             `
@@ -2075,13 +2159,14 @@ export class FcDev extends BaseElement {
                                           class="flex-1 overflow-auto p-4 font-mono text-xs whitespace-pre-wrap [&_pre]:whitespace-pre-wrap [&_pre]:m-0 text-base-content/80"
                                       >
                                           ${(() => {
+                                              const sel = this._outputModalSelectedStep ?? ''
+                                              const cls = sel.startsWith('step:') ? sel.slice('step:'.length) : sel
                                               const allStyles = (this._lastRunOutput ?? [])
                                                   .flatMap(e => [...e.content.matchAll(/<style[\s\S]*?<\/style>/gi)])
                                                   .map(m => m[0])
                                                   .join('')
                                               const selected = (
-                                                  (this._lastRunOutput ?? []).find(e => e.class === this._outputModalSelectedStep)
-                                                      ?.content ?? ''
+                                                  (this._lastRunOutput ?? []).find(e => e.class === cls)?.content ?? ''
                                               ).trim()
                                               return unsafeHTML(allStyles + selected)
                                           })()}
@@ -2154,41 +2239,129 @@ export class FcDev extends BaseElement {
                         </div>
                     </div>
                     <div class="flex flex-1 min-h-0 overflow-hidden">
-                        <!-- Left: Step list -->
-                        <div class="w-64 shrink-0 border-r border-base-300 bg-base-200/40 flex flex-col overflow-y-auto">
-                            <div class="px-4 py-3 border-b border-base-300/50 shrink-0">
-                                <div class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest">Steps mit Output</div>
-                            </div>
-                            <div class="flex flex-col flex-1 overflow-y-auto py-1.5 gap-0.5 px-2">
-                                ${(this._lastRunOutput ?? []).map(
-                                    entry => html`
-                                        <button
-                                            class="px-3 py-2 text-left text-xs font-mono rounded-lg truncate transition-colors ${this
-                                                ._outputModalSelectedStep === entry.class
-                                                ? 'bg-base-300/60 text-base-content font-medium'
-                                                : 'hover:bg-base-300/50 text-base-content/70'}"
-                                            @click=${() => {
-                                                this._outputModalSelectedStep = entry.class
-                                            }}
-                                        >
-                                            ${entry.class.split('\\').at(-1)}
-                                        </button>
-                                    `
-                                )}
+                        <!-- Left: Step / Projection list -->
+                        <div
+                            style="width: ${this._outputSidebarWidth}px"
+                            class="shrink-0 border-r border-base-300 bg-base-200/40 flex flex-col overflow-y-auto"
+                        >
+                            <div class="flex flex-col flex-1 overflow-y-auto py-1.5 gap-0.5">
+                                ${(this._lastRunOutput ?? []).length
+                                    ? html`
+                                          <div class="px-4 pt-2 pb-1.5">
+                                              <div class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest">
+                                                  Steps mit Output
+                                              </div>
+                                          </div>
+                                          <div class="flex flex-col gap-0.5 px-2">
+                                              ${(this._lastRunOutput ?? []).map(entry => {
+                                                  const key = `step:${entry.class}`
+                                                  return html`
+                                                      <fc-tooltip
+                                                          class="block"
+                                                          position="right"
+                                                          text=${entry.class}
+                                                          .content=${html`
+                                                              <button
+                                                                  class="w-full px-3 py-2 text-left text-xs font-mono rounded-lg truncate transition-colors ${this
+                                                                      ._outputModalSelectedStep === key
+                                                                      ? 'bg-base-300/60 text-base-content font-medium'
+                                                                      : 'hover:bg-base-300/50 text-base-content/70'}"
+                                                                  @click=${() => {
+                                                                      this._outputModalSelectedStep = key
+                                                                  }}
+                                                              >
+                                                                  ${entry.class.split('\\').at(-1)}
+                                                              </button>
+                                                          `}
+                                                      ></fc-tooltip>
+                                                  `
+                                              })}
+                                          </div>
+                                      `
+                                    : ''}
+                                ${this._visibleProjectionEntries().length
+                                    ? html`
+                                          <div class="px-4 pt-3 pb-1.5">
+                                              <div class="text-[10px] font-semibold text-secondary/60 uppercase tracking-widest">
+                                                  Projections
+                                              </div>
+                                          </div>
+                                          <div class="flex flex-col gap-0.5 px-2">
+                                              ${this._visibleProjectionEntries().map(({ entry, i }) => {
+                                                  const key = `projection:${i}`
+                                                  return html`
+                                                      <fc-tooltip
+                                                          class="block"
+                                                          position="right"
+                                                          text=${`${entry.messageSource} → ${entry.handler}::${entry.method}`}
+                                                          .content=${html`
+                                                              <button
+                                                                  class="w-full px-3 py-2 text-left text-xs font-mono rounded-lg truncate transition-colors flex items-center gap-1.5 ${this
+                                                                      ._outputModalSelectedStep === key
+                                                                      ? 'bg-base-300/60 text-base-content font-medium'
+                                                                      : 'hover:bg-base-300/50 text-base-content/70'}"
+                                                                  @click=${() => {
+                                                                      this._outputModalSelectedStep = key
+                                                                  }}
+                                                              >
+                                                                  ${entry.throwable
+                                                                      ? html`<span
+                                                                            class="w-1.5 h-1.5 rounded-full bg-error shrink-0"
+                                                                        ></span>`
+                                                                      : ''}
+                                                                  <span class="truncate">${entry.method}</span>
+                                                              </button>
+                                                          `}
+                                                      ></fc-tooltip>
+                                                  `
+                                              })}
+                                          </div>
+                                      `
+                                    : ''}
                             </div>
                         </div>
-                        <!-- Right: Output content -->
+                        <!-- Resize handle -->
                         <div
-                            class="flex-1 overflow-auto p-4 font-mono text-xs whitespace-pre-wrap [&_pre]:whitespace-pre-wrap [&_pre]:m-0 text-base-content/80"
-                        >
+                            class="w-1 shrink-0 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors -ml-px z-10"
+                            @mousedown=${this._startOutputResize}
+                        ></div>
+                        <!-- Right: Output content -->
+                        <div class="flex-1 overflow-auto p-4 font-mono text-xs text-base-content/80 flex flex-col gap-3">
+                            ${this._projectionRunError
+                                ? html`<div class="rounded-lg bg-error/8 border border-error/25 px-3 py-2 text-error">
+                                      Projection-Discovery fehlgeschlagen: ${this._projectionRunError}
+                                  </div>`
+                                : ''}
                             ${(() => {
-                                const allStyles = (this._lastRunOutput ?? [])
-                                    .flatMap(e => [...e.content.matchAll(/<style[\s\S]*?<\/style>/gi)].map(m => m[0]))
-                                    .join('')
-                                const selected = (
-                                    (this._lastRunOutput ?? []).find(e => e.class === this._outputModalSelectedStep)?.content ?? ''
-                                ).trim()
-                                return unsafeHTML(allStyles + selected)
+                                const sel = this._outputModalSelectedStep ?? ''
+                                // Symfony's HtmlDumper emits its <style>/<script> only on the
+                                // first dump per process, so harvest them across ALL outputs
+                                // (steps + projections) and prepend to whichever is shown.
+                                const harvest = list =>
+                                    (list ?? []).flatMap(e =>
+                                        [...e.content.matchAll(/<(?:style|script)[\s\S]*?<\/(?:style|script)>/gi)].map(m => m[0])
+                                    )
+                                const allStyles = [...harvest(this._lastRunOutput), ...harvest(this._lastRunProjectionOutput)].join('')
+                                // Wrap the dump body via a raw string + unsafeHTML so no stray
+                                // template whitespace leaks into the pre-wrap region.
+                                const dump = body =>
+                                    body
+                                        ? unsafeHTML(
+                                              `<div class="whitespace-pre-wrap [&_pre]:whitespace-pre-wrap [&_pre]:m-0">${allStyles + body}</div>`
+                                          )
+                                        : ''
+                                if (sel.startsWith('projection:')) {
+                                    const idx = Number.parseInt(sel.slice('projection:'.length), 10)
+                                    const proj = (this._lastRunProjectionOutput ?? [])[idx]
+                                    if (!proj) return ''
+                                    return html`
+                                        ${proj.throwable
+                                            ? renderApiError({ message: proj.throwable.error, ...proj.throwable }, { detailed: true })
+                                            : ''}${dump((proj.content ?? '').trim())}
+                                    `
+                                }
+                                const cls = sel.startsWith('step:') ? sel.slice('step:'.length) : sel
+                                return dump(((this._lastRunOutput ?? []).find(e => e.class === cls)?.content ?? '').trim())
                             })()}
                         </div>
                     </div>
