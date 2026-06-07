@@ -1867,21 +1867,25 @@ export class FcDev extends BaseElement {
                                     ? Object.entries(this._detail.initMessageTypes).map(([name, type]) => {
                                           const nullable = type.startsWith('?')
                                           const base = nullable ? type.slice(1) : type
+                                          const suffix = base.endsWith('[]') ? '[]' : ''
+                                          const element = base.replace(/\[\]$/, '')
                                           const typeColor =
-                                              base === 'string'
+                                              element === 'string'
                                                   ? 'text-sky-400'
-                                                  : base === 'int' || base === 'float'
+                                                  : element === 'int' || element === 'float'
                                                     ? 'text-amber-400'
-                                                    : base === 'bool'
+                                                    : element === 'bool'
                                                       ? 'text-violet-400'
-                                                      : base === 'array'
+                                                      : element === 'array'
                                                         ? 'text-orange-400'
                                                         : 'text-base-content/50'
                                           return html`
                                               <div class="rounded-lg bg-base-100 border border-base-300/60 px-3 py-2 flex flex-col gap-0.5">
                                                   <span class="text-xs font-mono font-semibold text-base-content/90">${name}</span>
                                                   <span class="text-[10px] font-mono ${typeColor}"
-                                                      >${nullable ? html`<span class="text-base-content/30">?</span>` : ''}${base}</span
+                                                      >${nullable ? html`<span class="text-base-content/30">?</span>` : ''}${element
+                                                          .split('\\')
+                                                          .pop()}${suffix}</span
                                                   >
                                               </div>
                                           `

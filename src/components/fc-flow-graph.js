@@ -750,8 +750,10 @@ export class FcFlowGraph extends BaseElement {
         const selRess = this.selectedStep ? ressOf(this.selectedStep) : []
 
         const primitiveTypes = new Set(['string', 'int', 'float', 'bool', 'array', 'mixed', 'null', 'void', 'never', 'object'])
+        // Strip a trailing `[]` (list type) so colour/lookup work on the element type.
+        const elementType = t => t.replace(/\[\]$/, '')
         const typeColor = type => {
-            const base = type.startsWith('?') ? type.slice(1) : type
+            const base = elementType(type.startsWith('?') ? type.slice(1) : type)
             if (base === 'string') return 'text-sky-400'
             if (base === 'int' || base === 'float') return 'text-amber-400'
             if (base === 'bool') return 'text-violet-400'
@@ -767,13 +769,18 @@ export class FcFlowGraph extends BaseElement {
                     ${Object.entries(props).map(([name, type]) => {
                         const nullable = type.startsWith('?')
                         const base = nullable ? type.slice(1) : type
-                        const subClass = base.split('|').find(p => !primitiveTypes.has(p) && this.messageSchemas?.[p])
+                        // For `Foo[]` lists resolve/expand the element class; keep `[]` for display.
+                        const subClass = base
+                            .split('|')
+                            .map(p => elementType(p))
+                            .find(p => !primitiveTypes.has(p) && this.messageSchemas?.[p])
                         const hasNested = !!subClass && !visited.has(subClass)
+                        const suffix = base.endsWith('[]') ? '[]' : ''
                         return html`
                             <span class="text-xs font-mono leading-snug"
                                 ><span class="text-base-content/40">${name}</span><span class="text-base-content/20">:</span>${nullable
                                     ? html`<span class="text-base-content/25">?</span>`
-                                    : ''}<span class="${typeColor(type)}">${base.split('\\').pop()}</span></span
+                                    : ''}<span class="${typeColor(type)}">${elementType(base).split('\\').pop()}${suffix}</span></span
                             >
                             ${hasNested ? renderMsgProps(subClass, depth + 1, new Set([...visited, subClass])) : ''}
                         `
