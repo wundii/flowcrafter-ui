@@ -298,9 +298,34 @@ export class FcApp extends BaseElement {
             this._serverDescription = info.description ?? null
             this._serverOffline = false
             this._checkVersionMismatch()
-        } catch {
+        } catch (err) {
+            // A 401 means the UI session is gone (expired token), not that the
+            // backend is offline. Verify against the auth server and, if the
+            // session is indeed invalid, drop back to the login screen instead
+            // of showing the "connection lost" modal.
+            if (err?.status === 401 && !(await this._sessionStillValid())) {
+                this._handleSessionExpired()
+                return
+            }
             this._serverOffline = true
         }
+    }
+
+    async _sessionStillValid() {
+        try {
+            const s = await auth.status()
+            return !!s.authenticated
+        } catch {
+            // Auth server unreachable — treat as offline, not as expired.
+            return true
+        }
+    }
+
+    async _handleSessionExpired() {
+        this._stopInfoPolling()
+        this._serverOffline = false
+        await auth.logout()
+        this._authed = false
     }
 
     _checkVersionMismatch() {

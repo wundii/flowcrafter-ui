@@ -66,6 +66,33 @@ function nextVersion(type) {
     return { current: `v${m[1]}`, next: `v${parseInt(m[1]) + 1}` }
 }
 
+function versionNum(type) {
+    const m = type?.match(/\.v(\d+)$/)
+    return m ? parseInt(m[1], 10) : null
+}
+
+// Findet eine Projection, die für eine ältere Version desselben Flow-Typs
+// registriert ist, während die aktuelle Version (currentType) keine hat.
+// Gibt die höchste solche Vorgängerversion zurück oder null.
+function findStaleProjection(projections, currentType) {
+    if (!projections || !currentType) return null
+    const base = currentType.replace(/\.v\d+$/, '')
+    const currentVer = versionNum(currentType)
+    if (currentVer === null) return null
+
+    let best = null
+    for (const [type, p] of Object.entries(projections)) {
+        if (type === currentType) continue
+        if (type.replace(/\.v\d+$/, '') !== base) continue
+        const ver = versionNum(type)
+        if (ver === null || ver >= currentVer) continue
+        if (!best || ver > best.version) {
+            best = { type, version: ver, handler: p?.projectionHandlerClass ?? null }
+        }
+    }
+    return best
+}
+
 function removedSteps(liveSteps, storedSteps) {
     const liveSources = new Set(liveSteps.map(s => s.source))
     return storedSteps.filter(s => !liveSources.has(s.source))
@@ -128,6 +155,7 @@ export class FcDev extends BaseElement {
         _outputModalSelectedStep: { state: true },
         _projectionHandler: { state: true },
         _projectionMessageMethods: { state: true },
+        _projectionVersionWarning: { state: true },
         _errorModalTab: { state: true },
         _runError: { state: true },
         _runMessage: { state: true },
@@ -146,6 +174,7 @@ export class FcDev extends BaseElement {
         _srcSource: { state: true },
         _storedSchemas: { state: true },
         _validationCache: { state: true },
+        _projectionWarningCache: { state: true },
         _versionsModal: { state: true },
         _versionsSelected: { state: true },
     }
@@ -176,6 +205,7 @@ export class FcDev extends BaseElement {
         this._loading = true
         this._projectionHandler = null
         this._projectionMessageMethods = null
+        this._projectionVersionWarning = null
         this._runError = null
         this._runMessage = {}
         this._runMessageValid = true
@@ -193,6 +223,8 @@ export class FcDev extends BaseElement {
         this._srcSource = null
         this._storedSchemas = []
         this._validationCache = {}
+        this._projectionWarningCache = {}
+        this._projections = null
         this._validateGeneration = 0
         this._versionsModal = false
         this._versionsSelected = null
@@ -249,10 +281,11 @@ export class FcDev extends BaseElement {
         this._error = null
         this._loading = true
         try {
-            const [flows, devImport, storedSchemas] = await Promise.all([
+            const [flows, devImport, storedSchemas, projections] = await Promise.all([
                 api.getDevFlows(),
                 api.getDevImport().catch(() => null),
                 api.getSchemas().catch(() => []),
+                api.getProjections().catch(() => ({})),
             ])
             const allGroups = new Set(flows.map(f => f.group).filter(Boolean))
             const previousGroups = new Set(this._flows.map(f => f.group).filter(Boolean))
@@ -264,6 +297,7 @@ export class FcDev extends BaseElement {
             this._flows = flows
             this._devImport = devImport
             this._storedSchemas = Array.isArray(storedSchemas) ? storedSchemas : []
+            this._projections = projections ?? {}
             this._validateAllFlows()
         } catch (err) {
             this._error = {
@@ -287,14 +321,82 @@ export class FcDev extends BaseElement {
             try {
                 const data = await api.getDevFlow(flow.className)
                 if (this._validateGeneration !== gen) return
+                this._applyImportFallback(data)
                 const status = resolveFlowStatus(data, this._storedSchemas)
+                const type = data.schema?.type
+                const staleProjection = type && !this._projections?.[type] ? findStaleProjection(this._projections, type) : null
                 this._validationCache = {
                     ...this._validationCache,
                     [flow.className]: status.config.showButton,
                 }
+                this._projectionWarningCache = {
+                    ...this._projectionWarningCache,
+                    [flow.className]: !!staleProjection,
+                }
             } catch {
                 // Flow überspringen
             }
+        }
+    }
+
+    // Reichert die per Reflection gelesenen Flow-Daten mit den importierten
+    // Schemas an (storedHash/storedSchema, hashDrift, changedMessages,
+    // messageSchemas-Fallback). Muss vor resolveFlowStatus laufen, damit sowohl
+    // die Sidebar-Validierung als auch die Detailansicht den Import berücksichtigen.
+    _applyImportFallback(data) {
+        if (!this._devImport || !data.schema?.type) return
+
+        // 1. Schema-Fallback: storedHash + storedSchema aus Import wenn lokal nicht in DB
+        const imp = this._devImport.schemas?.[data.schema.type]
+        if (imp) {
+            if (data.storedHash === null) data.storedHash = imp.storedHash
+            if (data.storedSchema === null) data.storedSchema = { type: data.schema.type, steps: imp.steps }
+            data.hashDrift = data.hash !== null && data.storedHash !== null && data.hash !== data.storedHash
+        }
+
+        const importedMessageSources = this._devImport.messageSources ?? {}
+
+        // 2. changedMessages-Enrichment aus Import
+        //    Nur für Klassen die lokal per Reflection bekannt sind (data.messageSchemas),
+        //    aber in der lokalen DB fehlen (daher noch nicht in data.changedMessages).
+        //    Importiertes Format: { ShortName: [propName, ...] }
+        const localMessageSchemas = data.messageSchemas ?? {}
+        const changedSet = new Set((data.changedMessages ?? []).map(m => m.class))
+        for (const [cls, propsByShortName] of Object.entries(importedMessageSources)) {
+            if (changedSet.has(cls)) continue // lokale DB hat bereits erkannt
+            if (!localMessageSchemas[cls]) continue // Klasse lokal nicht vorhanden → kein Vergleich
+
+            const shortName = cls.split('\\').pop()
+            const liveProps = Object.keys(localMessageSchemas[cls]).sort()
+            const importedTopLevel = (propsByShortName[shortName] ?? []).map(p => p.split(':')[0]).sort()
+
+            if (JSON.stringify(liveProps) !== JSON.stringify(importedTopLevel)) {
+                data.changedMessages = data.changedMessages ?? []
+                data.changedMessages.push({
+                    class: cls,
+                    liveHash: null,
+                    storedHash: null,
+                    liveProperties: liveProps,
+                    storedProperties: propsByShortName[shortName] ?? [],
+                    livePropertyNames: { [shortName]: liveProps },
+                    storedPropertyNames: propsByShortName,
+                })
+            }
+        }
+
+        // 3. messageSchemas-Fallback für Klassen die lokal nicht existieren
+        //    Transformation: { ShortName: [propName, ...] } → { propName: '?' }
+        //    Lokale Reflection-Daten haben immer Vorrang.
+        if (!data.messageSchemas) data.messageSchemas = {}
+        for (const [cls, propsByShortName] of Object.entries(importedMessageSources)) {
+            if (data.messageSchemas[cls]) continue // lokal bekannt → überspringen
+            const props = {}
+            for (const propList of Object.values(propsByShortName)) {
+                for (const propName of propList) {
+                    props[propName] = '?'
+                }
+            }
+            data.messageSchemas[cls] = props
         }
     }
 
@@ -309,63 +411,11 @@ export class FcDev extends BaseElement {
         this._projectionRunError = null
         this._projectionHandler = null
         this._projectionMessageMethods = null
+        this._projectionVersionWarning = null
         this._selected = className
         try {
             const data = await api.getDevFlow(className)
-            if (this._devImport && data.schema?.type) {
-                // 1. Schema-Fallback: storedHash + storedSchema aus Import wenn lokal nicht in DB
-                const imp = this._devImport.schemas?.[data.schema.type]
-                if (imp) {
-                    if (data.storedHash === null) data.storedHash = imp.storedHash
-                    if (data.storedSchema === null) data.storedSchema = { type: data.schema.type, steps: imp.steps }
-                    data.hashDrift = data.hash !== null && data.storedHash !== null && data.hash !== data.storedHash
-                }
-
-                const importedMessageSources = this._devImport.messageSources ?? {}
-
-                // 2. changedMessages-Enrichment aus Import
-                //    Nur für Klassen die lokal per Reflection bekannt sind (data.messageSchemas),
-                //    aber in der lokalen DB fehlen (daher noch nicht in data.changedMessages).
-                //    Importiertes Format: { ShortName: [propName, ...] }
-                const localMessageSchemas = data.messageSchemas ?? {}
-                const changedSet = new Set((data.changedMessages ?? []).map(m => m.class))
-                for (const [cls, propsByShortName] of Object.entries(importedMessageSources)) {
-                    if (changedSet.has(cls)) continue // lokale DB hat bereits erkannt
-                    if (!localMessageSchemas[cls]) continue // Klasse lokal nicht vorhanden → kein Vergleich
-
-                    const shortName = cls.split('\\').pop()
-                    const liveProps = Object.keys(localMessageSchemas[cls]).sort()
-                    const importedTopLevel = (propsByShortName[shortName] ?? []).map(p => p.split(':')[0]).sort()
-
-                    if (JSON.stringify(liveProps) !== JSON.stringify(importedTopLevel)) {
-                        data.changedMessages = data.changedMessages ?? []
-                        data.changedMessages.push({
-                            class: cls,
-                            liveHash: null,
-                            storedHash: null,
-                            liveProperties: liveProps,
-                            storedProperties: propsByShortName[shortName] ?? [],
-                            livePropertyNames: { [shortName]: liveProps },
-                            storedPropertyNames: propsByShortName,
-                        })
-                    }
-                }
-
-                // 3. messageSchemas-Fallback für Klassen die lokal nicht existieren
-                //    Transformation: { ShortName: [propName, ...] } → { propName: '?' }
-                //    Lokale Reflection-Daten haben immer Vorrang.
-                if (!data.messageSchemas) data.messageSchemas = {}
-                for (const [cls, propsByShortName] of Object.entries(importedMessageSources)) {
-                    if (data.messageSchemas[cls]) continue // lokal bekannt → überspringen
-                    const props = {}
-                    for (const propList of Object.values(propsByShortName)) {
-                        for (const propName of propList) {
-                            props[propName] = '?'
-                        }
-                    }
-                    data.messageSchemas[cls] = props
-                }
-            }
+            this._applyImportFallback(data)
             this._detail = data
             this._runMessage = data?.initMessageSchema ?? {}
             this._runMessageValid = true
@@ -373,9 +423,15 @@ export class FcDev extends BaseElement {
             if (data.schema?.type) {
                 api.getProjections()
                     .then(projections => {
+                        this._projections = projections ?? {}
                         const match = projections?.[data.schema.type]
                         this._projectionHandler = match?.projectionHandlerClass ?? null
                         this._projectionMessageMethods = match?.projectionMessageMethods ?? null
+                        this._projectionVersionWarning = match ? null : findStaleProjection(projections, data.schema.type)
+                        this._projectionWarningCache = {
+                            ...this._projectionWarningCache,
+                            [className]: !!this._projectionVersionWarning,
+                        }
                     })
                     .catch(() => {})
             }
@@ -708,6 +764,24 @@ export class FcDev extends BaseElement {
               </svg>`
     }
 
+    _renderProjectionWarningIcon(className) {
+        if (!this._projectionWarningCache[className]) return ''
+        return html`
+            <fc-tooltip
+                text="Projection fehlt in aktueller Version"
+                .content=${html`
+                    <svg class="w-3.5 h-3.5 text-warning shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                        />
+                    </svg>
+                `}
+            ></fc-tooltip>
+        `
+    }
+
     _renderFlowItem(f) {
         const active = this._selected === f.className
         return html`
@@ -723,7 +797,9 @@ export class FcDev extends BaseElement {
                         ? html`<div class="text-[10px] font-mono text-base-content/40 truncate mt-0.5">${f.type}</div>`
                         : html`<div class="text-[10px] text-error/60 mt-0.5">schema() fehlgeschlagen</div>`}
                 </div>
-                ${this._renderValidationIcon(f.className)}
+                <div class="flex items-center gap-1 shrink-0">
+                    ${this._renderProjectionWarningIcon(f.className)} ${this._renderValidationIcon(f.className)}
+                </div>
             </button>
         `
     }
@@ -1051,6 +1127,43 @@ export class FcDev extends BaseElement {
                         `
                     )}
                 </div>
+            </div>
+        `
+    }
+
+    _renderProjectionVersionWarning(d) {
+        const w = this._projectionVersionWarning
+        if (!w) return ''
+        return html`
+            <div class="flex items-start gap-1.5 mt-1 flex-wrap">
+                <svg
+                    class="w-3.5 h-3.5 text-warning shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                    />
+                </svg>
+                <span class="text-xs font-semibold text-warning">Projection fehlt in aktueller Version</span>
+                <span class="text-xs text-base-content/50">
+                    — Die Version
+                    <code class="font-mono bg-base-300/50 px-1 rounded">${w.type}</code>
+                    hat eine Projection, für die aktuelle Version
+                    <code class="font-mono bg-base-300/50 px-1 rounded">${d.schema?.type}</code>
+                    ist noch keine registriert.
+                </span>
+                ${w.handler
+                    ? html`<div class="w-full flex flex-wrap gap-1 mt-0.5 ml-5">
+                          <span class="text-[10px] font-mono text-warning/80 bg-warning/10 px-1.5 py-0.5 rounded" title="${w.handler}"
+                              >${shortClass(w.handler)}</span
+                          >
+                      </div>`
+                    : ''}
             </div>
         `
     }
@@ -1509,7 +1622,7 @@ export class FcDev extends BaseElement {
                                 ${this._renderStatusIcon(cfg)} ${this._renderStatusLine(status, d)}
                                 ${cfg.showButton ? this._renderRunButton(cfg.buttonColor) : ''}
                             </div>
-                            ${this._renderChangedMessages(status, d)}
+                            ${this._renderChangedMessages(status, d)} ${this._renderProjectionVersionWarning(d)}
                         </div>
                         ${d.hash
                             ? html`

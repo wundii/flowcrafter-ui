@@ -8,6 +8,7 @@ function fetchJson(path) {
         if (!res.ok) {
             const body = await res.json().catch(() => ({}))
             const err = new Error(body.error ?? `HTTP ${res.status}`)
+            err.status = res.status
             err.file = body.file ?? null
             err.line = body.line ?? null
             err.trace = body.trace ?? null
@@ -31,6 +32,7 @@ function postJson(path, body) {
         if (!res.ok) {
             const data = await res.json().catch(() => ({}))
             const err = new Error(data.error ?? `HTTP ${res.status}`)
+            err.status = res.status
             err.file = data.file ?? null
             err.line = data.line ?? null
             err.trace = data.trace ?? null
