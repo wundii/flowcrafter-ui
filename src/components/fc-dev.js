@@ -2815,16 +2815,22 @@ export class FcDev extends BaseElement {
                                 <code class="font-mono text-xs bg-base-300/50 px-1 rounded break-all">${this._devImport?.sourceUrl}</code>
                                 haben sich Schemas oder Message-Sources geändert. Möchtest du den Import aktualisieren?
                             </p>
-                            ${this._importModalError
-                                ? html`<p class="text-xs text-error mt-2">${this._importModalError}</p>`
-                                : ''}
+                            ${this._importModalError ? html`<p class="text-xs text-error mt-2">${this._importModalError}</p>` : ''}
                         </div>
                     </div>
                     <div class="modal-action mt-5">
-                        <button class="btn btn-sm btn-ghost" ?disabled=${this._importModalLoading} @click=${() => this._dismissImportChanged()}>
+                        <button
+                            class="btn btn-sm btn-ghost"
+                            ?disabled=${this._importModalLoading}
+                            @click=${() => this._dismissImportChanged()}
+                        >
                             Abbruch
                         </button>
-                        <button class="btn btn-sm btn-primary" ?disabled=${this._importModalLoading} @click=${() => this._applyImportRefresh()}>
+                        <button
+                            class="btn btn-sm btn-primary"
+                            ?disabled=${this._importModalLoading}
+                            @click=${() => this._applyImportRefresh()}
+                        >
                             ${this._importModalLoading
                                 ? html`<span class="loading loading-spinner loading-xs"></span> Importiere…`
                                 : 'Import'}

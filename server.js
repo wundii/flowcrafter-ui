@@ -171,7 +171,8 @@ function clearDevImport() {
 // Niemals das (verschlüsselte) Secret an den Client ausliefern.
 function publicDevImport(snapshot) {
     if (!snapshot) return snapshot
-    const { encryptedSecret, ...rest } = snapshot
+    const rest = { ...snapshot }
+    delete rest.encryptedSecret
     return rest
 }
 
@@ -824,8 +825,7 @@ const server = createServer(async (req, res) => {
                     if (!hashRes.ok) return json(res, { hasImport: true, canCheck: false, error: `HTTP ${hashRes.status}` })
 
                     const current = await hashRes.json()
-                    const changed =
-                        current.schemaHash !== snapshot.schemaHash || current.messageSourceHash !== snapshot.messageSourceHash
+                    const changed = current.schemaHash !== snapshot.schemaHash || current.messageSourceHash !== snapshot.messageSourceHash
                     return json(res, {
                         hasImport: true,
                         canCheck: true,
