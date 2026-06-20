@@ -303,6 +303,13 @@ export const api = {
         }).then(res => res.json())
     },
 
+    getDevImportCheck() {
+        const token = localStorage.getItem('fc_token') ?? ''
+        return fetch('/api/dev-import/check', {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }).then(res => res.json())
+    },
+
     clearDevImport() {
         const token = localStorage.getItem('fc_token') ?? ''
         return fetch('/api/dev-import', {

@@ -141,6 +141,7 @@ export class FcDev extends BaseElement {
         _error: { state: true },
         _filter: { state: true },
         _flows: { state: true },
+        _importChanged: { state: true },
         _importModalError: { state: true },
         _importModalLoading: { state: true },
         _importSecret: { state: true },
@@ -190,6 +191,7 @@ export class FcDev extends BaseElement {
         this._error = null
         this._filter = ''
         this._flows = []
+        this._importChanged = false
         this._importModalError = null
         this._importModalLoading = false
         this._importSecret = ''
@@ -299,6 +301,7 @@ export class FcDev extends BaseElement {
             this._storedSchemas = Array.isArray(storedSchemas) ? storedSchemas : []
             this._projections = projections ?? {}
             this._validateAllFlows()
+            if (devImport) this._checkImportFreshness()
         } catch (err) {
             this._error = {
                 message: err.message,
@@ -310,6 +313,42 @@ export class FcDev extends BaseElement {
         } finally {
             this._loading = false
         }
+    }
+
+    // Best-effort: prüft beim Öffnen der Devtool-Seite, ob sich die importierten
+    // Schemas/Message-Sources am Quell-Backend geändert haben, und zeigt ggf. ein Popup.
+    async _checkImportFreshness() {
+        try {
+            const result = await api.getDevImportCheck()
+            if (result?.changed) {
+                this._importChanged = true
+                await this.updateComplete
+                this.querySelector('#fc-dev-import-changed-modal')?.showModal()
+            }
+        } catch {
+            // Check ist optional — Fehler still ignorieren
+        }
+    }
+
+    async _applyImportRefresh() {
+        this._importModalLoading = true
+        this._importModalError = null
+        try {
+            const result = await api.saveDevImport({ url: this._devImport.sourceUrl })
+            this._devImport = result
+            this._importChanged = false
+            this.querySelector('#fc-dev-import-changed-modal')?.close()
+            if (this._selected) this._selectFlow(this._selected)
+        } catch (err) {
+            this._importModalError = err.message
+        } finally {
+            this._importModalLoading = false
+        }
+    }
+
+    _dismissImportChanged() {
+        this._importChanged = false
+        this.querySelector('#fc-dev-import-changed-modal')?.close()
     }
 
     async _validateAllFlows() {
@@ -2753,6 +2792,47 @@ export class FcDev extends BaseElement {
                 </div>
                 <form method="dialog" class="modal-backdrop backdrop-blur-sm">
                     <button @click=${() => this.querySelector('#fc-dev-import-modal')?.close()}>close</button>
+                </form>
+            </dialog>
+
+            <!-- Import Changed Modal -->
+            <dialog id="fc-dev-import-changed-modal" class="modal">
+                <div class="modal-box max-w-md">
+                    <div class="flex items-start gap-3">
+                        <div class="shrink-0 mt-0.5">
+                            <svg class="w-6 h-6 text-warning" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M12 9v4m0 4h.01M10.29 3.86l-8.48 14.7A1.5 1.5 0 003.1 21h17.8a1.5 1.5 0 001.29-2.44l-8.48-14.7a1.5 1.5 0 00-2.42 0z"
+                                />
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-base">Importierte Schemas veraltet</h3>
+                            <p class="text-sm text-base-content/70 mt-1">
+                                Am Quell-Backend
+                                <code class="font-mono text-xs bg-base-300/50 px-1 rounded break-all">${this._devImport?.sourceUrl}</code>
+                                haben sich Schemas oder Message-Sources geändert. Möchtest du den Import aktualisieren?
+                            </p>
+                            ${this._importModalError
+                                ? html`<p class="text-xs text-error mt-2">${this._importModalError}</p>`
+                                : ''}
+                        </div>
+                    </div>
+                    <div class="modal-action mt-5">
+                        <button class="btn btn-sm btn-ghost" ?disabled=${this._importModalLoading} @click=${() => this._dismissImportChanged()}>
+                            Abbruch
+                        </button>
+                        <button class="btn btn-sm btn-primary" ?disabled=${this._importModalLoading} @click=${() => this._applyImportRefresh()}>
+                            ${this._importModalLoading
+                                ? html`<span class="loading loading-spinner loading-xs"></span> Importiere…`
+                                : 'Import'}
+                        </button>
+                    </div>
+                </div>
+                <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                    <button @click=${() => this._dismissImportChanged()}>close</button>
                 </form>
             </dialog>
 

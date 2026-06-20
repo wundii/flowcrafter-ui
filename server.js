@@ -168,6 +168,13 @@ function clearDevImport() {
     if (existsSync(DEV_IMPORT_FILE)) unlinkSync(DEV_IMPORT_FILE)
 }
 
+// Niemals das (verschlüsselte) Secret an den Client ausliefern.
+function publicDevImport(snapshot) {
+    if (!snapshot) return snapshot
+    const { encryptedSecret, ...rest } = snapshot
+    return rest
+}
+
 // ─── AI analysis ─────────────────────────────────────────────────────────────
 const ANALYSIS_SYSTEM_PROMPT = `Du bist ein Experte fuer Workflow- und State-Machine-Analyse fuer FlowCrafter, eine PHP message-driven Workflow-Engine.
 
@@ -799,7 +806,36 @@ const server = createServer(async (req, res) => {
             if (!validToken(db, bearerToken(req))) return json(res, { error: 'Nicht autorisiert.' }, 401)
 
             if (method === 'GET' && path === '/api/dev-import') {
-                return json(res, loadDevImport())
+                return json(res, publicDevImport(loadDevImport()))
+            }
+
+            // Leichtgewichtiger Freshness-Check: Remote-Hashes gegen den Snapshot vergleichen.
+            if (method === 'GET' && path === '/api/dev-import/check') {
+                const snapshot = loadDevImport()
+                if (!snapshot) return json(res, { hasImport: false })
+                if (!snapshot.sourceUrl || !snapshot.encryptedSecret || !snapshot.schemaHash) {
+                    return json(res, { hasImport: true, canCheck: false })
+                }
+
+                try {
+                    const secret = decryptSecret(snapshot.encryptedSecret)
+                    const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
+                    const hashRes = await fetch(`${snapshot.sourceUrl}/api/flow/schema-import-hashes`, { headers })
+                    if (!hashRes.ok) return json(res, { hasImport: true, canCheck: false, error: `HTTP ${hashRes.status}` })
+
+                    const current = await hashRes.json()
+                    const changed =
+                        current.schemaHash !== snapshot.schemaHash || current.messageSourceHash !== snapshot.messageSourceHash
+                    return json(res, {
+                        hasImport: true,
+                        canCheck: true,
+                        changed,
+                        current,
+                        stored: { schemaHash: snapshot.schemaHash, messageSourceHash: snapshot.messageSourceHash },
+                    })
+                } catch (err) {
+                    return json(res, { hasImport: true, canCheck: false, error: err.cause?.code ?? err.message })
+                }
             }
 
             if (method === 'DELETE' && path === '/api/dev-import') {
@@ -813,21 +849,36 @@ const server = createServer(async (req, res) => {
                 // Save pre-built snapshot (from client-side fetch)
                 if (body?.schemas) {
                     saveDevImport(body)
-                    return json(res, body)
+                    return json(res, publicDevImport(body))
                 }
 
                 // Server-side fetch: { url, secret }
-                const { url: importUrl, secret } = body
+                const { url: importUrl } = body
                 if (!importUrl) return json(res, { error: 'url fehlt.' }, 400)
                 if (!isUrlAllowed(importUrl)) return json(res, { error: 'Ungültige URL.' }, 403)
 
                 const baseUrl = importUrl.replace(/\/$/, '')
+
+                // Secret wiederverwenden, wenn kein neues angegeben wurde (z. B. Re-Import aus dem Änderungs-Popup).
+                let secret = body.secret ?? ''
+                if (!secret) {
+                    const existing = loadDevImport()
+                    if (existing?.sourceUrl === baseUrl && existing?.encryptedSecret) {
+                        try {
+                            secret = decryptSecret(existing.encryptedSecret)
+                        } catch {
+                            // ungültiges/altes Secret — ignorieren
+                        }
+                    }
+                }
+
                 const headers = secret ? { Authorization: `Bearer ${secret}` } : {}
 
                 try {
-                    const [schemasRes, messageSourcesRes] = await Promise.all([
+                    const [schemasRes, messageSourcesRes, hashesRes] = await Promise.all([
                         fetch(`${baseUrl}/api/flow/schema-list`, { headers }),
                         fetch(`${baseUrl}/api/flow/message-source-list`, { headers }),
+                        fetch(`${baseUrl}/api/flow/schema-import-hashes`, { headers }).catch(() => null),
                     ])
 
                     if (schemasRes.status === 401)
@@ -863,6 +914,18 @@ const server = createServer(async (req, res) => {
                         }
                     }
 
+                    let schemaHash = null
+                    let messageSourceHash = null
+                    if (hashesRes?.ok) {
+                        try {
+                            const h = await hashesRes.json()
+                            schemaHash = h.schemaHash ?? null
+                            messageSourceHash = h.messageSourceHash ?? null
+                        } catch {
+                            // hashes nicht verfügbar — Freshness-Check später nicht möglich
+                        }
+                    }
+
                     const schemasMap = {}
                     for (const s of schemas) {
                         schemasMap[s.type] = { storedHash: s.schemaHash, steps: s.steps }
@@ -872,11 +935,14 @@ const server = createServer(async (req, res) => {
                         sourceUrl: baseUrl,
                         schemaCount: Object.keys(schemasMap).length,
                         messageSourceCount: Object.keys(messageSources).length,
+                        schemaHash,
+                        messageSourceHash,
+                        encryptedSecret: secret ? encryptSecret(secret) : null,
                         schemas: schemasMap,
                         messageSources,
                     }
                     saveDevImport(snapshot)
-                    return json(res, snapshot)
+                    return json(res, publicDevImport(snapshot))
                 } catch (err) {
                     const cause = err.cause?.code ?? err.cause?.message ?? err.message
                     console.error('Dev import error:', cause)
