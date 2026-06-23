@@ -346,7 +346,7 @@ export class FcOverview extends BaseElement {
                                         stroke-dashoffset="${2 * Math.PI * 15 * (this._countdown / 30)}"
                                     />
                                 </svg>
-                                <button class="btn btn-sm btn-ghost btn-circle border-0" @click=${this._load}>
+                                <button class="btn btn-sm btn-ghost btn-circle border-0" @click=${() => this._load()}>
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path
                                             stroke-linecap="round"
