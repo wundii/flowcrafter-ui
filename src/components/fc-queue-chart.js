@@ -76,9 +76,11 @@ export class FcQueueChart extends BaseElement {
                 <div class="text-right">
                     <div class="text-xs text-base-content/40 leading-none mb-0.5">Queue</div>
                     <div class="text-sm font-mono font-semibold leading-none ${colorClass}">
-                        ${this._error
-                            ? html`<span class="text-base-content/30">—</span>`
-                            : (this._current ?? html`<span class="text-base-content/30">…</span>`)}
+                        ${
+                            this._error
+                                ? html`<span class="text-base-content/30">—</span>`
+                                : (this._current ?? html`<span class="text-base-content/30">…</span>`)
+                        }
                     </div>
                 </div>
 
@@ -87,13 +89,15 @@ export class FcQueueChart extends BaseElement {
                     <!-- background -->
                     <rect x="0" y="0" width="${W}" height="${H}" rx="4" style="fill: oklch(from var(--color-base-300) l c h / 0.6)" />
 
-                    ${hasData && area
-                        ? svg`
+                    ${
+                        hasData && area
+                            ? svg`
                         <path d="${area}" fill="currentColor" opacity="0.18" />
                         <path d="${path}" fill="none" stroke="currentColor" stroke-width="1.5"
                             stroke-linejoin="round" stroke-linecap="round" />
                     `
-                        : ''}
+                            : ''
+                    }
 
                     <!-- baseline -->
                     <line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="currentColor" stroke-width="1" opacity="0.15" />

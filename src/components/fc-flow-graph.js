@@ -778,9 +778,9 @@ export class FcFlowGraph extends BaseElement {
                         const suffix = base.endsWith('[]') ? '[]' : ''
                         return html`
                             <span class="text-xs font-mono leading-snug"
-                                ><span class="text-base-content/40">${name}</span><span class="text-base-content/20">:</span>${nullable
-                                    ? html`<span class="text-base-content/25">?</span>`
-                                    : ''}<span class="${typeColor(type)}">${elementType(base).split('\\').pop()}${suffix}</span></span
+                                ><span class="text-base-content/40">${name}</span><span class="text-base-content/20">:</span>${
+                                    nullable ? html`<span class="text-base-content/25">?</span>` : ''
+                                }<span class="${typeColor(type)}">${elementType(base).split('\\').pop()}${suffix}</span></span
                             >
                             ${hasNested ? renderMsgProps(subClass, depth + 1, new Set([...visited, subClass])) : ''}
                         `
@@ -816,18 +816,20 @@ export class FcFlowGraph extends BaseElement {
                      background:${st.bg};
                      border:1.5px solid ${selected ? st.color : st.color + '55'};
                      border-left:5px solid ${st.color};
-                     border-radius:10px; cursor:pointer; overflow:${stepRetries.length > 0 || (this.showStepConfig && step.retries > 0)
-                                        ? 'visible'
-                                        : 'hidden'};
+                     border-radius:10px; cursor:pointer; overflow:${
+                         stepRetries.length > 0 || (this.showStepConfig && step.retries > 0) ? 'visible' : 'hidden'
+                     };
                      box-shadow:${selected ? `0 0 0 2px ${st.color}44, 0 4px 20px ${st.color}22` : '0 2px 8px rgba(0,0,0,0.4)'};
                    "
                                 >
                                     <!-- Header -->
                                     <div
                                         style="height:${HEADER_H}px; display:flex; align-items:center; gap:8px;
-                            padding:0 10px; ${hasTimings
-                                            ? ''
-                                            : `background-image:linear-gradient(to right,transparent 10px,${st.color}33 10px,${st.color}33 calc(100% - 10px),transparent calc(100% - 10px));background-size:100% 1px;background-repeat:no-repeat;background-position:bottom;`}"
+                            padding:0 10px; ${
+                                hasTimings
+                                    ? ''
+                                    : `background-image:linear-gradient(to right,transparent 10px,${st.color}33 10px,${st.color}33 calc(100% - 10px),transparent calc(100% - 10px));background-size:100% 1px;background-repeat:no-repeat;background-position:bottom;`
+                            }"
                                         @mouseenter=${e => {
                                             if (!this.showStepConfig) return
                                             clearTimeout(this._diffTooltipTimer)
@@ -851,18 +853,20 @@ export class FcFlowGraph extends BaseElement {
                                overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
                                             >${short(step.source)}</span
                                         >
-                                        ${step.runOnce
-                                            ? html`<svg
-                                                  viewBox="0 0 24 24"
-                                                  fill="none"
-                                                  stroke="#a5b4fc"
-                                                  stroke-width="2.5"
-                                                  style="width:11px;height:11px;flex-shrink:0;"
-                                              >
-                                                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                                                  <path d="M7 11V7a5 5 0 0110 0v4" />
-                                              </svg>`
-                                            : ''}
+                                        ${
+                                            step.runOnce
+                                                ? html`<svg
+                                                      viewBox="0 0 24 24"
+                                                      fill="none"
+                                                      stroke="#a5b4fc"
+                                                      stroke-width="2.5"
+                                                      style="width:11px;height:11px;flex-shrink:0;"
+                                                  >
+                                                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                                      <path d="M7 11V7a5 5 0 0110 0v4" />
+                                                  </svg>`
+                                                : ''
+                                        }
                                         <span
                                             style="font-size:8px; color:oklch(from var(--color-base-content) l c h / 0.4); text-transform:uppercase;
                                letter-spacing:.06em; flex-shrink:0;"
@@ -871,25 +875,29 @@ export class FcFlowGraph extends BaseElement {
                                     </div>
 
                                     <!-- Timing row -->
-                                    ${hasTimings
-                                        ? html`
-                                              <div
-                                                  style="height:${TIMING_ROW_H}px; display:flex; align-items:center;
+                                    ${
+                                        hasTimings
+                                            ? html`
+                                                  <div
+                                                      style="height:${TIMING_ROW_H}px; display:flex; align-items:center;
                                       padding:0 10px; gap:5px;"
-                                              >
-                                                  <div style="flex:1; height:1px; background:${st.color}33;"></div>
-                                                  <span
-                                                      style="font-size:9px; font-family:monospace; color:${st.color};
-                                      font-weight:600; width:44px; text-align:center; flex-shrink:0; opacity:0.8;"
                                                   >
-                                                      ${stepTimingsMap[step.source]
-                                                          ? formatDuration(stepTimingsMap[step.source].duration)
-                                                          : '—'}
-                                                  </span>
-                                                  <div style="flex:1; height:1px; background:${st.color}33;"></div>
-                                              </div>
-                                          `
-                                        : ''}
+                                                      <div style="flex:1; height:1px; background:${st.color}33;"></div>
+                                                      <span
+                                                          style="font-size:9px; font-family:monospace; color:${st.color};
+                                      font-weight:600; width:44px; text-align:center; flex-shrink:0; opacity:0.8;"
+                                                      >
+                                                          ${
+                                                              stepTimingsMap[step.source]
+                                                                  ? formatDuration(stepTimingsMap[step.source].duration)
+                                                                  : '—'
+                                                          }
+                                                      </span>
+                                                      <div style="flex:1; height:1px; background:${st.color}33;"></div>
+                                                  </div>
+                                              `
+                                            : ''
+                                    }
 
                                     <!-- Port rows -->
                                     <div style="padding:${PORT_PAD_V}px 0;">
@@ -911,36 +919,40 @@ export class FcFlowGraph extends BaseElement {
                                                         style="display:flex;flex-direction:column;justify-content:center;
                                     padding-left:20px;padding-right:4px;overflow:hidden;min-width:0;"
                                                     >
-                                                        ${inMsg
-                                                            ? html`
-                                                                  <div
-                                                                      style="cursor:${inData ? 'pointer' : 'default'};overflow:hidden;"
-                                                                      @mouseenter=${inData
-                                                                          ? e =>
-                                                                                this._showTooltip(
-                                                                                    e,
-                                                                                    short(inMsg),
-                                                                                    inData.messageSource,
-                                                                                    inData.message
-                                                                                )
-                                                                          : null}
-                                                                      @mouseleave=${this._hideTooltip}
-                                                                  >
-                                                                      <span
-                                                                          style="font-size:10px;color:${inColor};font-weight:600;
+                                                        ${
+                                                            inMsg
+                                                                ? html`
+                                                                      <div
+                                                                          style="cursor:${inData ? 'pointer' : 'default'};overflow:hidden;"
+                                                                          @mouseenter=${
+                                                                              inData
+                                                                                  ? e =>
+                                                                                        this._showTooltip(
+                                                                                            e,
+                                                                                            short(inMsg),
+                                                                                            inData.messageSource,
+                                                                                            inData.message
+                                                                                        )
+                                                                                  : null
+                                                                          }
+                                                                          @mouseleave=${this._hideTooltip}
+                                                                      >
+                                                                          <span
+                                                                              style="font-size:10px;color:${inColor};font-weight:600;
                                          font-family:monospace;white-space:nowrap;
                                          overflow:hidden;text-overflow:ellipsis;display:block;"
-                                                                          >${short(inMsg)}</span
-                                                                      >
-                                                                      <span
-                                                                          style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
+                                                                              >${short(inMsg)}</span
+                                                                          >
+                                                                          <span
+                                                                              style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
                                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;"
-                                                                      >
-                                                                          ${inData ? fmtJson(inData.message) : '—'}
-                                                                      </span>
-                                                                  </div>
-                                                              `
-                                                            : ''}
+                                                                          >
+                                                                              ${inData ? fmtJson(inData.message) : '—'}
+                                                                          </span>
+                                                                      </div>
+                                                                  `
+                                                                : ''
+                                                        }
                                                     </div>
 
                                                     <!-- OUT port content -->
@@ -948,98 +960,104 @@ export class FcFlowGraph extends BaseElement {
                                                         style="display:flex;flex-direction:column;justify-content:center;
                                     padding-right:12px;overflow:hidden;height:100%;min-width:0;"
                                                     >
-                                                        ${i === 0 && excs.length > 0
-                                                            ? html`
-                                                                  <div
-                                                                      style="cursor:pointer;overflow:hidden;"
-                                                                      @mouseenter=${e => {
-                                                                          clearTimeout(this._excTooltipTimer)
-                                                                          const hostRect = this.getBoundingClientRect()
-                                                                          const elRect = e.currentTarget.getBoundingClientRect()
-                                                                          const tooltipWidth = 360
-                                                                          const xLeft = elRect.left - hostRect.left
-                                                                          const alignRight = xLeft + tooltipWidth > hostRect.width
-                                                                          this._excTooltip = {
-                                                                              x: alignRight
-                                                                                  ? hostRect.width - (elRect.right - hostRect.left)
-                                                                                  : xLeft,
-                                                                              alignRight,
-                                                                              y: elRect.bottom - hostRect.top + 6,
-                                                                              exc: excs[0],
-                                                                          }
-                                                                      }}
-                                                                      @mouseleave=${() => {
-                                                                          this._excTooltipTimer = setTimeout(
-                                                                              () => (this._excTooltip = null),
-                                                                              150
-                                                                          )
-                                                                      }}
-                                                                  >
-                                                                      <span
-                                                                          style="font-size:10px;color:#ef4444;font-weight:600;
-                                         font-family:monospace;white-space:nowrap;
-                                         overflow:hidden;text-overflow:ellipsis;text-align:right;display:block;"
-                                                                          >✕ Exception</span
-                                                                      >
-                                                                      <span
-                                                                          style="font-size:9px;color:#ef4444;opacity:0.7;
-                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;display:block;"
-                                                                      >
-                                                                          ${excs[0].message.length > 28
-                                                                              ? excs[0].message.slice(0, 28) + '…'
-                                                                              : excs[0].message}
-                                                                      </span>
-                                                                  </div>
-                                                              `
-                                                            : i === 0 && ress.length > 0
-                                                              ? html`
-                                                                    <span
-                                                                        style="font-size:10px;color:${ress[0].result
-                                                                            ? '#22c55e'
-                                                                            : '#f97316'};font-weight:600;
-                                         font-family:monospace;white-space:nowrap;
-                                         overflow:hidden;text-overflow:ellipsis;text-align:right;"
-                                                                        >${ress[0].result ? 'true' : 'false'}</span
-                                                                    >
-                                                                    <span
-                                                                        style="font-size:9px;color:${ress[0].result
-                                                                            ? '#22c55e'
-                                                                            : '#f97316'};opacity:0.7;
-                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;"
-                                                                    >
-                                                                        Ergebnis
-                                                                    </span>
-                                                                `
-                                                              : outRt
+                                                        ${
+                                                            i === 0 && excs.length > 0
                                                                 ? html`
                                                                       <div
-                                                                          style="cursor:${outData ? 'pointer' : 'default'};overflow:hidden;"
-                                                                          @mouseenter=${outData
-                                                                              ? e =>
-                                                                                    this._showTooltip(
-                                                                                        e,
-                                                                                        short(outRt),
-                                                                                        outData.messageSource,
-                                                                                        outData.message
-                                                                                    )
-                                                                              : null}
-                                                                          @mouseleave=${this._hideTooltip}
+                                                                          style="cursor:pointer;overflow:hidden;"
+                                                                          @mouseenter=${e => {
+                                                                              clearTimeout(this._excTooltipTimer)
+                                                                              const hostRect = this.getBoundingClientRect()
+                                                                              const elRect = e.currentTarget.getBoundingClientRect()
+                                                                              const tooltipWidth = 360
+                                                                              const xLeft = elRect.left - hostRect.left
+                                                                              const alignRight = xLeft + tooltipWidth > hostRect.width
+                                                                              this._excTooltip = {
+                                                                                  x: alignRight
+                                                                                      ? hostRect.width - (elRect.right - hostRect.left)
+                                                                                      : xLeft,
+                                                                                  alignRight,
+                                                                                  y: elRect.bottom - hostRect.top + 6,
+                                                                                  exc: excs[0],
+                                                                              }
+                                                                          }}
+                                                                          @mouseleave=${() => {
+                                                                              this._excTooltipTimer = setTimeout(
+                                                                                  () => (this._excTooltip = null),
+                                                                                  150
+                                                                              )
+                                                                          }}
                                                                       >
                                                                           <span
-                                                                              style="font-size:10px;color:#6b7280;font-weight:600;
+                                                                              style="font-size:10px;color:#ef4444;font-weight:600;
                                          font-family:monospace;white-space:nowrap;
-                                         overflow:hidden;text-overflow:ellipsis;display:block;text-align:left;"
-                                                                              >${short(outRt)}</span
+                                         overflow:hidden;text-overflow:ellipsis;text-align:right;display:block;"
+                                                                              >✕ Exception</span
                                                                           >
                                                                           <span
-                                                                              style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
-                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;"
+                                                                              style="font-size:9px;color:#ef4444;opacity:0.7;
+                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;display:block;"
                                                                           >
-                                                                              ${outData ? fmtJson(outData.message) : '—'}
+                                                                              ${
+                                                                                  excs[0].message.length > 28
+                                                                                      ? excs[0].message.slice(0, 28) + '…'
+                                                                                      : excs[0].message
+                                                                              }
                                                                           </span>
                                                                       </div>
                                                                   `
-                                                                : ''}
+                                                                : i === 0 && ress.length > 0
+                                                                  ? html`
+                                                                        <span
+                                                                            style="font-size:10px;color:${
+                                                                                ress[0].result ? '#22c55e' : '#f97316'
+                                                                            };font-weight:600;
+                                         font-family:monospace;white-space:nowrap;
+                                         overflow:hidden;text-overflow:ellipsis;text-align:right;"
+                                                                            >${ress[0].result ? 'true' : 'false'}</span
+                                                                        >
+                                                                        <span
+                                                                            style="font-size:9px;color:${
+                                                                                ress[0].result ? '#22c55e' : '#f97316'
+                                                                            };opacity:0.7;
+                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;"
+                                                                        >
+                                                                            Ergebnis
+                                                                        </span>
+                                                                    `
+                                                                  : outRt
+                                                                    ? html`
+                                                                          <div
+                                                                              style="cursor:${outData ? 'pointer' : 'default'};overflow:hidden;"
+                                                                              @mouseenter=${
+                                                                                  outData
+                                                                                      ? e =>
+                                                                                            this._showTooltip(
+                                                                                                e,
+                                                                                                short(outRt),
+                                                                                                outData.messageSource,
+                                                                                                outData.message
+                                                                                            )
+                                                                                      : null
+                                                                              }
+                                                                              @mouseleave=${this._hideTooltip}
+                                                                          >
+                                                                              <span
+                                                                                  style="font-size:10px;color:#6b7280;font-weight:600;
+                                         font-family:monospace;white-space:nowrap;
+                                         overflow:hidden;text-overflow:ellipsis;display:block;text-align:left;"
+                                                                                  >${short(outRt)}</span
+                                                                              >
+                                                                              <span
+                                                                                  style="font-size:9px;color:oklch(from var(--color-base-content) l c h / 0.45);font-family:monospace;
+                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;"
+                                                                              >
+                                                                                  ${outData ? fmtJson(outData.message) : '—'}
+                                                                              </span>
+                                                                          </div>
+                                                                      `
+                                                                    : ''
+                                                        }
                                                     </div>
                                                 </div>
                                             `
@@ -1047,79 +1065,83 @@ export class FcFlowGraph extends BaseElement {
                                     </div>
 
                                     <!-- Step config badge (devtool only) -->
-                                    ${this.showStepConfig && step.retries > 0 && stepRetries.length === 0 && flowMessages.length === 0
-                                        ? html`
-                                              <div
-                                                  style="position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+                                    ${
+                                        this.showStepConfig && step.retries > 0 && stepRetries.length === 0 && flowMessages.length === 0
+                                            ? html`
+                                                  <div
+                                                      style="position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
                                                       display:flex; align-items:center; gap:3px;
                                                       background:#374151; color:#fff; border:1.5px solid #6b7280;
                                                       border-radius:8px; padding:1px 7px; font-size:9px; font-weight:700;
                                                       font-family:monospace; white-space:nowrap; z-index:2;
                                                       box-shadow:0 1px 4px rgba(0,0,0,0.2);"
-                                              >
-                                                  <svg
-                                                      viewBox="0 0 24 24"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      stroke-width="3"
-                                                      style="width:10px;height:10px;"
                                                   >
-                                                      <path
-                                                          stroke-linecap="round"
-                                                          stroke-linejoin="round"
-                                                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                                      />
-                                                  </svg>
-                                                  ${step.retries} × ${step.delay}ms
-                                              </div>
-                                          `
-                                        : ''}
+                                                      <svg
+                                                          viewBox="0 0 24 24"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="3"
+                                                          style="width:10px;height:10px;"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                                          />
+                                                      </svg>
+                                                      ${step.retries} × ${step.delay}ms
+                                                  </div>
+                                              `
+                                            : ''
+                                    }
 
                                     <!-- Retry badge -->
-                                    ${stepRetries.length > 0
-                                        ? html`
-                                              <div
-                                                  style="position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+                                    ${
+                                        stepRetries.length > 0
+                                            ? html`
+                                                  <div
+                                                      style="position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
                                                       display:flex; align-items:center; gap:3px;
                                                       background:#ea580c; color:#fff; border:1.5px solid #9a3412;
                                                       border-radius:8px; padding:1px 7px; font-size:9px; font-weight:700;
                                                       font-family:monospace; white-space:nowrap; z-index:2;
                                                       box-shadow:0 1px 4px rgba(234,88,12,0.4);"
-                                                  @mouseenter=${e => {
-                                                      e.stopPropagation()
-                                                      clearTimeout(this._retryTooltipTimer)
-                                                      const hostRect = this.getBoundingClientRect()
-                                                      const elRect = e.currentTarget.getBoundingClientRect()
-                                                      this._retryTooltip = {
-                                                          x: elRect.left - hostRect.left + elRect.width / 2,
-                                                          y: elRect.bottom - hostRect.top + 6,
-                                                          retries: stepRetries,
-                                                          stepSource: step.source,
-                                                          hasException: excs.length > 0,
-                                                          hasWarning: ress.some(r => r.result === false),
-                                                      }
-                                                  }}
-                                                  @mouseleave=${() => {
-                                                      this._retryTooltipTimer = setTimeout(() => (this._retryTooltip = null), 150)
-                                                  }}
-                                              >
-                                                  <svg
-                                                      viewBox="0 0 24 24"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      stroke-width="3"
-                                                      style="width:10px;height:10px;"
+                                                      @mouseenter=${e => {
+                                                          e.stopPropagation()
+                                                          clearTimeout(this._retryTooltipTimer)
+                                                          const hostRect = this.getBoundingClientRect()
+                                                          const elRect = e.currentTarget.getBoundingClientRect()
+                                                          this._retryTooltip = {
+                                                              x: elRect.left - hostRect.left + elRect.width / 2,
+                                                              y: elRect.bottom - hostRect.top + 6,
+                                                              retries: stepRetries,
+                                                              stepSource: step.source,
+                                                              hasException: excs.length > 0,
+                                                              hasWarning: ress.some(r => r.result === false),
+                                                          }
+                                                      }}
+                                                      @mouseleave=${() => {
+                                                          this._retryTooltipTimer = setTimeout(() => (this._retryTooltip = null), 150)
+                                                      }}
                                                   >
-                                                      <path
-                                                          stroke-linecap="round"
-                                                          stroke-linejoin="round"
-                                                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                                      />
-                                                  </svg>
-                                                  ${stepRetries.length}
-                                              </div>
-                                          `
-                                        : ''}
+                                                      <svg
+                                                          viewBox="0 0 24 24"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="3"
+                                                          style="width:10px;height:10px;"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                                          />
+                                                      </svg>
+                                                      ${stepRetries.length}
+                                                  </div>
+                                              `
+                                            : ''
+                                    }
                                 </div>
                             `
                         })}
@@ -1134,25 +1156,26 @@ export class FcFlowGraph extends BaseElement {
                             ${unsafeSVG(svgContent)}
                         </svg>
 
-                        ${projNode
-                            ? html`
-                                  <div
-                                      class="fc-proj-node"
-                                      style="
+                        ${
+                            projNode
+                                ? html`
+                                      <div
+                                          class="fc-proj-node"
+                                          style="
                                           position:absolute; left:${projNode.x}px; top:${projNode.y}px;
                                           width:${projNode.w}px; height:${projNode.h}px;
                                           cursor:pointer; overflow:visible; pointer-events:auto; z-index:4;
                                       "
-                                      @click=${() => this._openProjectionSourceModal(this.projectionHandler)}
-                                      @mouseenter=${e => this._showProjTooltip(e, projNode.rows)}
-                                      @mouseleave=${() => this._hideProjTooltip()}
-                                  >
-                                      <div
-                                          class="fc-proj-outer"
-                                          style="position:absolute; inset:0; border:1.5px solid rgba(168,85,247,0.25); border-radius:12px;"
-                                      ></div>
-                                      <div
-                                          style="
+                                          @click=${() => this._openProjectionSourceModal(this.projectionHandler)}
+                                          @mouseenter=${e => this._showProjTooltip(e, projNode.rows)}
+                                          @mouseleave=${() => this._hideProjTooltip()}
+                                      >
+                                          <div
+                                              class="fc-proj-outer"
+                                              style="position:absolute; inset:0; border:1.5px solid rgba(168,85,247,0.25); border-radius:12px;"
+                                          ></div>
+                                          <div
+                                              style="
                                           position:absolute; inset:4px;
                                           background:rgba(168,85,247,0.06);
                                           border:1.5px solid rgba(168,85,247,0.45);
@@ -1163,130 +1186,111 @@ export class FcFlowGraph extends BaseElement {
                                           padding:8px 12px 8px 14px;
                                           overflow:hidden;
                                       "
-                                      >
-                                          <div style="display:flex; align-items:center; gap:7px; margin-bottom:5px;">
-                                              <svg
-                                                  class="fc-proj-pulse"
-                                                  style="width:14px; height:14px; flex-shrink:0; color:rgba(168,85,247,0.75);"
-                                                  viewBox="0 0 24 24"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  stroke-width="2"
-                                              >
-                                                  <path
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round"
-                                                      d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0l4.179 2.25L12 17.25 6.429 14.25m5.571 3v4.5m0 0l-5.571-3m5.571 3l5.571-3"
-                                                  />
-                                              </svg>
-                                              <span
-                                                  style="font-weight:700; font-size:11px; color:var(--color-base-content); flex:1;
+                                          >
+                                              <div style="display:flex; align-items:center; gap:7px; margin-bottom:5px;">
+                                                  <svg
+                                                      class="fc-proj-pulse"
+                                                      style="width:14px; height:14px; flex-shrink:0; color:rgba(168,85,247,0.75);"
+                                                      viewBox="0 0 24 24"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                  >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0l4.179 2.25L12 17.25 6.429 14.25m5.571 3v4.5m0 0l-5.571-3m5.571 3l5.571-3"
+                                                      />
+                                                  </svg>
+                                                  <span
+                                                      style="font-weight:700; font-size:11px; color:var(--color-base-content); flex:1;
                                                       overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
-                                                  >${short(this.projectionHandler)}</span
+                                                      >${short(this.projectionHandler)}</span
+                                                  >
+                                              </div>
+                                              <div
+                                                  style="display:flex; flex-direction:column; gap:2px; padding-left:21px; overflow:hidden;"
                                               >
-                                          </div>
-                                          <div style="display:flex; flex-direction:column; gap:2px; padding-left:21px; overflow:hidden;">
-                                              ${projNode.rows.map(
-                                                  row => html`
-                                                      <div
-                                                          style="display:flex; align-items:baseline; gap:6px; white-space:nowrap; overflow:hidden;"
-                                                      >
-                                                          <span
-                                                              style="font-size:9px; font-weight:600; font-family:monospace; color:#a855f7; flex-shrink:0;"
-                                                              >${row.method}</span
+                                                  ${projNode.rows.map(
+                                                      row => html`
+                                                          <div
+                                                              style="display:flex; align-items:baseline; gap:6px; white-space:nowrap; overflow:hidden;"
                                                           >
-                                                          <span
-                                                              style="font-size:9px; font-family:monospace; color:var(--color-base-content); opacity:0.4;
+                                                              <span
+                                                                  style="font-size:9px; font-weight:600; font-family:monospace; color:#a855f7; flex-shrink:0;"
+                                                                  >${row.method}</span
+                                                              >
+                                                              <span
+                                                                  style="font-size:9px; font-family:monospace; color:var(--color-base-content); opacity:0.4;
                                                                   overflow:hidden; text-overflow:ellipsis;"
-                                                              >${short(row.messageClass)}</span
-                                                          >
-                                                      </div>
-                                                  `
-                                              )}
+                                                                  >${short(row.messageClass)}</span
+                                                              >
+                                                          </div>
+                                                      `
+                                                  )}
+                                              </div>
                                           </div>
                                       </div>
-                                  </div>
-                              `
-                            : ''}
+                                  `
+                                : ''
+                        }
                     </div>
                 </div>
 
                 <!-- ── Diff tooltip ── -->
-                ${this._diffTooltip
-                    ? html`
-                          <div
-                              style="position:fixed; left:${this._diffTooltip.x}px; top:${this._diffTooltip.y}px; z-index:9999;"
-                              class="w-96 rounded-box border border-base-300 bg-base-100 shadow-lg p-4"
-                              @mouseenter=${() => clearTimeout(this._diffTooltipTimer)}
-                              @mouseleave=${() => {
-                                  this._diffTooltipTimer = setTimeout(() => (this._diffTooltip = null), 150)
-                              }}
-                          >
-                              <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box flex items-baseline gap-2 mb-0">
-                                  <span
-                                      class="text-xs font-semibold uppercase tracking-wider shrink-0"
-                                      style="color:${DIFF_STATUS[this._diffTooltip.diff?.status]?.color ?? 'var(--color-base-content)'}"
-                                  >
-                                      ${this._diffTooltip.diff === null
-                                          ? short(this._diffTooltip.source)
+                ${
+                    this._diffTooltip
+                        ? html`
+                              <div
+                                  style="position:fixed; left:${this._diffTooltip.x}px; top:${this._diffTooltip.y}px; z-index:9999;"
+                                  class="w-96 rounded-box border border-base-300 bg-base-100 shadow-lg p-4"
+                                  @mouseenter=${() => clearTimeout(this._diffTooltipTimer)}
+                                  @mouseleave=${() => {
+                                      this._diffTooltipTimer = setTimeout(() => (this._diffTooltip = null), 150)
+                                  }}
+                              >
+                                  <div class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box flex items-baseline gap-2 mb-0">
+                                      <span
+                                          class="text-xs font-semibold uppercase tracking-wider shrink-0"
+                                          style="color:${DIFF_STATUS[this._diffTooltip.diff?.status]?.color ?? 'var(--color-base-content)'}"
+                                      >
+                                          ${
+                                              this._diffTooltip.diff === null
+                                                  ? short(this._diffTooltip.source)
+                                                  : this._diffTooltip.diff.status === 'added'
+                                                    ? 'Neu hinzugefügt'
+                                                    : this._diffTooltip.diff.status === 'unchanged'
+                                                      ? 'Aktuell'
+                                                      : this._diffTooltip.diff.status === 'messageDrift'
+                                                        ? 'Nachrichtenstruktur geändert'
+                                                        : 'Schema geändert'
+                                          }
+                                      </span>
+                                      ${
+                                          this._diffTooltip.diff !== null &&
+                                          this._diffTooltip.diff.status !== 'added' &&
+                                          this._diffTooltip.diff.status !== 'messageDrift'
+                                              ? html`<span
+                                                    class="text-xs text-base-content/40 font-normal normal-case tracking-normal font-mono truncate"
+                                                    >${this._diffTooltip.source}</span
+                                                >`
+                                              : ''
+                                      }
+                                  </div>
+                                  ${
+                                      !this._diffTooltip.diff
+                                          ? html`<span class="text-xs font-mono"
+                                                >${(() => {
+                                                    const s = this._diffTooltip.source
+                                                    const i = s.lastIndexOf('\\')
+                                                    return i === -1
+                                                        ? html`<span class="text-base-content/80">${s}</span>`
+                                                        : html`<span class="text-base-content/40 break-all">${s.slice(0, i + 1)}</span
+                                                              ><wbr /><span class="text-base-content/80">${s.slice(i + 1)}</span>`
+                                                })()}</span
+                                            >`
                                           : this._diffTooltip.diff.status === 'added'
-                                            ? 'Neu hinzugefügt'
-                                            : this._diffTooltip.diff.status === 'unchanged'
-                                              ? 'Aktuell'
-                                              : this._diffTooltip.diff.status === 'messageDrift'
-                                                ? 'Nachrichtenstruktur geändert'
-                                                : 'Schema geändert'}
-                                  </span>
-                                  ${this._diffTooltip.diff !== null &&
-                                  this._diffTooltip.diff.status !== 'added' &&
-                                  this._diffTooltip.diff.status !== 'messageDrift'
-                                      ? html`<span
-                                            class="text-xs text-base-content/40 font-normal normal-case tracking-normal font-mono truncate"
-                                            >${this._diffTooltip.source}</span
-                                        >`
-                                      : ''}
-                              </div>
-                              ${!this._diffTooltip.diff
-                                  ? html`<span class="text-xs font-mono"
-                                        >${(() => {
-                                            const s = this._diffTooltip.source
-                                            const i = s.lastIndexOf('\\')
-                                            return i === -1
-                                                ? html`<span class="text-base-content/80">${s}</span>`
-                                                : html`<span class="text-base-content/40 break-all">${s.slice(0, i + 1)}</span><wbr /><span
-                                                          class="text-base-content/80"
-                                                          >${s.slice(i + 1)}</span
-                                                      >`
-                                        })()}</span
-                                    >`
-                                  : this._diffTooltip.diff.status === 'added'
-                                    ? html`<span class="text-xs font-mono"
-                                          >${(() => {
-                                              const s = this._diffTooltip.source
-                                              const i = s.lastIndexOf('\\')
-                                              return i === -1
-                                                  ? html`<span class="text-base-content/80">${s}</span>`
-                                                  : html`<span class="text-base-content/40 break-all">${s.slice(0, i + 1)}</span
-                                                        ><wbr /><span class="text-base-content/80">${s.slice(i + 1)}</span>`
-                                          })()}</span
-                                      >`
-                                    : this._diffTooltip.diff.status === 'unchanged'
-                                      ? html`
-                                            <div class="space-y-1.5 text-xs text-base-content/70">
-                                                <div class="flex gap-2">
-                                                    <span class="text-success shrink-0">✓</span>
-                                                    <span>Step entspricht dem gespeicherten Schema</span>
-                                                </div>
-                                                <div class="flex gap-2">
-                                                    <span class="text-success shrink-0">✓</span>
-                                                    <span>Input- und Output-Messages unverändert</span>
-                                                </div>
-                                            </div>
-                                        `
-                                      : this._diffTooltip.diff.status === 'messageDrift' &&
-                                          this._diffTooltip.diff.changes?.properties?.length
-                                        ? html`
-                                              <span class="text-xs font-mono mt-1.5 mb-2 inline-block"
+                                            ? html`<span class="text-xs font-mono"
                                                   >${(() => {
                                                       const s = this._diffTooltip.source
                                                       const i = s.lastIndexOf('\\')
@@ -1295,353 +1299,887 @@ export class FcFlowGraph extends BaseElement {
                                                           : html`<span class="text-base-content/40 break-all">${s.slice(0, i + 1)}</span
                                                                 ><wbr /><span class="text-base-content/80">${s.slice(i + 1)}</span>`
                                                   })()}</span
-                                              >
-                                              ${this._diffTooltip.diff.changes.properties.map(p => {
-                                                  const mainClass = p.class.split('\\').pop()
-                                                  const allClasses = [
-                                                      ...new Set([
-                                                          ...Object.keys(p.livePropertyNames ?? {}),
-                                                          ...Object.keys(p.storedPropertyNames ?? {}),
-                                                      ]),
-                                                  ].sort((a, b) => (a === mainClass ? -1 : b === mainClass ? 1 : 0))
+                                              >`
+                                            : this._diffTooltip.diff.status === 'unchanged'
+                                              ? html`
+                                                    <div class="space-y-1.5 text-xs text-base-content/70">
+                                                        <div class="flex gap-2">
+                                                            <span class="text-success shrink-0">✓</span>
+                                                            <span>Step entspricht dem gespeicherten Schema</span>
+                                                        </div>
+                                                        <div class="flex gap-2">
+                                                            <span class="text-success shrink-0">✓</span>
+                                                            <span>Input- und Output-Messages unverändert</span>
+                                                        </div>
+                                                    </div>
+                                                `
+                                              : this._diffTooltip.diff.status === 'messageDrift' &&
+                                                  this._diffTooltip.diff.changes?.properties?.length
+                                                ? html`
+                                                      <span class="text-xs font-mono mt-1.5 mb-2 inline-block"
+                                                          >${(() => {
+                                                              const s = this._diffTooltip.source
+                                                              const i = s.lastIndexOf('\\')
+                                                              return i === -1
+                                                                  ? html`<span class="text-base-content/80">${s}</span>`
+                                                                  : html`<span class="text-base-content/40 break-all"
+                                                                            >${s.slice(0, i + 1)}</span
+                                                                        ><wbr /><span class="text-base-content/80">${s.slice(i + 1)}</span>`
+                                                          })()}</span
+                                                      >
+                                                      ${this._diffTooltip.diff.changes.properties.map(p => {
+                                                          const mainClass = p.class.split('\\').pop()
+                                                          const allClasses = [
+                                                              ...new Set([
+                                                                  ...Object.keys(p.livePropertyNames ?? {}),
+                                                                  ...Object.keys(p.storedPropertyNames ?? {}),
+                                                              ]),
+                                                          ].sort((a, b) => (a === mainClass ? -1 : b === mainClass ? 1 : 0))
 
-                                                  const renderPropCell = prop => {
-                                                      if (!prop) return html`<span class="text-base-content/30">—</span>`
-                                                      const colonIdx = prop.indexOf(':')
-                                                      if (colonIdx === -1) return html`${prop}`
-                                                      return html`${prop.slice(0, colonIdx)}<span class="text-base-content/30"
-                                                              >${prop.slice(colonIdx)}</span
-                                                          >`
-                                                  }
+                                                          const renderPropCell = prop => {
+                                                              if (!prop) return html`<span class="text-base-content/30">—</span>`
+                                                              const colonIdx = prop.indexOf(':')
+                                                              if (colonIdx === -1) return html`${prop}`
+                                                              return html`${prop.slice(0, colonIdx)}<span class="text-base-content/30"
+                                                                      >${prop.slice(colonIdx)}</span
+                                                                  >`
+                                                          }
 
-                                                  const renderTable = (cls, liveArr, storedArr) => {
-                                                      const liveSet = new Set(liveArr)
-                                                      const storedSet = new Set(storedArr)
-                                                      return html`
-                                                          <div class="mb-2">
-                                                              <div
-                                                                  class="text-[10px] uppercase tracking-wider mb-1 ${cls === mainClass
-                                                                      ? 'text-base-content/60 font-semibold'
-                                                                      : 'text-base-content/30'}"
-                                                              >
-                                                                  ${cls}
-                                                              </div>
-                                                              <table class="w-full text-[10px] font-mono border-collapse">
-                                                                  <thead>
-                                                                      <tr>
-                                                                          <th
-                                                                              class="text-left text-base-content/40 font-semibold pb-0.5 pr-3 w-1/2"
-                                                                              style="border-bottom:1px solid rgba(75,85,99,0.2)"
-                                                                          >
-                                                                              Alt
-                                                                          </th>
-                                                                          <th
-                                                                              class="text-left text-base-content/40 font-semibold pb-0.5 w-1/2"
-                                                                              style="border-bottom:1px solid rgba(75,85,99,0.2)"
-                                                                          >
-                                                                              Neu
-                                                                          </th>
-                                                                      </tr>
-                                                                  </thead>
-                                                                  <tbody>
-                                                                      ${Array.from({
-                                                                          length: Math.max(storedArr.length, liveArr.length),
-                                                                      }).map((_, i) => {
-                                                                          const storedProp = storedArr[i]
-                                                                          const liveProp = liveArr[i]
-                                                                          const removed =
-                                                                              storedProp &&
-                                                                              !storedSet.has(liveProp) &&
-                                                                              !liveSet.has(storedProp)
-                                                                          const added =
-                                                                              liveProp &&
-                                                                              !liveSet.has(storedProp) &&
-                                                                              !storedSet.has(liveProp)
-                                                                          return html`
+                                                          const renderTable = (cls, liveArr, storedArr) => {
+                                                              const liveSet = new Set(liveArr)
+                                                              const storedSet = new Set(storedArr)
+                                                              return html`
+                                                                  <div class="mb-2">
+                                                                      <div
+                                                                          class="text-[10px] uppercase tracking-wider mb-1 ${
+                                                                              cls === mainClass
+                                                                                  ? 'text-base-content/60 font-semibold'
+                                                                                  : 'text-base-content/30'
+                                                                          }"
+                                                                      >
+                                                                          ${cls}
+                                                                      </div>
+                                                                      <table class="w-full text-[10px] font-mono border-collapse">
+                                                                          <thead>
                                                                               <tr>
-                                                                                  <td
-                                                                                      class="py-0.5 pr-3 break-all align-top"
-                                                                                      style="color:${removed ? '#f97316' : 'inherit'}"
+                                                                                  <th
+                                                                                      class="text-left text-base-content/40 font-semibold pb-0.5 pr-3 w-1/2"
+                                                                                      style="border-bottom:1px solid rgba(75,85,99,0.2)"
                                                                                   >
-                                                                                      ${renderPropCell(storedProp)}
-                                                                                  </td>
-                                                                                  <td
-                                                                                      class="py-0.5 break-all align-top"
-                                                                                      style="color:${added ? '#22c55e' : 'inherit'}"
+                                                                                      Alt
+                                                                                  </th>
+                                                                                  <th
+                                                                                      class="text-left text-base-content/40 font-semibold pb-0.5 w-1/2"
+                                                                                      style="border-bottom:1px solid rgba(75,85,99,0.2)"
                                                                                   >
-                                                                                      ${renderPropCell(liveProp)}
-                                                                                  </td>
+                                                                                      Neu
+                                                                                  </th>
                                                                               </tr>
-                                                                          `
-                                                                      })}
-                                                                  </tbody>
-                                                              </table>
-                                                          </div>
-                                                      `
-                                                  }
+                                                                          </thead>
+                                                                          <tbody>
+                                                                              ${Array.from({
+                                                                                  length: Math.max(storedArr.length, liveArr.length),
+                                                                              }).map((_, i) => {
+                                                                                  const storedProp = storedArr[i]
+                                                                                  const liveProp = liveArr[i]
+                                                                                  const removed =
+                                                                                      storedProp &&
+                                                                                      !storedSet.has(liveProp) &&
+                                                                                      !liveSet.has(storedProp)
+                                                                                  const added =
+                                                                                      liveProp &&
+                                                                                      !liveSet.has(storedProp) &&
+                                                                                      !storedSet.has(liveProp)
+                                                                                  return html`
+                                                                                      <tr>
+                                                                                          <td
+                                                                                              class="py-0.5 pr-3 break-all align-top"
+                                                                                              style="color:${removed ? '#f97316' : 'inherit'}"
+                                                                                          >
+                                                                                              ${renderPropCell(storedProp)}
+                                                                                          </td>
+                                                                                          <td
+                                                                                              class="py-0.5 break-all align-top"
+                                                                                              style="color:${added ? '#22c55e' : 'inherit'}"
+                                                                                          >
+                                                                                              ${renderPropCell(liveProp)}
+                                                                                          </td>
+                                                                                      </tr>
+                                                                                  `
+                                                                              })}
+                                                                          </tbody>
+                                                                      </table>
+                                                                  </div>
+                                                              `
+                                                          }
 
-                                                  return html`${allClasses.map(cls =>
-                                                      renderTable(cls, p.livePropertyNames?.[cls] ?? [], p.storedPropertyNames?.[cls] ?? [])
-                                                  )}`
-                                              })}
-                                          `
-                                        : this._diffTooltip.diff.changes
-                                          ? html`
-                                                ${this._diffTooltip.diff.changes.messages.added.length
-                                                    ? html`<div class="mb-1">
-                                                          <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
-                                                              >Input +</span
-                                                          >
-                                                          ${this._diffTooltip.diff.changes.messages.added.map(
-                                                              m =>
-                                                                  html`<div class="text-xs font-mono text-success truncate ml-1">
-                                                                      + ${m.split('\\').pop()}
+                                                          return html`${allClasses.map(cls =>
+                                                              renderTable(
+                                                                  cls,
+                                                                  p.livePropertyNames?.[cls] ?? [],
+                                                                  p.storedPropertyNames?.[cls] ?? []
+                                                              )
+                                                          )}`
+                                                      })}
+                                                  `
+                                                : this._diffTooltip.diff.changes
+                                                  ? html`
+                                                        ${
+                                                            this._diffTooltip.diff.changes.messages.added.length
+                                                                ? html`<div class="mb-1">
+                                                                      <span
+                                                                          class="text-[10px] text-base-content/40 uppercase tracking-wider"
+                                                                          >Input +</span
+                                                                      >
+                                                                      ${this._diffTooltip.diff.changes.messages.added.map(
+                                                                          m =>
+                                                                              html`<div
+                                                                                  class="text-xs font-mono text-success truncate ml-1"
+                                                                              >
+                                                                                  + ${m.split('\\').pop()}
+                                                                              </div>`
+                                                                      )}
                                                                   </div>`
-                                                          )}
-                                                      </div>`
-                                                    : ''}
-                                                ${this._diffTooltip.diff.changes.messages.removed.length
-                                                    ? html`<div class="mb-1">
-                                                          <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
-                                                              >Input −</span
-                                                          >
-                                                          ${this._diffTooltip.diff.changes.messages.removed.map(
-                                                              m =>
-                                                                  html`<div class="text-xs font-mono text-error truncate ml-1">
-                                                                      − ${m.split('\\').pop()}
+                                                                : ''
+                                                        }
+                                                        ${
+                                                            this._diffTooltip.diff.changes.messages.removed.length
+                                                                ? html`<div class="mb-1">
+                                                                      <span
+                                                                          class="text-[10px] text-base-content/40 uppercase tracking-wider"
+                                                                          >Input −</span
+                                                                      >
+                                                                      ${this._diffTooltip.diff.changes.messages.removed.map(
+                                                                          m =>
+                                                                              html`<div class="text-xs font-mono text-error truncate ml-1">
+                                                                                  − ${m.split('\\').pop()}
+                                                                              </div>`
+                                                                      )}
                                                                   </div>`
-                                                          )}
-                                                      </div>`
-                                                    : ''}
-                                                ${this._diffTooltip.diff.changes.returnTypes.added.length
-                                                    ? html`<div class="mb-1">
-                                                          <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
-                                                              >Output +</span
-                                                          >
-                                                          ${this._diffTooltip.diff.changes.returnTypes.added.map(
-                                                              m =>
-                                                                  html`<div class="text-xs font-mono text-success truncate ml-1">
-                                                                      + ${m.split('\\').pop()}
+                                                                : ''
+                                                        }
+                                                        ${
+                                                            this._diffTooltip.diff.changes.returnTypes.added.length
+                                                                ? html`<div class="mb-1">
+                                                                      <span
+                                                                          class="text-[10px] text-base-content/40 uppercase tracking-wider"
+                                                                          >Output +</span
+                                                                      >
+                                                                      ${this._diffTooltip.diff.changes.returnTypes.added.map(
+                                                                          m =>
+                                                                              html`<div
+                                                                                  class="text-xs font-mono text-success truncate ml-1"
+                                                                              >
+                                                                                  + ${m.split('\\').pop()}
+                                                                              </div>`
+                                                                      )}
                                                                   </div>`
-                                                          )}
-                                                      </div>`
-                                                    : ''}
-                                                ${this._diffTooltip.diff.changes.returnTypes.removed.length
-                                                    ? html`<div>
-                                                          <span class="text-[10px] text-base-content/40 uppercase tracking-wider"
-                                                              >Output −</span
-                                                          >
-                                                          ${this._diffTooltip.diff.changes.returnTypes.removed.map(
-                                                              m =>
-                                                                  html`<div class="text-xs font-mono text-error truncate ml-1">
-                                                                      − ${m.split('\\').pop()}
+                                                                : ''
+                                                        }
+                                                        ${
+                                                            this._diffTooltip.diff.changes.returnTypes.removed.length
+                                                                ? html`<div>
+                                                                      <span
+                                                                          class="text-[10px] text-base-content/40 uppercase tracking-wider"
+                                                                          >Output −</span
+                                                                      >
+                                                                      ${this._diffTooltip.diff.changes.returnTypes.removed.map(
+                                                                          m =>
+                                                                              html`<div class="text-xs font-mono text-error truncate ml-1">
+                                                                                  − ${m.split('\\').pop()}
+                                                                              </div>`
+                                                                      )}
                                                                   </div>`
-                                                          )}
-                                                      </div>`
-                                                    : ''}
-                                            `
-                                          : ''}
-                          </div>
-                      `
-                    : ''}
+                                                                : ''
+                                                        }
+                                                    `
+                                                  : ''
+                                  }
+                              </div>
+                          `
+                        : ''
+                }
 
                 <!-- ── Message tooltip ── -->
-                ${this._tooltip
-                    ? html`
-                          <div
-                              style="position:absolute; ${this._tooltip.alignRight
-                                  ? `right:${this._tooltip.x}px`
-                                  : `left:${this._tooltip.x}px`}; top:${this._tooltip.y}px;
+                ${
+                    this._tooltip
+                        ? html`
+                              <div
+                                  style="position:absolute; ${
+                                      this._tooltip.alignRight ? `right:${this._tooltip.x}px` : `left:${this._tooltip.x}px`
+                                  }; top:${this._tooltip.y}px;
                            z-index:50; max-width:360px;"
-                              @mouseenter=${() => this._onTooltipEnter()}
-                              @mouseleave=${() => this._hideTooltip()}
-                          >
-                              <fc-info-box
-                                  title="${this._tooltip.label}"
-                                  subtitle="${this._tooltip.messageSource}"
-                                  .content=${html`<pre
-                                      class="text-xs font-mono text-base-content/90 whitespace-pre-wrap overflow-auto max-h-48"
-                                  >
-${JSON.stringify(this._maskingRules ? masking.maskObject(this._tooltip.data, this._maskingRules) : this._tooltip.data, null, 2)}</pre
-                                  >`}
-                              ></fc-info-box>
-                          </div>
-                      `
-                    : ''}
+                                  @mouseenter=${() => this._onTooltipEnter()}
+                                  @mouseleave=${() => this._hideTooltip()}
+                              >
+                                  <fc-info-box
+                                      title="${this._tooltip.label}"
+                                      subtitle="${this._tooltip.messageSource}"
+                                      .content=${html`<pre
+                                          class="text-xs font-mono text-base-content/90 whitespace-pre-wrap overflow-auto max-h-48"
+                                      >
+${JSON.stringify(this._maskingRules ? masking.maskObject(this._tooltip.data, this._maskingRules) : this._tooltip.data, null, 2)}</pre>`}
+                                  ></fc-info-box>
+                              </div>
+                          `
+                        : ''
+                }
 
                 <!-- ── Projection tooltip ── -->
-                ${this._projTooltip
-                    ? html`
-                          <div
-                              style="position:absolute; ${this._projTooltip.alignRight
-                                  ? `right:${this._projTooltip.x}px`
-                                  : `left:${this._projTooltip.x}px`}; top:${this._projTooltip.y}px;
+                ${
+                    this._projTooltip
+                        ? html`
+                              <div
+                                  style="position:absolute; ${
+                                      this._projTooltip.alignRight ? `right:${this._projTooltip.x}px` : `left:${this._projTooltip.x}px`
+                                  }; top:${this._projTooltip.y}px;
                            z-index:50; max-width:360px;"
-                              @mouseenter=${() => clearTimeout(this._projTooltipTimer)}
-                              @mouseleave=${() => this._hideProjTooltip()}
-                          >
-                              <div class="rounded-box border border-base-300 bg-base-100 shadow-lg">
-                                  <div class="bg-base-200 px-4 py-3 rounded-t-box flex items-baseline gap-2">
-                                      <span class="text-xs font-semibold uppercase tracking-wider shrink-0" style="color:#a855f7;"
-                                          >Projection</span
-                                      >
-                                      <span class="text-xs text-base-content/40 font-normal font-mono truncate"
-                                          >${short(this.projectionHandler)}</span
-                                      >
-                                  </div>
-                                  <div class="px-2 py-2">
-                                      ${this._projTooltip.rows.map(
-                                          row => html`
-                                              <div
-                                                  class="flex items-baseline gap-3 px-2 py-1 rounded transition-colors cursor-default hover:bg-base-200"
-                                                  @mouseenter=${() => (this._projHighlight = new Set([row.messageClass]))}
-                                                  @mouseleave=${() =>
-                                                      (this._projHighlight = new Set(
-                                                          (this._projTooltip?.rows ?? []).map(r => r.messageClass)
-                                                      ))}
-                                              >
-                                                  <span
-                                                      class="text-xs font-mono font-semibold whitespace-nowrap"
-                                                      style="color:#a855f7; flex:0 0 auto; min-width:96px;"
-                                                      >${row.method}</span
-                                                  >
-                                                  <span class="text-xs font-mono text-base-content/70 break-all"
-                                                      >${short(row.messageClass)}</span
-                                                  >
-                                              </div>
-                                          `
-                                      )}
-                                  </div>
-                              </div>
-                          </div>
-                      `
-                    : ''}
-
-                <!-- ── Exception tooltip ── -->
-                ${this._excTooltip
-                    ? html`
-                          <div
-                              style="position:absolute; ${this._excTooltip.alignRight
-                                  ? `right:${this._excTooltip.x}px`
-                                  : `left:${this._excTooltip.x}px`}; top:${this._excTooltip.y}px;
-                           z-index:50; max-width:360px;"
-                              @mouseenter=${() => clearTimeout(this._excTooltipTimer)}
-                              @mouseleave=${() => {
-                                  this._excTooltipTimer = setTimeout(() => (this._excTooltip = null), 150)
-                              }}
-                          >
-                              <div class="rounded-box border border-base-300 bg-base-100 shadow-lg">
-                                  <div class="bg-base-200 px-4 py-3 rounded-t-box">
-                                      <span class="text-xs font-semibold uppercase tracking-wider text-error">Exception</span>
-                                  </div>
-                                  <div class="px-4 py-3 space-y-2">
-                                      <div class="text-xs font-semibold text-base-content/80 break-words">
-                                          ${this._excTooltip.exc.message}
+                                  @mouseenter=${() => clearTimeout(this._projTooltipTimer)}
+                                  @mouseleave=${() => this._hideProjTooltip()}
+                              >
+                                  <div class="rounded-box border border-base-300 bg-base-100 shadow-lg">
+                                      <div class="bg-base-200 px-4 py-3 rounded-t-box flex items-baseline gap-2">
+                                          <span class="text-xs font-semibold uppercase tracking-wider shrink-0" style="color:#a855f7;"
+                                              >Projection</span
+                                          >
+                                          <span class="text-xs text-base-content/40 font-normal font-mono truncate"
+                                              >${short(this.projectionHandler)}</span
+                                          >
                                       </div>
-                                      <div class="font-mono text-[10px] text-base-content/40">
-                                          ${this._excTooltip.exc.file}:${this._excTooltip.exc.line}
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      `
-                    : ''}
-
-                <!-- ── Retry tooltip ── -->
-                ${this._retryTooltip
-                    ? html`
-                          <div
-                              style="position:absolute; left:${this._retryTooltip.x}px; top:${this._retryTooltip.y}px;
-                                  transform:translateX(-50%); z-index:50; max-width:320px;"
-                              @mouseenter=${() => clearTimeout(this._retryTooltipTimer)}
-                              @mouseleave=${() => {
-                                  this._retryTooltipTimer = setTimeout(() => (this._retryTooltip = null), 150)
-                              }}
-                          >
-                              <div class="rounded-box border border-base-300 bg-base-100 shadow-lg">
-                                  <div class="bg-base-200 px-4 py-2 rounded-t-box flex items-center gap-2">
-                                      <svg
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          stroke="#ea580c"
-                                          stroke-width="2.5"
-                                          style="width:12px;height:12px;"
-                                      >
-                                          <path
-                                              stroke-linecap="round"
-                                              stroke-linejoin="round"
-                                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                          />
-                                      </svg>
-                                      <span class="text-xs font-semibold" style="color:#ea580c;">
-                                          ${this._retryTooltip.retries.length} Retry${this._retryTooltip.retries.length > 1 ? 's' : ''}
-                                      </span>
-                                  </div>
-                                  <div class="px-4 py-2">
-                                      <table class="w-full">
-                                          ${this._retryTooltip.retries.map(
-                                              r => html`
-                                                  <tr>
-                                                      <td
-                                                          class="text-[10px] font-mono text-base-content/40 pr-3 py-0.5 align-top whitespace-nowrap"
+                                      <div class="px-2 py-2">
+                                          ${this._projTooltip.rows.map(
+                                              row => html`
+                                                  <div
+                                                      class="flex items-baseline gap-3 px-2 py-1 rounded transition-colors cursor-default hover:bg-base-200"
+                                                      @mouseenter=${() => (this._projHighlight = new Set([row.messageClass]))}
+                                                      @mouseleave=${() =>
+                                                          (this._projHighlight = new Set(
+                                                              (this._projTooltip?.rows ?? []).map(r => r.messageClass)
+                                                          ))}
+                                                  >
+                                                      <span
+                                                          class="text-xs font-mono font-semibold whitespace-nowrap"
+                                                          style="color:#a855f7; flex:0 0 auto; min-width:96px;"
+                                                          >${row.method}</span
                                                       >
-                                                          #${r.attempt}
-                                                      </td>
-                                                      <td class="text-[10px] text-base-content/70 py-0.5 break-words">${r.message}</td>
-                                                      <td
-                                                          class="text-[10px] font-mono text-base-content/30 pl-3 py-0.5 align-top whitespace-nowrap"
+                                                      <span class="text-xs font-mono text-base-content/70 break-all"
+                                                          >${short(row.messageClass)}</span
                                                       >
-                                                          ${r.time ? new Date(r.time).toLocaleTimeString('de-DE') : ''}
-                                                      </td>
-                                                  </tr>
+                                                  </div>
                                               `
                                           )}
-                                          ${!this._retryTooltip.hasException
-                                              ? html`
-                                                    <tr>
-                                                        <td
-                                                            class="text-[10px] font-mono pr-3 py-0.5 align-top whitespace-nowrap"
-                                                            style="color:${this._retryTooltip.hasWarning ? '#f97316' : '#22c55e'};"
-                                                        >
-                                                            #${this._retryTooltip.retries.length + 1}
-                                                        </td>
-                                                        <td
-                                                            class="text-[10px] font-semibold py-0.5"
-                                                            style="color:${this._retryTooltip.hasWarning ? '#f97316' : '#22c55e'};"
-                                                        >
-                                                            ${this._retryTooltip.hasWarning ? 'Warning' : 'Success'}
-                                                        </td>
-                                                        <td></td>
-                                                    </tr>
-                                                `
-                                              : ''}
-                                      </table>
+                                      </div>
                                   </div>
                               </div>
-                          </div>
-                      `
-                    : ''}
+                          `
+                        : ''
+                }
+
+                <!-- ── Exception tooltip ── -->
+                ${
+                    this._excTooltip
+                        ? html`
+                              <div
+                                  style="position:absolute; ${
+                                      this._excTooltip.alignRight ? `right:${this._excTooltip.x}px` : `left:${this._excTooltip.x}px`
+                                  }; top:${this._excTooltip.y}px;
+                           z-index:50; max-width:360px;"
+                                  @mouseenter=${() => clearTimeout(this._excTooltipTimer)}
+                                  @mouseleave=${() => {
+                                      this._excTooltipTimer = setTimeout(() => (this._excTooltip = null), 150)
+                                  }}
+                              >
+                                  <div class="rounded-box border border-base-300 bg-base-100 shadow-lg">
+                                      <div class="bg-base-200 px-4 py-3 rounded-t-box">
+                                          <span class="text-xs font-semibold uppercase tracking-wider text-error">Exception</span>
+                                      </div>
+                                      <div class="px-4 py-3 space-y-2">
+                                          <div class="text-xs font-semibold text-base-content/80 break-words">
+                                              ${this._excTooltip.exc.message}
+                                          </div>
+                                          <div class="font-mono text-[10px] text-base-content/40">
+                                              ${this._excTooltip.exc.file}:${this._excTooltip.exc.line}
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          `
+                        : ''
+                }
+
+                <!-- ── Retry tooltip ── -->
+                ${
+                    this._retryTooltip
+                        ? html`
+                              <div
+                                  style="position:absolute; left:${this._retryTooltip.x}px; top:${this._retryTooltip.y}px;
+                                  transform:translateX(-50%); z-index:50; max-width:320px;"
+                                  @mouseenter=${() => clearTimeout(this._retryTooltipTimer)}
+                                  @mouseleave=${() => {
+                                      this._retryTooltipTimer = setTimeout(() => (this._retryTooltip = null), 150)
+                                  }}
+                              >
+                                  <div class="rounded-box border border-base-300 bg-base-100 shadow-lg">
+                                      <div class="bg-base-200 px-4 py-2 rounded-t-box flex items-center gap-2">
+                                          <svg
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                              stroke="#ea580c"
+                                              stroke-width="2.5"
+                                              style="width:12px;height:12px;"
+                                          >
+                                              <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                              />
+                                          </svg>
+                                          <span class="text-xs font-semibold" style="color:#ea580c;">
+                                              ${this._retryTooltip.retries.length} Retry${this._retryTooltip.retries.length > 1 ? 's' : ''}
+                                          </span>
+                                      </div>
+                                      <div class="px-4 py-2">
+                                          <table class="w-full">
+                                              ${this._retryTooltip.retries.map(
+                                                  r => html`
+                                                      <tr>
+                                                          <td
+                                                              class="text-[10px] font-mono text-base-content/40 pr-3 py-0.5 align-top whitespace-nowrap"
+                                                          >
+                                                              #${r.attempt}
+                                                          </td>
+                                                          <td class="text-[10px] text-base-content/70 py-0.5 break-words">${r.message}</td>
+                                                          <td
+                                                              class="text-[10px] font-mono text-base-content/30 pl-3 py-0.5 align-top whitespace-nowrap"
+                                                          >
+                                                              ${r.time ? new Date(r.time).toLocaleTimeString('de-DE') : ''}
+                                                          </td>
+                                                      </tr>
+                                                  `
+                                              )}
+                                              ${
+                                                  !this._retryTooltip.hasException
+                                                      ? html`
+                                                            <tr>
+                                                                <td
+                                                                    class="text-[10px] font-mono pr-3 py-0.5 align-top whitespace-nowrap"
+                                                                    style="color:${this._retryTooltip.hasWarning ? '#f97316' : '#22c55e'};"
+                                                                >
+                                                                    #${this._retryTooltip.retries.length + 1}
+                                                                </td>
+                                                                <td
+                                                                    class="text-[10px] font-semibold py-0.5"
+                                                                    style="color:${this._retryTooltip.hasWarning ? '#f97316' : '#22c55e'};"
+                                                                >
+                                                                    ${this._retryTooltip.hasWarning ? 'Warning' : 'Success'}
+                                                                </td>
+                                                                <td></td>
+                                                            </tr>
+                                                        `
+                                                      : ''
+                                              }
+                                          </table>
+                                      </div>
+                                  </div>
+                              </div>
+                          `
+                        : ''
+                }
 
                 <!-- ── Detail panel ── -->
-                ${selStep
-                    ? html`
-                          <div class="mt-3 rounded-box border border-base-300 bg-base-200">
-                              <div class="p-4 border-b border-base-300 flex items-center justify-between">
-                                  <div>
-                                      <span class="font-semibold text-sm">${short(selStep.source)}</span>
-                                      <span class="font-mono text-xs text-base-content/40 ml-2 mr-2">${selStep.source}</span>
-                                      ${(() => {
-                                          const firstMsg = selMsgs[0]
-                                          const stepHash = firstMsg?.stepHash
-                                          return html`<fc-tooltip
-                                              text="Step Source anzeigen"
-                                              .content=${html`
-                                                  <button
-                                                      class="btn btn-xs btn-outline btn-info"
-                                                      @click=${() => this._openSourceModal(selStep.source, stepHash)}
+                ${
+                    selStep
+                        ? html`
+                              <div class="mt-3 rounded-box border border-base-300 bg-base-200">
+                                  <div class="p-4 border-b border-base-300 flex items-center justify-between">
+                                      <div>
+                                          <span class="font-semibold text-sm">${short(selStep.source)}</span>
+                                          <span class="font-mono text-xs text-base-content/40 ml-2 mr-2">${selStep.source}</span>
+                                          ${(() => {
+                                              const firstMsg = selMsgs[0]
+                                              const stepHash = firstMsg?.stepHash
+                                              return html`<fc-tooltip
+                                                  text="Step Source anzeigen"
+                                                  .content=${html`
+                                                      <button
+                                                          class="btn btn-xs btn-outline btn-info"
+                                                          @click=${() => this._openSourceModal(selStep.source, stepHash)}
+                                                      >
+                                                          <svg
+                                                              class="w-3 h-3"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              stroke-width="2"
+                                                              viewBox="0 0 24 24"
+                                                          >
+                                                              <path
+                                                                  stroke-linecap="round"
+                                                                  stroke-linejoin="round"
+                                                                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                                                              />
+                                                          </svg>
+                                                          Source
+                                                      </button>
+                                                  `}
+                                              ></fc-tooltip>`
+                                          })()}
+                                      </div>
+                                      <div class="flex items-center gap-1">
+                                          <button class="btn btn-xs btn-ghost" @click=${() => (this.selectedStep = null)}>✕</button>
+                                      </div>
+                                  </div>
+
+                                  <div class="p-4 grid md:grid-cols-2 gap-6">
+                                      <div>
+                                          <div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3">
+                                              ↓ Eingehende Messages
+                                          </div>
+                                          ${
+                                              selStep.messages.length === 0
+                                                  ? html`<p class="text-xs text-base-content/30 italic">keine</p>`
+                                                  : selStep.messages.map(msgClass => {
+                                                        const received = selMsgs.filter(m => m.messageSource === msgClass)
+                                                        return html`
+                                                            <div class="mb-3">
+                                                                <div class="flex items-center gap-2 mb-1">
+                                                                    <span class="font-mono text-xs font-semibold text-base-content/60">
+                                                                        ${short(msgClass)}
+                                                                    </span>
+                                                                    ${
+                                                                        !this.readonly && received.length > 0
+                                                                            ? html`<fc-tooltip
+                                                                                  text="Message-Input editieren"
+                                                                                  .content=${html`
+                                                                                      <button
+                                                                                          class="btn btn-xs btn-outline btn-primary"
+                                                                                          @click=${() =>
+                                                                                              this._openModal(
+                                                                                                  selStep.source,
+                                                                                                  msgClass,
+                                                                                                  received[0]
+                                                                                              )}
+                                                                                      >
+                                                                                          <svg
+                                                                                              class="w-3.5 h-3.5"
+                                                                                              fill="none"
+                                                                                              stroke="currentColor"
+                                                                                              stroke-width="2"
+                                                                                              viewBox="0 0 24 24"
+                                                                                          >
+                                                                                              <path
+                                                                                                  stroke-linecap="round"
+                                                                                                  stroke-linejoin="round"
+                                                                                                  d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
+                                                                                              />
+                                                                                              <path
+                                                                                                  stroke-linecap="round"
+                                                                                                  stroke-linejoin="round"
+                                                                                                  d="M19.5 7.125L18 8.625"
+                                                                                              />
+                                                                                          </svg>
+                                                                                          Editieren
+                                                                                      </button>
+                                                                                  `}
+                                                                              ></fc-tooltip>`
+                                                                            : ''
+                                                                    }
+                                                                </div>
+                                                                ${msgProps(msgClass)}
+                                                                ${
+                                                                    received.length === 0
+                                                                        ? !this.readonly
+                                                                            ? html`<div class="text-xs text-base-content/30 italic px-2">
+                                                                                  nicht empfangen
+                                                                              </div>`
+                                                                            : ''
+                                                                        : (() => {
+                                                                              const blockId = `${selStep.source}::${msgClass}`
+                                                                              const revealed = this._revealedBlocks.has(blockId)
+                                                                              return html`
+                                                                                  ${received.map(
+                                                                                      m => html`
+                                                                                          <div class="rounded-lg bg-base-300 p-3 mb-1">
+                                                                                              <div class="flex items-center gap-2 mb-2">
+                                                                                                  <span
+                                                                                                      class="badge badge-xs leading-none ${
+                                                                                                          m.messageType === 'finish'
+                                                                                                              ? 'badge-success'
+                                                                                                              : m.messageType === 'process'
+                                                                                                                ? 'badge-info'
+                                                                                                                : 'badge-warning'
+                                                                                                      }"
+                                                                                                      >${m.messageType}</span
+                                                                                                  >
+                                                                                                  <span class="text-xs text-base-content/40"
+                                                                                                      >${fmtDate(m.time)}</span
+                                                                                                  >
+                                                                                                  <fc-tooltip
+                                                                                                      class="ml-auto"
+                                                                                                      text="${
+                                                                                                          revealed
+                                                                                                              ? 'Sensible Daten maskieren'
+                                                                                                              : 'Sensible Daten anzeigen'
+                                                                                                      }"
+                                                                                                      .content=${html`
+                                                                                                          <button
+                                                                                                              class="btn btn-ghost btn-xs px-1 ${
+                                                                                                                  revealed
+                                                                                                                      ? 'text-warning'
+                                                                                                                      : 'text-base-content/30 hover:text-base-content/70'
+                                                                                                              }"
+                                                                                                              @click=${() =>
+                                                                                                                  this._toggleReveal(
+                                                                                                                      blockId
+                                                                                                                  )}
+                                                                                                          >
+                                                                                                              <svg
+                                                                                                                  class="w-4 h-4 ${
+                                                                                                                      revealed
+                                                                                                                          ? ''
+                                                                                                                          : 'hidden'
+                                                                                                                  }"
+                                                                                                                  fill="none"
+                                                                                                                  stroke="currentColor"
+                                                                                                                  stroke-width="1.5"
+                                                                                                                  viewBox="0 0 24 24"
+                                                                                                                  xmlns="http://www.w3.org/2000/svg"
+                                                                                                              >
+                                                                                                                  <path
+                                                                                                                      stroke-linecap="round"
+                                                                                                                      stroke-linejoin="round"
+                                                                                                                      d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                                                                                                                  />
+                                                                                                                  <circle
+                                                                                                                      cx="12"
+                                                                                                                      cy="12"
+                                                                                                                      r="3"
+                                                                                                                  />
+                                                                                                              </svg>
+                                                                                                              <svg
+                                                                                                                  class="w-4 h-4 ${
+                                                                                                                      revealed
+                                                                                                                          ? 'hidden'
+                                                                                                                          : ''
+                                                                                                                  }"
+                                                                                                                  fill="none"
+                                                                                                                  stroke="currentColor"
+                                                                                                                  stroke-width="1.5"
+                                                                                                                  viewBox="0 0 24 24"
+                                                                                                                  xmlns="http://www.w3.org/2000/svg"
+                                                                                                              >
+                                                                                                                  <path
+                                                                                                                      stroke-linecap="round"
+                                                                                                                      stroke-linejoin="round"
+                                                                                                                      d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
+                                                                                                                  />
+                                                                                                              </svg>
+                                                                                                          </button>
+                                                                                                      `}
+                                                                                                  ></fc-tooltip>
+                                                                                                  <fc-tooltip
+                                                                                                      text="Inhalt kopieren"
+                                                                                                      .content=${html`
+                                                                                                          <button
+                                                                                                              class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
+                                                                                                              @click=${() =>
+                                                                                                                  navigator.clipboard.writeText(
+                                                                                                                      JSON.stringify(
+                                                                                                                          this._maskMessage(
+                                                                                                                              m.message,
+                                                                                                                              blockId
+                                                                                                                          ),
+                                                                                                                          null,
+                                                                                                                          2
+                                                                                                                      )
+                                                                                                                  )}
+                                                                                                          >
+                                                                                                              <svg
+                                                                                                                  class="w-3 h-3"
+                                                                                                                  fill="none"
+                                                                                                                  stroke="currentColor"
+                                                                                                                  stroke-width="2"
+                                                                                                                  viewBox="0 0 24 24"
+                                                                                                              >
+                                                                                                                  <rect
+                                                                                                                      x="9"
+                                                                                                                      y="9"
+                                                                                                                      width="13"
+                                                                                                                      height="13"
+                                                                                                                      rx="2"
+                                                                                                                      ry="2"
+                                                                                                                  ></rect>
+                                                                                                                  <path
+                                                                                                                      d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                                                                                  ></path>
+                                                                                                              </svg>
+                                                                                                          </button>
+                                                                                                      `}
+                                                                                                  ></fc-tooltip>
+                                                                                              </div>
+                                                                                              <pre
+                                                                                                  class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"
+                                                                                              >
+${JSON.stringify(this._maskMessage(m.message, blockId), null, 2)}</pre>
+                                                                                          </div>
+                                                                                      `
+                                                                                  )}
+                                                                              `
+                                                                          })()
+                                                                }
+                                                            </div>
+                                                        `
+                                                    })
+                                          }
+                                      </div>
+
+                                      <div>
+                                          ${
+                                              selExcs.length
+                                                  ? html`
+                                                        <div class="text-xs font-semibold uppercase tracking-wide text-error mb-3">
+                                                            ✕ Exceptions
+                                                        </div>
+                                                        ${selExcs.map(
+                                                            ex => html`
+                                                                <div
+                                                                    class="rounded-box bg-error/80 border border-error text-error-content text-xs mb-2 p-3"
+                                                                >
+                                                                    <div class="min-w-0 w-full overflow-hidden">
+                                                                        <div class="font-semibold mb-1">${ex.message}</div>
+                                                                        <div class="opacity-60">${ex.file}:${ex.line}</div>
+                                                                        <details class="mt-2">
+                                                                            <summary class="cursor-pointer opacity-50">Stacktrace</summary>
+                                                                            <pre
+                                                                                class="mt-1 text-xs overflow-auto whitespace-pre-wrap opacity-70 max-h-48 bg-base-200 text-base-content rounded p-1"
+                                                                            >
+${ex.traceString}</pre>
+                                                                        </details>
+                                                                    </div>
+                                                                </div>
+                                                            `
+                                                        )}
+                                                    `
+                                                  : selRess.length
+                                                    ? html`
+                                                          <div
+                                                              class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3"
+                                                          >
+                                                              ↑ Ausgehend
+                                                          </div>
+                                                          ${selRess.map(
+                                                              r => html`
+                                                                  <div class="flex items-center gap-2 mb-3">
+                                                                      <span class="font-mono text-xs font-semibold text-base-content/60"
+                                                                          >Ergebnis</span
+                                                                      >
+                                                                  </div>
+                                                                  <div
+                                                                      class="rounded-lg p-3 mb-2 text-xs"
+                                                                      style="background:${
+                                                                          r.result ? 'rgba(34,197,94,0.10)' : 'rgba(249,115,22,0.10)'
+                                                                      }; border:1px solid ${
+                                                                          r.result ? 'rgba(34,197,94,0.3)' : 'rgba(249,115,22,0.3)'
+                                                                      };"
+                                                                  >
+                                                                      <div class="flex items-center gap-2">
+                                                                          <span
+                                                                              class="badge badge-xs leading-none"
+                                                                              style="background:${
+                                                                                  r.result ? '#00d390' : '#f97316'
+                                                                              }; color:#004c39; border:none;"
+                                                                              >${r.result ? 'true' : 'false'}</span
+                                                                          >
+                                                                          <span class="text-base-content/40">${fmtDate(r.time)}</span>
+                                                                      </div>
+                                                                  </div>
+                                                              `
+                                                          )}
+                                                      `
+                                                    : html`
+                                                          <div
+                                                              class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3"
+                                                          >
+                                                              ↑ Ausgehende Messages
+                                                          </div>
+                                                          ${
+                                                              selStep.returnTypes.length === 0
+                                                                  ? html`<p class="text-xs text-base-content/30 italic">
+                                                                        Terminal-Step (keine Ausgabe)
+                                                                    </p>`
+                                                                  : selStep.returnTypes.map(rt => {
+                                                                        const outData = outgoingOf(rt)
+                                                                        const outBlockId = `${selStep.source}::out::${rt}`
+                                                                        const outRevealed = this._revealedBlocks.has(outBlockId)
+                                                                        return html`
+                                                                            <div class="mb-3">
+                                                                                <div class="flex items-center gap-2 mb-1">
+                                                                                    <span
+                                                                                        class="font-mono text-xs font-semibold text-base-content/60"
+                                                                                        >${short(rt)}</span
+                                                                                    >
+                                                                                </div>
+                                                                                ${msgProps(rt)}
+                                                                                ${
+                                                                                    outData
+                                                                                        ? html`<div class="rounded-lg bg-base-300 p-3 mb-1">
+                                                                                              <div class="flex items-center gap-2 mb-2">
+                                                                                                  <span
+                                                                                                      class="badge badge-xs leading-none ${
+                                                                                                          outData.messageType === 'finish'
+                                                                                                              ? 'badge-success'
+                                                                                                              : outData.messageType ===
+                                                                                                                  'process'
+                                                                                                                ? 'badge-info'
+                                                                                                                : 'badge-warning'
+                                                                                                      }"
+                                                                                                      >${outData.messageType}</span
+                                                                                                  >
+                                                                                                  <span class="text-xs text-base-content/40"
+                                                                                                      >${fmtDate(outData.time)}</span
+                                                                                                  >
+                                                                                                  <fc-tooltip
+                                                                                                      class="ml-auto"
+                                                                                                      text="${
+                                                                                                          outRevealed
+                                                                                                              ? 'Sensible Daten maskieren'
+                                                                                                              : 'Sensible Daten anzeigen'
+                                                                                                      }"
+                                                                                                      .content=${html`
+                                                                                                          <button
+                                                                                                              class="btn btn-ghost btn-xs px-1 ${
+                                                                                                                  outRevealed
+                                                                                                                      ? 'text-warning'
+                                                                                                                      : 'text-base-content/30 hover:text-base-content/70'
+                                                                                                              }"
+                                                                                                              @click=${() => this._toggleReveal(outBlockId)}
+                                                                                                          >
+                                                                                                              <svg
+                                                                                                                  class="w-4 h-4 ${
+                                                                                                                      outRevealed
+                                                                                                                          ? ''
+                                                                                                                          : 'hidden'
+                                                                                                                  }"
+                                                                                                                  fill="none"
+                                                                                                                  stroke="currentColor"
+                                                                                                                  stroke-width="1.5"
+                                                                                                                  viewBox="0 0 24 24"
+                                                                                                                  xmlns="http://www.w3.org/2000/svg"
+                                                                                                              >
+                                                                                                                  <path
+                                                                                                                      stroke-linecap="round"
+                                                                                                                      stroke-linejoin="round"
+                                                                                                                      d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                                                                                                                  />
+                                                                                                                  <circle
+                                                                                                                      cx="12"
+                                                                                                                      cy="12"
+                                                                                                                      r="3"
+                                                                                                                  />
+                                                                                                              </svg>
+                                                                                                              <svg
+                                                                                                                  class="w-4 h-4 ${
+                                                                                                                      outRevealed
+                                                                                                                          ? 'hidden'
+                                                                                                                          : ''
+                                                                                                                  }"
+                                                                                                                  fill="none"
+                                                                                                                  stroke="currentColor"
+                                                                                                                  stroke-width="1.5"
+                                                                                                                  viewBox="0 0 24 24"
+                                                                                                                  xmlns="http://www.w3.org/2000/svg"
+                                                                                                              >
+                                                                                                                  <path
+                                                                                                                      stroke-linecap="round"
+                                                                                                                      stroke-linejoin="round"
+                                                                                                                      d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
+                                                                                                                  />
+                                                                                                              </svg>
+                                                                                                          </button>
+                                                                                                      `}
+                                                                                                  ></fc-tooltip>
+                                                                                                  <fc-tooltip
+                                                                                                      text="Inhalt kopieren"
+                                                                                                      .content=${html`
+                                                                                                          <button
+                                                                                                              class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
+                                                                                                              @click=${() =>
+                                                                                                                  navigator.clipboard.writeText(
+                                                                                                                      JSON.stringify(
+                                                                                                                          this._maskMessage(
+                                                                                                                              outData.message,
+                                                                                                                              outBlockId
+                                                                                                                          ),
+                                                                                                                          null,
+                                                                                                                          2
+                                                                                                                      )
+                                                                                                                  )}
+                                                                                                          >
+                                                                                                              <svg
+                                                                                                                  class="w-3 h-3"
+                                                                                                                  fill="none"
+                                                                                                                  stroke="currentColor"
+                                                                                                                  stroke-width="2"
+                                                                                                                  viewBox="0 0 24 24"
+                                                                                                              >
+                                                                                                                  <rect
+                                                                                                                      x="9"
+                                                                                                                      y="9"
+                                                                                                                      width="13"
+                                                                                                                      height="13"
+                                                                                                                      rx="2"
+                                                                                                                      ry="2"
+                                                                                                                  ></rect>
+                                                                                                                  <path
+                                                                                                                      d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                                                                                  ></path>
+                                                                                                              </svg>
+                                                                                                          </button>
+                                                                                                      `}
+                                                                                                  ></fc-tooltip>
+                                                                                              </div>
+                                                                                              <pre
+                                                                                                  class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"
+                                                                                              >
+${JSON.stringify(this._maskMessage(outData.message, outBlockId), null, 2)}</pre>
+                                                                                          </div>`
+                                                                                        : !this.readonly
+                                                                                          ? html`<div
+                                                                                                class="text-xs text-base-content/30 italic px-2"
+                                                                                            >
+                                                                                                nicht gesendet
+                                                                                            </div>`
+                                                                                          : ''
+                                                                                }
+                                                                            </div>
+                                                                        `
+                                                                    })
+                                                          }
+                                                      `
+                                          }
+                                      </div>
+                                  </div>
+                              </div>
+                          `
+                        : ''
+                }
+
+                <!-- ── Step Input Modal ── -->
+                <dialog id="fc-step-input-modal" class="modal">
+                    ${
+                        this._modalMsg
+                            ? html`
+                                  <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
+                                      <!-- Header -->
+                                      <div
+                                          class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0"
+                                      >
+                                          <div class="flex items-start justify-between">
+                                              <div class="flex items-start gap-3">
+                                                  <div
+                                                      class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"
                                                   >
                                                       <svg
-                                                          class="w-3 h-3"
+                                                          class="w-5 h-5 text-primary"
                                                           fill="none"
                                                           stroke="currentColor"
                                                           stroke-width="2"
@@ -1650,591 +2188,184 @@ ${JSON.stringify(this._maskingRules ? masking.maskObject(this._tooltip.data, thi
                                                           <path
                                                               stroke-linecap="round"
                                                               stroke-linejoin="round"
-                                                              d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                                                              d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
                                                           />
                                                       </svg>
-                                                      Source
+                                                  </div>
+                                                  <div>
+                                                      <div class="flex items-center gap-2">
+                                                          <h3 class="font-bold text-base leading-tight">Message-Input editieren</h3>
+                                                          ${
+                                                              this.flow?.isExecutable === false
+                                                                  ? html`<span
+                                                                        class="badge badge-sm border-slate-500/50 bg-slate-600/40 text-slate-300 leading-none"
+                                                                        >Nicht ausführbar</span
+                                                                    >`
+                                                                  : ''
+                                                          }
+                                                      </div>
+                                                      <div class="flex items-center gap-3 mt-1 flex-wrap">
+                                                          <span class="font-mono text-xs text-base-content/50">
+                                                              ${this._modalMsg.messageClass}
+                                                          </span>
+                                                          <span class="text-base-content/30 text-xs">·</span>
+                                                          <span class="text-xs text-base-content/40">
+                                                              Step:
+                                                              <span class="font-mono">${short(this._modalMsg.stepSource)}</span>
+                                                          </span>
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                              <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
+                                                  <button
+                                                      class="btn btn-ghost btn-sm ${this._modalMsg.revealed ? 'text-warning' : ''}"
+                                                      title="${
+                                                          this._modalMsg.revealed ? 'Sensible Daten maskieren' : 'Sensible Daten anzeigen'
+                                                      }"
+                                                      @click=${() => this._toggleModalReveal()}
+                                                  >
+                                                      <svg
+                                                          class="w-4 h-4 ${this._modalMsg.revealed ? '' : 'hidden'}"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="1.5"
+                                                          viewBox="0 0 24 24"
+                                                          xmlns="http://www.w3.org/2000/svg"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                                                          />
+                                                          <circle cx="12" cy="12" r="3" />
+                                                      </svg>
+                                                      <svg
+                                                          class="w-4 h-4 ${this._modalMsg.revealed ? 'hidden' : ''}"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="1.5"
+                                                          viewBox="0 0 24 24"
+                                                          xmlns="http://www.w3.org/2000/svg"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
+                                                          />
+                                                      </svg>
                                                   </button>
-                                              `}
-                                          ></fc-tooltip>`
-                                      })()}
-                                  </div>
-                                  <div class="flex items-center gap-1">
-                                      <button class="btn btn-xs btn-ghost" @click=${() => (this.selectedStep = null)}>✕</button>
-                                  </div>
-                              </div>
-
-                              <div class="p-4 grid md:grid-cols-2 gap-6">
-                                  <div>
-                                      <div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3">
-                                          ↓ Eingehende Messages
-                                      </div>
-                                      ${selStep.messages.length === 0
-                                          ? html`<p class="text-xs text-base-content/30 italic">keine</p>`
-                                          : selStep.messages.map(msgClass => {
-                                                const received = selMsgs.filter(m => m.messageSource === msgClass)
-                                                return html`
-                                                    <div class="mb-3">
-                                                        <div class="flex items-center gap-2 mb-1">
-                                                            <span class="font-mono text-xs font-semibold text-base-content/60">
-                                                                ${short(msgClass)}
-                                                            </span>
-                                                            ${!this.readonly && received.length > 0
-                                                                ? html`<fc-tooltip
-                                                                      text="Message-Input editieren"
-                                                                      .content=${html`
-                                                                          <button
-                                                                              class="btn btn-xs btn-outline btn-primary"
-                                                                              @click=${() =>
-                                                                                  this._openModal(selStep.source, msgClass, received[0])}
-                                                                          >
-                                                                              <svg
-                                                                                  class="w-3.5 h-3.5"
-                                                                                  fill="none"
-                                                                                  stroke="currentColor"
-                                                                                  stroke-width="2"
-                                                                                  viewBox="0 0 24 24"
-                                                                              >
-                                                                                  <path
-                                                                                      stroke-linecap="round"
-                                                                                      stroke-linejoin="round"
-                                                                                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
-                                                                                  />
-                                                                                  <path
-                                                                                      stroke-linecap="round"
-                                                                                      stroke-linejoin="round"
-                                                                                      d="M19.5 7.125L18 8.625"
-                                                                                  />
-                                                                              </svg>
-                                                                              Editieren
-                                                                          </button>
-                                                                      `}
-                                                                  ></fc-tooltip>`
-                                                                : ''}
-                                                        </div>
-                                                        ${msgProps(msgClass)}
-                                                        ${received.length === 0
-                                                            ? !this.readonly
-                                                                ? html`<div class="text-xs text-base-content/30 italic px-2">
-                                                                      nicht empfangen
-                                                                  </div>`
-                                                                : ''
-                                                            : (() => {
-                                                                  const blockId = `${selStep.source}::${msgClass}`
-                                                                  const revealed = this._revealedBlocks.has(blockId)
-                                                                  return html`
-                                                                      ${received.map(
-                                                                          m => html`
-                                                                              <div class="rounded-lg bg-base-300 p-3 mb-1">
-                                                                                  <div class="flex items-center gap-2 mb-2">
-                                                                                      <span
-                                                                                          class="badge badge-xs leading-none ${m.messageType ===
-                                                                                          'finish'
-                                                                                              ? 'badge-success'
-                                                                                              : m.messageType === 'process'
-                                                                                                ? 'badge-info'
-                                                                                                : 'badge-warning'}"
-                                                                                          >${m.messageType}</span
-                                                                                      >
-                                                                                      <span class="text-xs text-base-content/40"
-                                                                                          >${fmtDate(m.time)}</span
-                                                                                      >
-                                                                                      <fc-tooltip
-                                                                                          class="ml-auto"
-                                                                                          text="${revealed
-                                                                                              ? 'Sensible Daten maskieren'
-                                                                                              : 'Sensible Daten anzeigen'}"
-                                                                                          .content=${html`
-                                                                                              <button
-                                                                                                  class="btn btn-ghost btn-xs px-1 ${revealed
-                                                                                                      ? 'text-warning'
-                                                                                                      : 'text-base-content/30 hover:text-base-content/70'}"
-                                                                                                  @click=${() =>
-                                                                                                      this._toggleReveal(blockId)}
-                                                                                              >
-                                                                                                  <svg
-                                                                                                      class="w-4 h-4 ${revealed
-                                                                                                          ? ''
-                                                                                                          : 'hidden'}"
-                                                                                                      fill="none"
-                                                                                                      stroke="currentColor"
-                                                                                                      stroke-width="1.5"
-                                                                                                      viewBox="0 0 24 24"
-                                                                                                      xmlns="http://www.w3.org/2000/svg"
-                                                                                                  >
-                                                                                                      <path
-                                                                                                          stroke-linecap="round"
-                                                                                                          stroke-linejoin="round"
-                                                                                                          d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-                                                                                                      />
-                                                                                                      <circle cx="12" cy="12" r="3" />
-                                                                                                  </svg>
-                                                                                                  <svg
-                                                                                                      class="w-4 h-4 ${revealed
-                                                                                                          ? 'hidden'
-                                                                                                          : ''}"
-                                                                                                      fill="none"
-                                                                                                      stroke="currentColor"
-                                                                                                      stroke-width="1.5"
-                                                                                                      viewBox="0 0 24 24"
-                                                                                                      xmlns="http://www.w3.org/2000/svg"
-                                                                                                  >
-                                                                                                      <path
-                                                                                                          stroke-linecap="round"
-                                                                                                          stroke-linejoin="round"
-                                                                                                          d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
-                                                                                                      />
-                                                                                                  </svg>
-                                                                                              </button>
-                                                                                          `}
-                                                                                      ></fc-tooltip>
-                                                                                      <fc-tooltip
-                                                                                          text="Inhalt kopieren"
-                                                                                          .content=${html`
-                                                                                              <button
-                                                                                                  class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
-                                                                                                  @click=${() =>
-                                                                                                      navigator.clipboard.writeText(
-                                                                                                          JSON.stringify(
-                                                                                                              this._maskMessage(
-                                                                                                                  m.message,
-                                                                                                                  blockId
-                                                                                                              ),
-                                                                                                              null,
-                                                                                                              2
-                                                                                                          )
-                                                                                                      )}
-                                                                                              >
-                                                                                                  <svg
-                                                                                                      class="w-3 h-3"
-                                                                                                      fill="none"
-                                                                                                      stroke="currentColor"
-                                                                                                      stroke-width="2"
-                                                                                                      viewBox="0 0 24 24"
-                                                                                                  >
-                                                                                                      <rect
-                                                                                                          x="9"
-                                                                                                          y="9"
-                                                                                                          width="13"
-                                                                                                          height="13"
-                                                                                                          rx="2"
-                                                                                                          ry="2"
-                                                                                                      ></rect>
-                                                                                                      <path
-                                                                                                          d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
-                                                                                                      ></path>
-                                                                                                  </svg>
-                                                                                              </button>
-                                                                                          `}
-                                                                                      ></fc-tooltip>
-                                                                                  </div>
-                                                                                  <pre
-                                                                                      class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"
-                                                                                  >
-${JSON.stringify(this._maskMessage(m.message, blockId), null, 2)}</pre
-                                                                                  >
-                                                                              </div>
-                                                                          `
-                                                                      )}
-                                                                  `
-                                                              })()}
-                                                    </div>
-                                                `
-                                            })}
-                                  </div>
-
-                                  <div>
-                                      ${selExcs.length
-                                          ? html`
-                                                <div class="text-xs font-semibold uppercase tracking-wide text-error mb-3">
-                                                    ✕ Exceptions
-                                                </div>
-                                                ${selExcs.map(
-                                                    ex => html`
-                                                        <div
-                                                            class="rounded-box bg-error/80 border border-error text-error-content text-xs mb-2 p-3"
-                                                        >
-                                                            <div class="min-w-0 w-full overflow-hidden">
-                                                                <div class="font-semibold mb-1">${ex.message}</div>
-                                                                <div class="opacity-60">${ex.file}:${ex.line}</div>
-                                                                <details class="mt-2">
-                                                                    <summary class="cursor-pointer opacity-50">Stacktrace</summary>
-                                                                    <pre
-                                                                        class="mt-1 text-xs overflow-auto whitespace-pre-wrap opacity-70 max-h-48 bg-base-200 text-base-content rounded p-1"
-                                                                    >
-${ex.traceString}</pre
-                                                                    >
-                                                                </details>
-                                                            </div>
-                                                        </div>
-                                                    `
-                                                )}
-                                            `
-                                          : selRess.length
-                                            ? html`
-                                                  <div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3">
-                                                      ↑ Ausgehend
-                                                  </div>
-                                                  ${selRess.map(
-                                                      r => html`
-                                                          <div class="flex items-center gap-2 mb-3">
-                                                              <span class="font-mono text-xs font-semibold text-base-content/60"
-                                                                  >Ergebnis</span
-                                                              >
-                                                          </div>
-                                                          <div
-                                                              class="rounded-lg p-3 mb-2 text-xs"
-                                                              style="background:${r.result
-                                                                  ? 'rgba(34,197,94,0.10)'
-                                                                  : 'rgba(249,115,22,0.10)'}; border:1px solid ${r.result
-                                                                  ? 'rgba(34,197,94,0.3)'
-                                                                  : 'rgba(249,115,22,0.3)'};"
-                                                          >
-                                                              <div class="flex items-center gap-2">
-                                                                  <span
-                                                                      class="badge badge-xs leading-none"
-                                                                      style="background:${r.result
-                                                                          ? '#00d390'
-                                                                          : '#f97316'}; color:#004c39; border:none;"
-                                                                      >${r.result ? 'true' : 'false'}</span
-                                                                  >
-                                                                  <span class="text-base-content/40">${fmtDate(r.time)}</span>
-                                                              </div>
-                                                          </div>
-                                                      `
-                                                  )}
-                                              `
-                                            : html`
-                                                  <div class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-3">
-                                                      ↑ Ausgehende Messages
-                                                  </div>
-                                                  ${selStep.returnTypes.length === 0
-                                                      ? html`<p class="text-xs text-base-content/30 italic">
-                                                            Terminal-Step (keine Ausgabe)
-                                                        </p>`
-                                                      : selStep.returnTypes.map(rt => {
-                                                            const outData = outgoingOf(rt)
-                                                            const outBlockId = `${selStep.source}::out::${rt}`
-                                                            const outRevealed = this._revealedBlocks.has(outBlockId)
-                                                            return html`
-                                                                <div class="mb-3">
-                                                                    <div class="flex items-center gap-2 mb-1">
-                                                                        <span class="font-mono text-xs font-semibold text-base-content/60"
-                                                                            >${short(rt)}</span
-                                                                        >
-                                                                    </div>
-                                                                    ${msgProps(rt)}
-                                                                    ${outData
-                                                                        ? html`<div class="rounded-lg bg-base-300 p-3 mb-1">
-                                                                              <div class="flex items-center gap-2 mb-2">
-                                                                                  <span
-                                                                                      class="badge badge-xs leading-none ${outData.messageType ===
-                                                                                      'finish'
-                                                                                          ? 'badge-success'
-                                                                                          : outData.messageType === 'process'
-                                                                                            ? 'badge-info'
-                                                                                            : 'badge-warning'}"
-                                                                                      >${outData.messageType}</span
-                                                                                  >
-                                                                                  <span class="text-xs text-base-content/40"
-                                                                                      >${fmtDate(outData.time)}</span
-                                                                                  >
-                                                                                  <fc-tooltip
-                                                                                      class="ml-auto"
-                                                                                      text="${outRevealed
-                                                                                          ? 'Sensible Daten maskieren'
-                                                                                          : 'Sensible Daten anzeigen'}"
-                                                                                      .content=${html`
-                                                                                          <button
-                                                                                              class="btn btn-ghost btn-xs px-1 ${outRevealed
-                                                                                                  ? 'text-warning'
-                                                                                                  : 'text-base-content/30 hover:text-base-content/70'}"
-                                                                                              @click=${() => this._toggleReveal(outBlockId)}
-                                                                                          >
-                                                                                              <svg
-                                                                                                  class="w-4 h-4 ${outRevealed
-                                                                                                      ? ''
-                                                                                                      : 'hidden'}"
-                                                                                                  fill="none"
-                                                                                                  stroke="currentColor"
-                                                                                                  stroke-width="1.5"
-                                                                                                  viewBox="0 0 24 24"
-                                                                                                  xmlns="http://www.w3.org/2000/svg"
-                                                                                              >
-                                                                                                  <path
-                                                                                                      stroke-linecap="round"
-                                                                                                      stroke-linejoin="round"
-                                                                                                      d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-                                                                                                  />
-                                                                                                  <circle cx="12" cy="12" r="3" />
-                                                                                              </svg>
-                                                                                              <svg
-                                                                                                  class="w-4 h-4 ${outRevealed
-                                                                                                      ? 'hidden'
-                                                                                                      : ''}"
-                                                                                                  fill="none"
-                                                                                                  stroke="currentColor"
-                                                                                                  stroke-width="1.5"
-                                                                                                  viewBox="0 0 24 24"
-                                                                                                  xmlns="http://www.w3.org/2000/svg"
-                                                                                              >
-                                                                                                  <path
-                                                                                                      stroke-linecap="round"
-                                                                                                      stroke-linejoin="round"
-                                                                                                      d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
-                                                                                                  />
-                                                                                              </svg>
-                                                                                          </button>
-                                                                                      `}
-                                                                                  ></fc-tooltip>
-                                                                                  <fc-tooltip
-                                                                                      text="Inhalt kopieren"
-                                                                                      .content=${html`
-                                                                                          <button
-                                                                                              class="btn btn-ghost btn-xs px-1 text-base-content/30 hover:text-base-content/70"
-                                                                                              @click=${() =>
-                                                                                                  navigator.clipboard.writeText(
-                                                                                                      JSON.stringify(
-                                                                                                          this._maskMessage(
-                                                                                                              outData.message,
-                                                                                                              outBlockId
-                                                                                                          ),
-                                                                                                          null,
-                                                                                                          2
-                                                                                                      )
-                                                                                                  )}
-                                                                                          >
-                                                                                              <svg
-                                                                                                  class="w-3 h-3"
-                                                                                                  fill="none"
-                                                                                                  stroke="currentColor"
-                                                                                                  stroke-width="2"
-                                                                                                  viewBox="0 0 24 24"
-                                                                                              >
-                                                                                                  <rect
-                                                                                                      x="9"
-                                                                                                      y="9"
-                                                                                                      width="13"
-                                                                                                      height="13"
-                                                                                                      rx="2"
-                                                                                                      ry="2"
-                                                                                                  ></rect>
-                                                                                                  <path
-                                                                                                      d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
-                                                                                                  ></path>
-                                                                                              </svg>
-                                                                                          </button>
-                                                                                      `}
-                                                                                  ></fc-tooltip>
-                                                                              </div>
-                                                                              <pre
-                                                                                  class="text-xs font-mono text-base-content/80 whitespace-pre-wrap overflow-auto"
-                                                                              >
-${JSON.stringify(this._maskMessage(outData.message, outBlockId), null, 2)}</pre
-                                                                              >
-                                                                          </div>`
-                                                                        : !this.readonly
-                                                                          ? html`<div class="text-xs text-base-content/30 italic px-2">
-                                                                                nicht gesendet
-                                                                            </div>`
-                                                                          : ''}
-                                                                </div>
-                                                            `
-                                                        })}
-                                              `}
-                                  </div>
-                              </div>
-                          </div>
-                      `
-                    : ''}
-
-                <!-- ── Step Input Modal ── -->
-                <dialog id="fc-step-input-modal" class="modal">
-                    ${this._modalMsg
-                        ? html`
-                              <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
-                                  <!-- Header -->
-                                  <div
-                                      class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0"
-                                  >
-                                      <div class="flex items-start justify-between">
-                                          <div class="flex items-start gap-3">
-                                              <div
-                                                  class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"
-                                              >
-                                                  <svg
-                                                      class="w-5 h-5 text-primary"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      stroke-width="2"
-                                                      viewBox="0 0 24 24"
+                                                  <button
+                                                      class="btn btn-ghost btn-sm"
+                                                      @click=${() => navigator.clipboard.writeText(this._modalMsg.payload)}
                                                   >
-                                                      <path
-                                                          stroke-linecap="round"
-                                                          stroke-linejoin="round"
-                                                          d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                                                      />
-                                                  </svg>
-                                              </div>
-                                              <div>
-                                                  <div class="flex items-center gap-2">
-                                                      <h3 class="font-bold text-base leading-tight">Message-Input editieren</h3>
-                                                      ${this.flow?.isExecutable === false
-                                                          ? html`<span
-                                                                class="badge badge-sm border-slate-500/50 bg-slate-600/40 text-slate-300 leading-none"
-                                                                >Nicht ausführbar</span
-                                                            >`
-                                                          : ''}
-                                                  </div>
-                                                  <div class="flex items-center gap-3 mt-1 flex-wrap">
-                                                      <span class="font-mono text-xs text-base-content/50">
-                                                          ${this._modalMsg.messageClass}
-                                                      </span>
-                                                      <span class="text-base-content/30 text-xs">·</span>
-                                                      <span class="text-xs text-base-content/40">
-                                                          Step:
-                                                          <span class="font-mono">${short(this._modalMsg.stepSource)}</span>
-                                                      </span>
-                                                  </div>
+                                                      <svg
+                                                          class="w-4 h-4"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                                      </svg>
+                                                  </button>
+                                                  <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${this._closeModal}>
+                                                      ✕
+                                                  </button>
                                               </div>
                                           </div>
-                                          <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
-                                              <button
-                                                  class="btn btn-ghost btn-sm ${this._modalMsg.revealed ? 'text-warning' : ''}"
-                                                  title="${this._modalMsg.revealed
-                                                      ? 'Sensible Daten maskieren'
-                                                      : 'Sensible Daten anzeigen'}"
-                                                  @click=${() => this._toggleModalReveal()}
-                                              >
-                                                  <svg
-                                                      class="w-4 h-4 ${this._modalMsg.revealed ? '' : 'hidden'}"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      stroke-width="1.5"
-                                                      viewBox="0 0 24 24"
-                                                      xmlns="http://www.w3.org/2000/svg"
-                                                  >
-                                                      <path
-                                                          stroke-linecap="round"
-                                                          stroke-linejoin="round"
-                                                          d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-                                                      />
-                                                      <circle cx="12" cy="12" r="3" />
-                                                  </svg>
-                                                  <svg
-                                                      class="w-4 h-4 ${this._modalMsg.revealed ? 'hidden' : ''}"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      stroke-width="1.5"
-                                                      viewBox="0 0 24 24"
-                                                      xmlns="http://www.w3.org/2000/svg"
-                                                  >
-                                                      <path
-                                                          stroke-linecap="round"
-                                                          stroke-linejoin="round"
-                                                          d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
-                                                      />
-                                                  </svg>
-                                              </button>
-                                              <button
-                                                  class="btn btn-ghost btn-sm"
-                                                  @click=${() => navigator.clipboard.writeText(this._modalMsg.payload)}
-                                              >
-                                                  <svg
-                                                      class="w-4 h-4"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      stroke-width="2"
-                                                      viewBox="0 0 24 24"
-                                                  >
-                                                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
-                                                  </svg>
-                                              </button>
-                                              <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${this._closeModal}>
-                                                  ✕
-                                              </button>
-                                          </div>
                                       </div>
-                                  </div>
 
-                                  <!-- Editor (fills remaining space) -->
-                                  <div class="flex-1 overflow-hidden relative">
-                                      <fc-json-editor
-                                          .value=${this._modalMsg.payload}
-                                          .search=${true}
-                                          @change=${this._onEditorChange}
-                                          style="display:block; height:100%; overflow:hidden;"
-                                      ></fc-json-editor>
-                                  </div>
+                                      <!-- Editor (fills remaining space) -->
+                                      <div class="flex-1 overflow-hidden relative">
+                                          <fc-json-editor
+                                              .value=${this._modalMsg.payload}
+                                              .search=${true}
+                                              @change=${this._onEditorChange}
+                                              style="display:block; height:100%; overflow:hidden;"
+                                          ></fc-json-editor>
+                                      </div>
 
-                                  <!-- Status bar -->
-                                  <div
-                                      class="flex items-center gap-2 px-4 py-2 border-t border-base-300 flex-shrink-0
+                                      <!-- Status bar -->
+                                      <div
+                                          class="flex items-center gap-2 px-4 py-2 border-t border-base-300 flex-shrink-0
                         text-xs font-mono bg-base-200"
-                                  >
-                                      ${this._modalMsg.valid
-                                          ? html`<span class="text-success">● JSON valid</span>`
-                                          : html`<span class="text-error">● JSON invalid — Fehler siehe Markierungen</span>`}
+                                      >
+                                          ${
+                                              this._modalMsg.valid
+                                                  ? html`<span class="text-success">● JSON valid</span>`
+                                                  : html`<span class="text-error">● JSON invalid — Fehler siehe Markierungen</span>`
+                                          }
+                                      </div>
+
+                                      <!-- Footer -->
+                                      <div class="flex items-center justify-between px-5 py-3 border-t border-base-300 flex-shrink-0">
+                                          <div class="flex-1 mr-4">
+                                              ${
+                                                  this._sendError
+                                                      ? renderApiError(this._sendError, { compact: true })
+                                                      : html`<span class="text-xs text-base-content/30 font-mono"
+                                                            >${this.flow?.flowHash ?? ''}</span
+                                                        >`
+                                              }
+                                          </div>
+                                          <div class="flex gap-2 flex-shrink-0">
+                                              <button class="btn btn-ghost btn-sm" @click=${this._closeModal} ?disabled=${this._sending}>
+                                                  Abbrechen
+                                              </button>
+                                              <button
+                                                  class="btn btn-outline btn-sm"
+                                                  ?disabled=${
+                                                      !this._modalMsg?.valid ||
+                                                      this._sending ||
+                                                      !this._observerRunning ||
+                                                      this.flow?.isExecutable === false ||
+                                                      (this._modalMsg?.runOnce && !this._modalMsg?.multiTarget)
+                                                  }
+                                                  title=${
+                                                      this._modalMsg?.runOnce && !this._modalMsg?.multiTarget
+                                                          ? 'Run-Once Step — kann nicht erneut ausgeführt werden'
+                                                          : this.flow?.isExecutable === false
+                                                            ? 'Flow ist nicht ausführbar'
+                                                            : this._observerRunning
+                                                              ? 'In Queue legen'
+                                                              : 'Observer ist nicht aktiv'
+                                                  }
+                                                  @click=${() => this._onSend(true)}
+                                              >
+                                                  ${this._sending ? html`<span class="loading loading-spinner loading-xs"></span>` : ''} In
+                                                  Queue
+                                              </button>
+                                              <button
+                                                  class="btn btn-primary btn-sm"
+                                                  ?disabled=${
+                                                      !this._modalMsg?.valid ||
+                                                      this._sending ||
+                                                      this.flow?.isExecutable === false ||
+                                                      (this._modalMsg?.runOnce && !this._modalMsg?.multiTarget)
+                                                  }
+                                                  title=${
+                                                      this._modalMsg?.runOnce && !this._modalMsg?.multiTarget
+                                                          ? 'Run-Once Step — kann nicht erneut ausgeführt werden'
+                                                          : this.flow?.isExecutable === false
+                                                            ? 'Flow ist nicht ausführbar'
+                                                            : ''
+                                                  }
+                                                  @click=${() => this._onSend(false)}
+                                              >
+                                                  ${this._sending ? html`<span class="loading loading-spinner loading-xs"></span>` : ''}
+                                                  Direkt ausführen
+                                              </button>
+                                          </div>
+                                      </div>
                                   </div>
 
-                                  <!-- Footer -->
-                                  <div class="flex items-center justify-between px-5 py-3 border-t border-base-300 flex-shrink-0">
-                                      <div class="flex-1 mr-4">
-                                          ${this._sendError
-                                              ? renderApiError(this._sendError, { compact: true })
-                                              : html`<span class="text-xs text-base-content/30 font-mono"
-                                                    >${this.flow?.flowHash ?? ''}</span
-                                                >`}
-                                      </div>
-                                      <div class="flex gap-2 flex-shrink-0">
-                                          <button class="btn btn-ghost btn-sm" @click=${this._closeModal} ?disabled=${this._sending}>
-                                              Abbrechen
-                                          </button>
-                                          <button
-                                              class="btn btn-outline btn-sm"
-                                              ?disabled=${!this._modalMsg?.valid ||
-                                              this._sending ||
-                                              !this._observerRunning ||
-                                              this.flow?.isExecutable === false ||
-                                              (this._modalMsg?.runOnce && !this._modalMsg?.multiTarget)}
-                                              title=${this._modalMsg?.runOnce && !this._modalMsg?.multiTarget
-                                                  ? 'Run-Once Step — kann nicht erneut ausgeführt werden'
-                                                  : this.flow?.isExecutable === false
-                                                    ? 'Flow ist nicht ausführbar'
-                                                    : this._observerRunning
-                                                      ? 'In Queue legen'
-                                                      : 'Observer ist nicht aktiv'}
-                                              @click=${() => this._onSend(true)}
-                                          >
-                                              ${this._sending ? html`<span class="loading loading-spinner loading-xs"></span>` : ''} In
-                                              Queue
-                                          </button>
-                                          <button
-                                              class="btn btn-primary btn-sm"
-                                              ?disabled=${!this._modalMsg?.valid ||
-                                              this._sending ||
-                                              this.flow?.isExecutable === false ||
-                                              (this._modalMsg?.runOnce && !this._modalMsg?.multiTarget)}
-                                              title=${this._modalMsg?.runOnce && !this._modalMsg?.multiTarget
-                                                  ? 'Run-Once Step — kann nicht erneut ausgeführt werden'
-                                                  : this.flow?.isExecutable === false
-                                                    ? 'Flow ist nicht ausführbar'
-                                                    : ''}
-                                              @click=${() => this._onSend(false)}
-                                          >
-                                              ${this._sending ? html`<span class="loading loading-spinner loading-xs"></span>` : ''} Direkt
-                                              ausführen
-                                          </button>
-                                      </div>
-                                  </div>
-                              </div>
-
-                              <form method="dialog" class="modal-backdrop backdrop-blur-sm">
-                                  <button @click=${this._closeModal}>close</button>
-                              </form>
-                          `
-                        : ''}
+                                  <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                                      <button @click=${this._closeModal}>close</button>
+                                  </form>
+                              `
+                            : ''
+                    }
                 </dialog>
 
                 <!-- ── Step Source Modal ── -->
@@ -2260,27 +2391,37 @@ ${JSON.stringify(this._maskMessage(outData.message, outBlockId), null, 2)}</pre
                                     </div>
                                     <div>
                                         <h3 class="font-bold text-base leading-tight font-mono truncate">${this._stepSourceName ?? ''}</h3>
-                                        ${this._stepSourceCurrent === false
-                                            ? html`<span
-                                                  class="badge badge-outline border-base-content/40 text-base-content/60 badge-sm mt-1"
-                                                  >archiviert</span
-                                              >`
-                                            : ''}
+                                        ${
+                                            this._stepSourceCurrent === false
+                                                ? html`<span
+                                                      class="badge badge-outline border-base-content/40 text-base-content/60 badge-sm mt-1"
+                                                      >archiviert</span
+                                                  >`
+                                                : ''
+                                        }
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    ${this._stepSource !== null
-                                        ? html`<button
-                                              class="btn btn-sm btn-ghost btn-square btn-circle text-base-content/30 hover:text-base-content/70"
-                                              title="Quellcode kopieren"
-                                              @click=${() => navigator.clipboard.writeText(this._stepSource)}
-                                          >
-                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
-                                              </svg>
-                                          </button>`
-                                        : ''}
+                                    ${
+                                        this._stepSource !== null
+                                            ? html`<button
+                                                  class="btn btn-sm btn-ghost btn-square btn-circle text-base-content/30 hover:text-base-content/70"
+                                                  title="Quellcode kopieren"
+                                                  @click=${() => navigator.clipboard.writeText(this._stepSource)}
+                                              >
+                                                  <svg
+                                                      class="w-4 h-4"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                      viewBox="0 0 24 24"
+                                                  >
+                                                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                                  </svg>
+                                              </button>`
+                                            : ''
+                                    }
                                     <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${() => this._closeSourceModal()}>
                                         ✕
                                     </button>
@@ -2288,11 +2429,13 @@ ${JSON.stringify(this._maskMessage(outData.message, outBlockId), null, 2)}</pre
                             </div>
                         </div>
                         <div class="flex-1 overflow-hidden">
-                            ${this._stepSource !== null
-                                ? html`<fc-source-viewer class="block h-full" .value=${this._stepSource}></fc-source-viewer>`
-                                : this._stepSourceError
-                                  ? html`<div class="p-4">${renderApiError(this._stepSourceError)}</div>`
-                                  : html`<div class="p-4 text-base-content/40 text-sm">Loading...</div>`}
+                            ${
+                                this._stepSource !== null
+                                    ? html`<fc-source-viewer class="block h-full" .value=${this._stepSource}></fc-source-viewer>`
+                                    : this._stepSourceError
+                                      ? html`<div class="p-4">${renderApiError(this._stepSourceError)}</div>`
+                                      : html`<div class="p-4 text-base-content/40 text-sm">Loading...</div>`
+                            }
                         </div>
                     </div>
                     <form method="dialog" class="modal-backdrop backdrop-blur-sm">
@@ -2302,102 +2445,106 @@ ${JSON.stringify(this._maskMessage(outData.message, outBlockId), null, 2)}</pre
 
                 <!-- ── Step Selection Modal ── -->
                 <dialog id="fc-step-selection-modal" class="modal">
-                    ${this._stepSelection
-                        ? html`
-                              <div class="modal-box max-w-lg p-0 flex flex-col overflow-hidden">
-                                  <!-- Header -->
-                                  <div
-                                      class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0"
-                                  >
-                                      <div class="flex items-start justify-between">
-                                          <div class="flex items-start gap-3">
-                                              <div
-                                                  class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"
-                                              >
-                                                  <svg
-                                                      class="w-5 h-5 text-primary"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      stroke-width="2"
-                                                      viewBox="0 0 24 24"
+                    ${
+                        this._stepSelection
+                            ? html`
+                                  <div class="modal-box max-w-lg p-0 flex flex-col overflow-hidden">
+                                      <!-- Header -->
+                                      <div
+                                          class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0"
+                                      >
+                                          <div class="flex items-start justify-between">
+                                              <div class="flex items-start gap-3">
+                                                  <div
+                                                      class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"
                                                   >
-                                                      <path
-                                                          stroke-linecap="round"
-                                                          stroke-linejoin="round"
-                                                          d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                      />
-                                                  </svg>
+                                                      <svg
+                                                          class="w-5 h-5 text-primary"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                          />
+                                                      </svg>
+                                                  </div>
+                                                  <div>
+                                                      <h3 class="font-bold text-base leading-tight">Step-Auswahl</h3>
+                                                      <p class="text-xs text-base-content/50 mt-1">
+                                                          Die Message-Source wird von mehreren Steps verwendet. Bitte wähle die Steps aus,
+                                                          die ausgeführt werden sollen:
+                                                      </p>
+                                                  </div>
                                               </div>
-                                              <div>
-                                                  <h3 class="font-bold text-base leading-tight">Step-Auswahl</h3>
-                                                  <p class="text-xs text-base-content/50 mt-1">
-                                                      Die Message-Source wird von mehreren Steps verwendet. Bitte wähle die Steps aus, die
-                                                      ausgeführt werden sollen:
-                                                  </p>
+                                              <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
+                                                  <button
+                                                      class="btn btn-sm btn-ghost btn-square btn-circle"
+                                                      @click=${() => this._closeStepSelection()}
+                                                  >
+                                                      ✕
+                                                  </button>
                                               </div>
-                                          </div>
-                                          <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
-                                              <button
-                                                  class="btn btn-sm btn-ghost btn-square btn-circle"
-                                                  @click=${() => this._closeStepSelection()}
-                                              >
-                                                  ✕
-                                              </button>
                                           </div>
                                       </div>
-                                  </div>
 
-                                  <!-- Step list -->
-                                  <div class="flex flex-col gap-2 px-5 py-4">
-                                      ${this._stepSelection.steps.map(
-                                          (s, i) => html`
-                                              <label
-                                                  class="flex items-center gap-3 p-2 rounded-lg ${s.disabled
-                                                      ? 'opacity-50 cursor-not-allowed'
-                                                      : 'cursor-pointer hover:bg-base-200'}"
-                                              >
-                                                  <input
-                                                      type="checkbox"
-                                                      class="checkbox checkbox-sm checkbox-primary"
-                                                      .checked=${s.checked}
-                                                      ?disabled=${s.disabled}
-                                                      @change=${() => this._toggleStepSelection(i)}
-                                                  />
-                                                  <span class="font-mono text-sm">${short(s.source)}</span>
-                                                  ${s.disabled
-                                                      ? html`<svg
-                                                            viewBox="0 0 24 24"
-                                                            fill="none"
-                                                            stroke="#a5b4fc"
-                                                            stroke-width="2.5"
-                                                            class="w-3.5 h-3.5 flex-shrink-0"
-                                                        >
-                                                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                                                            <path d="M7 11V7a5 5 0 0110 0v4" />
-                                                        </svg>`
-                                                      : ''}
-                                              </label>
-                                          `
-                                      )}
-                                  </div>
+                                      <!-- Step list -->
+                                      <div class="flex flex-col gap-2 px-5 py-4">
+                                          ${this._stepSelection.steps.map(
+                                              (s, i) => html`
+                                                  <label
+                                                      class="flex items-center gap-3 p-2 rounded-lg ${
+                                                          s.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-base-200'
+                                                      }"
+                                                  >
+                                                      <input
+                                                          type="checkbox"
+                                                          class="checkbox checkbox-sm checkbox-primary"
+                                                          .checked=${s.checked}
+                                                          ?disabled=${s.disabled}
+                                                          @change=${() => this._toggleStepSelection(i)}
+                                                      />
+                                                      <span class="font-mono text-sm">${short(s.source)}</span>
+                                                      ${
+                                                          s.disabled
+                                                              ? html`<svg
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="none"
+                                                                    stroke="#a5b4fc"
+                                                                    stroke-width="2.5"
+                                                                    class="w-3.5 h-3.5 flex-shrink-0"
+                                                                >
+                                                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                                                    <path d="M7 11V7a5 5 0 0110 0v4" />
+                                                                </svg>`
+                                                              : ''
+                                                      }
+                                                  </label>
+                                              `
+                                          )}
+                                      </div>
 
-                                  <!-- Footer -->
-                                  <div class="flex justify-end gap-2 px-5 py-3 border-t border-base-300 flex-shrink-0">
-                                      <button class="btn btn-ghost btn-sm" @click=${() => this._closeStepSelection()}>Abbrechen</button>
-                                      <button
-                                          class="btn btn-primary btn-sm"
-                                          ?disabled=${!this._stepSelection.steps.some(s => s.checked)}
-                                          @click=${() => this._confirmStepSelection()}
-                                      >
-                                          Bestätigen
-                                      </button>
+                                      <!-- Footer -->
+                                      <div class="flex justify-end gap-2 px-5 py-3 border-t border-base-300 flex-shrink-0">
+                                          <button class="btn btn-ghost btn-sm" @click=${() => this._closeStepSelection()}>Abbrechen</button>
+                                          <button
+                                              class="btn btn-primary btn-sm"
+                                              ?disabled=${!this._stepSelection.steps.some(s => s.checked)}
+                                              @click=${() => this._confirmStepSelection()}
+                                          >
+                                              Bestätigen
+                                          </button>
+                                      </div>
                                   </div>
-                              </div>
-                              <form method="dialog" class="modal-backdrop backdrop-blur-sm">
-                                  <button @click=${() => this._closeStepSelection()}>close</button>
-                              </form>
-                          `
-                        : ''}
+                                  <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                                      <button @click=${() => this._closeStepSelection()}>close</button>
+                                  </form>
+                              `
+                            : ''
+                    }
                 </dialog>
             </div>
         `

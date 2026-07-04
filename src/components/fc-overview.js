@@ -139,16 +139,18 @@ export class FcOverview extends BaseElement {
             >
                 <!-- Gradient background overlay -->
                 <div
-                    class="absolute inset-0 bg-gradient-to-br from-${color ??
-                    'primary'}/8 via-transparent to-transparent pointer-events-none"
+                    class="absolute inset-0 bg-gradient-to-br from-${
+                        color ?? 'primary'
+                    }/8 via-transparent to-transparent pointer-events-none"
                 ></div>
                 <!-- Accent line bottom -->
                 <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-${color ?? 'primary'}/50 to-transparent"></div>
                 <div class="relative flex items-start justify-between gap-3 mb-3">
                     <!-- Icon bubble -->
                     <div
-                        class="w-9 h-9 rounded-xl bg-${color ?? 'primary'}/12 flex items-center justify-center text-${color ??
-                        'primary'} flex-shrink-0"
+                        class="w-9 h-9 rounded-xl bg-${color ?? 'primary'}/12 flex items-center justify-center text-${
+                            color ?? 'primary'
+                        } flex-shrink-0"
                     >
                         ${icon}
                     </div>
@@ -201,46 +203,50 @@ export class FcOverview extends BaseElement {
                     <span class="text-xs font-semibold text-base-content/50 uppercase tracking-wide">Fehlgeschlagene Flows</span>
                 </div>
 
-                ${items.length === 0
-                    ? html`<div class="flex items-center gap-2 text-xs text-success py-1">
-                          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Keine auffälligen Flows
-                      </div>`
-                    : html`
-                          <div class="flex flex-col gap-1">
-                              ${items.map(flow => {
-                                  const isExceeded = flow.status === 'IN_PROGRESS_EXCEEDED'
-                                  const badgeText = isExceeded ? 'Exceeded' : 'Warning'
-                                  const name = shortClass(flow.flowSource)
-                                  return html`
-                                      <button
-                                          class="flex items-start gap-2 text-left hover:bg-base-300/50 rounded-lg py-1.5 pl-2 pr-1 transition-colors w-full border-l-2 border-warning/40 cursor-pointer"
-                                          @click=${() =>
-                                              this.dispatchEvent(
-                                                  new CustomEvent('flow-selected', {
-                                                      detail: { hash: flow.flowHash },
-                                                      bubbles: true,
-                                                      composed: true,
-                                                  })
-                                              )}
-                                      >
-                                          <div class="min-w-0 flex-1">
-                                              <div class="flex items-center gap-1.5 min-w-0">
-                                                  <span class="text-[11px] font-semibold text-base-content truncate">${name}</span>
-                                                  <span class="badge badge-xs badge-warning flex-shrink-0 opacity-70">${badgeText}</span>
-                                                  <span class="text-[10px] text-base-content/40 flex-shrink-0 ml-auto"
-                                                      >${timeEl(flow.lastTerm)}</span
-                                                  >
+                ${
+                    items.length === 0
+                        ? html`<div class="flex items-center gap-2 text-xs text-success py-1">
+                              <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Keine auffälligen Flows
+                          </div>`
+                        : html`
+                              <div class="flex flex-col gap-1">
+                                  ${items.map(flow => {
+                                      const isExceeded = flow.status === 'IN_PROGRESS_EXCEEDED'
+                                      const badgeText = isExceeded ? 'Exceeded' : 'Warning'
+                                      const name = shortClass(flow.flowSource)
+                                      return html`
+                                          <button
+                                              class="flex items-start gap-2 text-left hover:bg-base-300/50 rounded-lg py-1.5 pl-2 pr-1 transition-colors w-full border-l-2 border-warning/40 cursor-pointer"
+                                              @click=${() =>
+                                                  this.dispatchEvent(
+                                                      new CustomEvent('flow-selected', {
+                                                          detail: { hash: flow.flowHash },
+                                                          bubbles: true,
+                                                          composed: true,
+                                                      })
+                                                  )}
+                                          >
+                                              <div class="min-w-0 flex-1">
+                                                  <div class="flex items-center gap-1.5 min-w-0">
+                                                      <span class="text-[11px] font-semibold text-base-content truncate">${name}</span>
+                                                      <span class="badge badge-xs badge-warning flex-shrink-0 opacity-70"
+                                                          >${badgeText}</span
+                                                      >
+                                                      <span class="text-[10px] text-base-content/40 flex-shrink-0 ml-auto"
+                                                          >${timeEl(flow.lastTerm)}</span
+                                                      >
+                                                  </div>
+                                                  <div class="text-[10px] text-base-content/40 truncate mt-0.5">${flow.flowType}</div>
                                               </div>
-                                              <div class="text-[10px] text-base-content/40 truncate mt-0.5">${flow.flowType}</div>
-                                          </div>
-                                      </button>
-                                  `
-                              })}
-                          </div>
-                      `}
+                                          </button>
+                                      `
+                                  })}
+                              </div>
+                          `
+                }
             </div>
         `
     }
@@ -254,55 +260,59 @@ export class FcOverview extends BaseElement {
                     <span class="text-xs font-semibold text-base-content/50 uppercase tracking-wide">Letzte Exceptions</span>
                 </div>
 
-                ${items.length === 0
-                    ? html`<div class="flex items-center gap-2 text-xs text-success py-1">
-                          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Keine Exceptions
-                      </div>`
-                    : html`
-                          <div class="flex flex-col gap-1">
-                              ${items.map(ex => {
-                                  const isSchedule = ex.type === 'schedule'
-                                  const isObserver = ex.type === 'observer'
-                                  const borderColor = isSchedule ? 'warning' : isObserver ? 'info' : 'error'
-                                  const badgeClass = isSchedule ? 'badge-warning' : isObserver ? 'badge-info' : 'badge-error'
-                                  const badgeLabel = isSchedule ? 'Schedule' : isObserver ? 'Observer' : 'Flow'
-                                  const name = isSchedule
-                                      ? shortClass(ex.scheduleName)
-                                      : isObserver
-                                        ? shortClass(ex.observerFlowSource)
-                                        : shortClass(ex.stepSource)
-                                  return html`
-                                      <button
-                                          class="flex items-start gap-2 text-left hover:bg-base-300/50 rounded-lg py-1.5 pl-2 pr-1 transition-colors w-full border-l-2 border-${borderColor}/40 cursor-pointer"
-                                          @click=${() =>
-                                              isSchedule || isObserver || !ex.flowHash
-                                                  ? this._navigate('exceptions')
-                                                  : this.dispatchEvent(
-                                                        new CustomEvent('flow-selected', {
-                                                            detail: { hash: ex.flowHash },
-                                                            bubbles: true,
-                                                            composed: true,
-                                                        })
-                                                    )}
-                                      >
-                                          <div class="min-w-0 flex-1">
-                                              <div class="flex items-center gap-1.5 min-w-0">
-                                                  <span class="text-[11px] font-semibold text-base-content truncate">${name}</span>
-                                                  <span class="badge badge-xs ${badgeClass} flex-shrink-0 opacity-70"> ${badgeLabel} </span>
-                                                  <span class="text-[10px] text-base-content/40 flex-shrink-0 ml-auto"
-                                                      >${timeEl(ex.time)}</span
-                                                  >
+                ${
+                    items.length === 0
+                        ? html`<div class="flex items-center gap-2 text-xs text-success py-1">
+                              <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Keine Exceptions
+                          </div>`
+                        : html`
+                              <div class="flex flex-col gap-1">
+                                  ${items.map(ex => {
+                                      const isSchedule = ex.type === 'schedule'
+                                      const isObserver = ex.type === 'observer'
+                                      const borderColor = isSchedule ? 'warning' : isObserver ? 'info' : 'error'
+                                      const badgeClass = isSchedule ? 'badge-warning' : isObserver ? 'badge-info' : 'badge-error'
+                                      const badgeLabel = isSchedule ? 'Schedule' : isObserver ? 'Observer' : 'Flow'
+                                      const name = isSchedule
+                                          ? shortClass(ex.scheduleName)
+                                          : isObserver
+                                            ? shortClass(ex.observerFlowSource)
+                                            : shortClass(ex.stepSource)
+                                      return html`
+                                          <button
+                                              class="flex items-start gap-2 text-left hover:bg-base-300/50 rounded-lg py-1.5 pl-2 pr-1 transition-colors w-full border-l-2 border-${borderColor}/40 cursor-pointer"
+                                              @click=${() =>
+                                                  isSchedule || isObserver || !ex.flowHash
+                                                      ? this._navigate('exceptions')
+                                                      : this.dispatchEvent(
+                                                            new CustomEvent('flow-selected', {
+                                                                detail: { hash: ex.flowHash },
+                                                                bubbles: true,
+                                                                composed: true,
+                                                            })
+                                                        )}
+                                          >
+                                              <div class="min-w-0 flex-1">
+                                                  <div class="flex items-center gap-1.5 min-w-0">
+                                                      <span class="text-[11px] font-semibold text-base-content truncate">${name}</span>
+                                                      <span class="badge badge-xs ${badgeClass} flex-shrink-0 opacity-70">
+                                                          ${badgeLabel}
+                                                      </span>
+                                                      <span class="text-[10px] text-base-content/40 flex-shrink-0 ml-auto"
+                                                          >${timeEl(ex.time)}</span
+                                                      >
+                                                  </div>
+                                                  <div class="text-[10px] text-base-content/40 truncate mt-0.5">${ex.message}</div>
                                               </div>
-                                              <div class="text-[10px] text-base-content/40 truncate mt-0.5">${ex.message}</div>
-                                          </div>
-                                      </button>
-                                  `
-                              })}
-                          </div>
-                      `}
+                                          </button>
+                                      `
+                                  })}
+                              </div>
+                          `
+                }
             </div>
         `
     }

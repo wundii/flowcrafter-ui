@@ -2,9 +2,9 @@ function uiToken() {
     return localStorage.getItem('fc_token') ?? ''
 }
 
-function fetchJson(path) {
+function fetchJson(path, signal = null) {
     const headers = uiToken() ? { Authorization: `Bearer ${uiToken()}` } : {}
-    return fetch(`/api/fc${path}`, { headers }).then(async res => {
+    return fetch(`/api/fc${path}`, { headers, ...(signal ? { signal } : {}) }).then(async res => {
         if (!res.ok) {
             const body = await res.json().catch(() => ({}))
             const err = new Error(body.error ?? `HTTP ${res.status}`)
@@ -44,14 +44,17 @@ function postJson(path, body) {
 }
 
 export const api = {
-    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, type?: string, from?: string, to?: string, status?: string }} [opts] */
-    getFlows({ sort = 'desc', top = 1000, skip = 0, type, from, to, status } = {}) {
+    /**
+     * @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, type?: string, from?: string, to?: string, status?: string }} [opts]
+     * @param {AbortSignal} [signal]
+     */
+    getFlows({ sort = 'desc', top = 1000, skip = 0, type, from, to, status } = {}, signal = null) {
         const p = new URLSearchParams({ sort, top, skip })
         if (type) p.set('type', type)
         if (from) p.set('from', from)
         if (to) p.set('to', to)
         if (status) p.set('status', status)
-        return fetchJson(`/api/flow/flow-list?${p}`)
+        return fetchJson(`/api/flow/flow-list?${p}`, signal)
     },
 
     /** @param {string} hash */
@@ -78,13 +81,16 @@ export const api = {
         return fetchJson(`/api/flow/exceptions-stats?${p}`)
     },
 
-    /** @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, from?: string, to?: string, status?: string }} [opts] */
-    getExceptions({ sort = 'desc', top = 1000, skip = 0, from, to, status } = {}) {
+    /**
+     * @param {{ sort?: 'asc'|'desc', top?: number, skip?: number, from?: string, to?: string, status?: string }} [opts]
+     * @param {AbortSignal} [signal]
+     */
+    getExceptions({ sort = 'desc', top = 1000, skip = 0, from, to, status } = {}, signal = null) {
         const p = new URLSearchParams({ sort, top, skip })
         if (from) p.set('from', from)
         if (to) p.set('to', to)
         if (status) p.set('status', status)
-        return fetchJson(`/api/flow/exception-list?${p}`)
+        return fetchJson(`/api/flow/exception-list?${p}`, signal)
     },
 
     /**

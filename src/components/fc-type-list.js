@@ -216,26 +216,28 @@ export class FcTypeList extends BaseElement {
         return html`
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2">
-                    ${showBack
-                        ? html`
-                              <button
-                                  class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50 gap-1.5"
-                                  @click=${() => (this._activeGroup = null)}
-                              >
-                                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                      <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-                                  </svg>
-                                  Zurück
-                              </button>
-                              <span class="font-semibold text-sm">${this._activeGroup}</span>
-                          `
-                        : html`
-                              <span class="text-sm text-base-content/60">
-                                  <span class="font-semibold">${this.schemas.length}</span>
-                                  Flow${this.schemas.length !== 1 ? 's' : ''}
-                                  <span class="text-base-content/40 ml-1">— Runs der letzten 14 Tage</span>
-                              </span>
-                          `}
+                    ${
+                        showBack
+                            ? html`
+                                  <button
+                                      class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50 gap-1.5"
+                                      @click=${() => (this._activeGroup = null)}
+                                  >
+                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                                      </svg>
+                                      Zurück
+                                  </button>
+                                  <span class="font-semibold text-sm">${this._activeGroup}</span>
+                              `
+                            : html`
+                                  <span class="text-sm text-base-content/60">
+                                      <span class="font-semibold">${this.schemas.length}</span>
+                                      Flow${this.schemas.length !== 1 ? 's' : ''}
+                                      <span class="text-base-content/40 ml-1">— Runs der letzten 14 Tage</span>
+                                  </span>
+                              `
+                    }
                 </div>
                 <div class="flex items-center gap-1">
                     <fc-tooltip

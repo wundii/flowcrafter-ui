@@ -167,21 +167,23 @@ export class FcScheduleList extends BaseElement {
         const inactive = item.active === false
         return html`
             <div
-                class="rounded-box border ${inactive
-                    ? 'border-base-content/20'
-                    : 'border-base-300 hover:border-primary/30 hover:shadow-md'} bg-base-200 transition-all duration-200 flex flex-col group"
+                class="rounded-box border ${
+                    inactive ? 'border-base-content/20' : 'border-base-300 hover:border-primary/30 hover:shadow-md'
+                } bg-base-200 transition-all duration-200 flex flex-col group"
             >
                 <!-- Card header with gradient -->
                 <div
-                    class="px-4 pt-4 pb-3 ${inactive
-                        ? 'bg-gradient-to-br from-base-content/3 via-transparent to-transparent'
-                        : 'bg-gradient-to-br from-primary/5 via-transparent to-transparent'}"
+                    class="px-4 pt-4 pb-3 ${
+                        inactive
+                            ? 'bg-gradient-to-br from-base-content/3 via-transparent to-transparent'
+                            : 'bg-gradient-to-br from-primary/5 via-transparent to-transparent'
+                    }"
                 >
                     <div class="flex items-start gap-2.5">
                         <div
-                            class="w-8 h-8 rounded-lg ${inactive
-                                ? 'bg-base-content/8 text-base-content/30'
-                                : 'bg-primary/10 text-primary'} flex items-center justify-center shrink-0 mt-0.5"
+                            class="w-8 h-8 rounded-lg ${
+                                inactive ? 'bg-base-content/8 text-base-content/30' : 'bg-primary/10 text-primary'
+                            } flex items-center justify-center shrink-0 mt-0.5"
                         >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -197,33 +199,35 @@ export class FcScheduleList extends BaseElement {
                             <div class="text-xs text-base-content/35 mt-1 truncate font-mono" title="${item.className}">
                                 ${shortClass(item.className)}
                             </div>
-                            ${inactive
-                                ? html`<div class="flex items-center gap-1 mt-1.5">
-                                      <svg
-                                          class="w-3 h-3 text-base-content/35"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          stroke-width="2"
-                                          viewBox="0 0 24 24"
-                                      >
-                                          <path
-                                              stroke-linecap="round"
-                                              stroke-linejoin="round"
-                                              d="M14.25 9v6m-4.5 0V9M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                                          />
-                                      </svg>
-                                      <span class="text-[10px] text-base-content/35 font-medium tracking-wider uppercase">Inaktiv</span>
-                                  </div>`
-                                : ''}
+                            ${
+                                inactive
+                                    ? html`<div class="flex items-center gap-1 mt-1.5">
+                                          <svg
+                                              class="w-3 h-3 text-base-content/35"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              stroke-width="2"
+                                              viewBox="0 0 24 24"
+                                          >
+                                              <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  d="M14.25 9v6m-4.5 0V9M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                                              />
+                                          </svg>
+                                          <span class="text-[10px] text-base-content/35 font-medium tracking-wider uppercase">Inaktiv</span>
+                                      </div>`
+                                    : ''
+                            }
                         </div>
                     </div>
                 </div>
 
                 <!-- Cron info -->
                 <div
-                    class="px-4 py-3 flex-1 flex flex-col justify-center border-t ${inactive
-                        ? 'border-base-content/10'
-                        : 'border-base-300/50'}"
+                    class="px-4 py-3 flex-1 flex flex-col justify-center border-t ${
+                        inactive ? 'border-base-content/10' : 'border-base-300/50'
+                    }"
                 >
                     <div class="text-center">
                         <div class="text-lg font-semibold ${inactive ? 'text-base-content/30' : 'text-base-content/80'} leading-tight">
@@ -231,9 +235,9 @@ export class FcScheduleList extends BaseElement {
                         </div>
                         <div class="mt-1.5">
                             <span
-                                class="badge badge-sm badge-ghost font-mono text-[10px] tracking-wider ${inactive
-                                    ? 'text-base-content/25'
-                                    : 'text-base-content/40'}"
+                                class="badge badge-sm badge-ghost font-mono text-[10px] tracking-wider ${
+                                    inactive ? 'text-base-content/25' : 'text-base-content/40'
+                                }"
                                 >${item.expression}</span
                             >
                         </div>
@@ -261,9 +265,9 @@ export class FcScheduleList extends BaseElement {
                         `}
                     ></fc-tooltip>
                     <button
-                        class="btn btn-xs btn-ghost ${inactive
-                            ? 'text-base-content/20 hover:text-primary/40'
-                            : 'text-base-content/40 hover:text-primary'} gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
+                        class="btn btn-xs btn-ghost ${
+                            inactive ? 'text-base-content/20 hover:text-primary/40' : 'text-base-content/40 hover:text-primary'
+                        } gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
                         @click=${() => this._showSource(item.className)}
                     >
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -345,17 +349,21 @@ export class FcScheduleList extends BaseElement {
         return html`
             <!-- Toolbar -->
             <div class="flex items-center gap-2 mb-4">
-                ${!isEmpty
-                    ? html`<input
-                              type="text"
-                              class="input input-sm w-64 font-mono text-xs"
-                              placeholder="Filter..."
-                              .value=${this._filter}
-                              @input=${e => (this._filter = e.target.value)}
-                          />${this._filter
-                              ? html`<button class="btn btn-sm btn-ghost" @click=${() => (this._filter = '')}>clear</button>`
-                              : ''}`
-                    : ''}
+                ${
+                    !isEmpty
+                        ? html`<input
+                                  type="text"
+                                  class="input input-sm w-64 font-mono text-xs"
+                                  placeholder="Filter..."
+                                  .value=${this._filter}
+                                  @input=${e => (this._filter = e.target.value)}
+                              />${
+                                  this._filter
+                                      ? html`<button class="btn btn-sm btn-ghost" @click=${() => (this._filter = '')}>clear</button>`
+                                      : ''
+                              }`
+                        : ''
+                }
                 <div class="ml-auto flex items-center gap-3">
                     <span class="text-sm text-base-content/60">
                         ${isEmpty ? '' : html`<span class="font-semibold">${this._schedules.length}</span> Schedule(s)`}
@@ -380,22 +388,24 @@ export class FcScheduleList extends BaseElement {
                 </div>
             </div>
 
-            ${isEmpty
-                ? html`<fc-empty-state message="Keine Schedules gefunden."></fc-empty-state>`
-                : this._filter.trim()
-                  ? this._filteredInGroup(this._schedules).length === 0
-                      ? html`<fc-empty-state message="Keine Schedules für diesen Filter."></fc-empty-state>`
+            ${
+                isEmpty
+                    ? html`<fc-empty-state message="Keine Schedules gefunden."></fc-empty-state>`
+                    : this._filter.trim()
+                      ? this._filteredInGroup(this._schedules).length === 0
+                          ? html`<fc-empty-state message="Keine Schedules für diesen Filter."></fc-empty-state>`
+                          : html`
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                    ${this._filteredInGroup(this._schedules).map(item => this._renderScheduleCard(item))}
+                                </div>
+                            `
                       : html`
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                ${this._filteredInGroup(this._schedules).map(item => this._renderScheduleCard(item))}
+                                ${sortedGroups.map(([name, items]) => this._renderGroupCard(name, items))}
+                                ${ungrouped.map(item => this._renderScheduleCard(item))}
                             </div>
                         `
-                  : html`
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            ${sortedGroups.map(([name, items]) => this._renderGroupCard(name, items))}
-                            ${ungrouped.map(item => this._renderScheduleCard(item))}
-                        </div>
-                    `}
+            }
         `
     }
 
@@ -432,13 +442,15 @@ export class FcScheduleList extends BaseElement {
                 </div>
             </div>
 
-            ${items.length === 0
-                ? html`<fc-empty-state message="Keine Schedules für diesen Filter."></fc-empty-state>`
-                : html`
-                      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                          ${items.map(item => this._renderScheduleCard(item))}
-                      </div>
-                  `}
+            ${
+                items.length === 0
+                    ? html`<fc-empty-state message="Keine Schedules für diesen Filter."></fc-empty-state>`
+                    : html`
+                          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                              ${items.map(item => this._renderScheduleCard(item))}
+                          </div>
+                      `
+            }
         `
     }
 
@@ -486,11 +498,13 @@ export class FcScheduleList extends BaseElement {
                         <div class="flex items-center justify-between">
                             <div>
                                 <h3 class="font-bold text-lg">Schedule Source</h3>
-                                ${this._selectedSource
-                                    ? html`<div class="text-xs text-base-content/50 mt-0.5 font-mono">
-                                          ${this._selectedSource.className}
-                                      </div>`
-                                    : ''}
+                                ${
+                                    this._selectedSource
+                                        ? html`<div class="text-xs text-base-content/50 mt-0.5 font-mono">
+                                              ${this._selectedSource.className}
+                                          </div>`
+                                        : ''
+                                }
                             </div>
                             <button class="btn btn-sm btn-circle btn-ghost" @click=${this._closeSource}>
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -502,17 +516,19 @@ export class FcScheduleList extends BaseElement {
 
                     <!-- Content -->
                     <div class="flex-1 overflow-auto">
-                        ${this._sourceLoading
-                            ? html`
-                                  <div class="flex justify-center py-16">
-                                      <span class="loading loading-spinner loading-lg"></span>
-                                  </div>
-                              `
-                            : this._sourceError
-                              ? html`<div class="alert alert-error m-4"><span>${this._sourceError}</span></div>`
-                              : this._selectedSource
-                                ? html`<fc-source-viewer .value=${this._selectedSource.source}></fc-source-viewer>`
-                                : ''}
+                        ${
+                            this._sourceLoading
+                                ? html`
+                                      <div class="flex justify-center py-16">
+                                          <span class="loading loading-spinner loading-lg"></span>
+                                      </div>
+                                  `
+                                : this._sourceError
+                                  ? html`<div class="alert alert-error m-4"><span>${this._sourceError}</span></div>`
+                                  : this._selectedSource
+                                    ? html`<fc-source-viewer .value=${this._selectedSource.source}></fc-source-viewer>`
+                                    : ''
+                        }
                     </div>
                 </div>
                 <form method="dialog" class="modal-backdrop backdrop-blur-sm"><button>close</button></form>
@@ -556,38 +572,42 @@ export class FcScheduleList extends BaseElement {
 
                     <!-- Content -->
                     <div class="px-6 pb-6 pt-4">
-                        ${this._runSuccess
-                            ? html`
-                                  <div class="alert alert-success py-2 px-3 text-xs">
-                                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                          <path
-                                              stroke-linecap="round"
-                                              stroke-linejoin="round"
-                                              d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                                          />
-                                      </svg>
-                                      <span><strong>${this._runName}</strong> wurde gestartet.</span>
-                                  </div>
-                                  <div class="modal-action mt-3">
-                                      <button class="btn btn-sm" @click=${this._closeRun}>Schließen</button>
-                                  </div>
-                              `
-                            : html`
-                                  <p class="text-sm text-base-content/70">
-                                      Möchtest du <strong>${this._runName}</strong> wirklich manuell starten?
-                                  </p>
-                                  ${this._runError
-                                      ? html`<div class="mt-4">${renderApiError(this._runError, { compact: true })}</div>`
-                                      : ''}
-                                  <div class="modal-action mt-3">
-                                      <button class="btn btn-ghost btn-sm" @click=${this._closeRun} ?disabled=${this._running}>
-                                          Abbrechen
-                                      </button>
-                                      <button class="btn btn-primary btn-sm" @click=${this._confirmRun} ?disabled=${this._running}>
-                                          ${this._running ? html`<span class="loading loading-spinner loading-xs"></span>` : 'Starten'}
-                                      </button>
-                                  </div>
-                              `}
+                        ${
+                            this._runSuccess
+                                ? html`
+                                      <div class="alert alert-success py-2 px-3 text-xs">
+                                          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                              <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                                              />
+                                          </svg>
+                                          <span><strong>${this._runName}</strong> wurde gestartet.</span>
+                                      </div>
+                                      <div class="modal-action mt-3">
+                                          <button class="btn btn-sm" @click=${this._closeRun}>Schließen</button>
+                                      </div>
+                                  `
+                                : html`
+                                      <p class="text-sm text-base-content/70">
+                                          Möchtest du <strong>${this._runName}</strong> wirklich manuell starten?
+                                      </p>
+                                      ${
+                                          this._runError
+                                              ? html`<div class="mt-4">${renderApiError(this._runError, { compact: true })}</div>`
+                                              : ''
+                                      }
+                                      <div class="modal-action mt-3">
+                                          <button class="btn btn-ghost btn-sm" @click=${this._closeRun} ?disabled=${this._running}>
+                                              Abbrechen
+                                          </button>
+                                          <button class="btn btn-primary btn-sm" @click=${this._confirmRun} ?disabled=${this._running}>
+                                              ${this._running ? html`<span class="loading loading-spinner loading-xs"></span>` : 'Starten'}
+                                          </button>
+                                      </div>
+                                  `
+                        }
                     </div>
                 </div>
                 <form method="dialog" class="modal-backdrop backdrop-blur-sm">

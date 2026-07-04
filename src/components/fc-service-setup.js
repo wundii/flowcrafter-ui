@@ -105,28 +105,32 @@ export class FcServiceSetup extends BaseElement {
                                     />
                                 </div>
 
-                                ${this._error
-                                    ? html`
-                                          <div class="alert alert-error py-2 px-3 text-xs">
-                                              <span>${this._error}</span>
-                                          </div>
-                                      `
-                                    : ''}
+                                ${
+                                    this._error
+                                        ? html`
+                                              <div class="alert alert-error py-2 px-3 text-xs">
+                                                  <span>${this._error}</span>
+                                              </div>
+                                          `
+                                        : ''
+                                }
 
                                 <div class="flex gap-2 mt-1">
-                                    ${isEdit
-                                        ? html`
-                                              <button
-                                                  type="button"
-                                                  class="btn btn-ghost btn-sm flex-1"
-                                                  ?disabled=${this._loading}
-                                                  @click=${() =>
-                                                      this.dispatchEvent(new CustomEvent('cancel', { bubbles: true, composed: true }))}
-                                              >
-                                                  Abbrechen
-                                              </button>
-                                          `
-                                        : ''}
+                                    ${
+                                        isEdit
+                                            ? html`
+                                                  <button
+                                                      type="button"
+                                                      class="btn btn-ghost btn-sm flex-1"
+                                                      ?disabled=${this._loading}
+                                                      @click=${() =>
+                                                          this.dispatchEvent(new CustomEvent('cancel', { bubbles: true, composed: true }))}
+                                                  >
+                                                      Abbrechen
+                                                  </button>
+                                              `
+                                            : ''
+                                    }
                                     <button type="submit" class="btn btn-primary btn-sm flex-1" ?disabled=${this._loading}>
                                         ${this._loading ? html`<span class="loading loading-spinner loading-xs"></span>` : 'Verbinden'}
                                     </button>

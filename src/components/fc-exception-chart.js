@@ -242,8 +242,9 @@ export class FcExceptionChart extends BaseElement {
 
                     <!-- Observer area + line (dotted) -->
                     ${hasObserver ? svg`<path d="${observerArea}" fill="url(#observer-exception-area-grad)" />` : ''}
-                    ${hasObserver
-                        ? svg`<path
+                    ${
+                        hasObserver
+                            ? svg`<path
                         d="${observerLine}"
                         fill="none"
                         class="stroke-info"
@@ -252,7 +253,8 @@ export class FcExceptionChart extends BaseElement {
                         stroke-linecap="round"
                         stroke-dasharray="2 3"
                     />`
-                        : ''}
+                            : ''
+                    }
 
                     <!-- Schedule area + line (behind flow, dashed) -->
                     <path d="${scheduleArea}" fill="url(#schedule-exception-area-grad)" />
@@ -289,39 +291,44 @@ export class FcExceptionChart extends BaseElement {
                     )}
 
                     <!-- Schedule data points -->
-                    ${hasSchedule
-                        ? scheduleCoords
-                              .filter(c => c.schedule > 0)
-                              .map(
-                                  c => svg`
+                    ${
+                        hasSchedule
+                            ? scheduleCoords
+                                  .filter(c => c.schedule > 0)
+                                  .map(
+                                      c => svg`
                             <g @mouseenter=${e => this._onPointEnter(e, c)} @mouseleave=${() => this._onPointLeave()} @click=${() => this._onPointClick(c.date)} style="cursor:pointer">
                                 <circle cx="${c.x}" cy="${c.y}" r="8" fill="transparent" stroke="none" />
                                 <circle cx="${c.x}" cy="${c.y}" r="2.5"
                                         class="fill-warning stroke-base-200" stroke-width="1" style="pointer-events:none" />
                             </g>
                         `
-                              )
-                        : ''}
+                                  )
+                            : ''
+                    }
 
                     <!-- Observer data points -->
-                    ${hasObserver
-                        ? observerCoords
-                              .filter(c => c.observer > 0)
-                              .map(
-                                  c => svg`
+                    ${
+                        hasObserver
+                            ? observerCoords
+                                  .filter(c => c.observer > 0)
+                                  .map(
+                                      c => svg`
                             <g @mouseenter=${e => this._onPointEnter(e, c)} @mouseleave=${() => this._onPointLeave()} @click=${() => this._onPointClick(c.date)} style="cursor:pointer">
                                 <circle cx="${c.x}" cy="${c.y}" r="8" fill="transparent" stroke="none" />
                                 <circle cx="${c.x}" cy="${c.y}" r="2.5"
                                         class="fill-info stroke-base-200" stroke-width="1" style="pointer-events:none" />
                             </g>
                         `
-                              )
-                        : ''}
+                                  )
+                            : ''
+                    }
 
                     <!-- Projection area + line (dash-dot) -->
                     ${hasProjection ? svg`<path d="${projectionArea}" fill="url(#projection-exception-area-grad)" />` : ''}
-                    ${hasProjection
-                        ? svg`<path
+                    ${
+                        hasProjection
+                            ? svg`<path
                         d="${projectionLine}"
                         fill="none"
                         class="stroke-accent"
@@ -330,22 +337,25 @@ export class FcExceptionChart extends BaseElement {
                         stroke-linecap="round"
                         stroke-dasharray="6 2 2 2"
                     />`
-                        : ''}
+                            : ''
+                    }
 
                     <!-- Projection data points -->
-                    ${hasProjection
-                        ? projectionCoords
-                              .filter(c => (c.projection ?? 0) > 0)
-                              .map(
-                                  c => svg`
+                    ${
+                        hasProjection
+                            ? projectionCoords
+                                  .filter(c => (c.projection ?? 0) > 0)
+                                  .map(
+                                      c => svg`
                             <g @mouseenter=${e => this._onPointEnter(e, c)} @mouseleave=${() => this._onPointLeave()} @click=${() => this._onPointClick(c.date)} style="cursor:pointer">
                                 <circle cx="${c.x}" cy="${c.y}" r="8" fill="transparent" stroke="none" />
                                 <circle cx="${c.x}" cy="${c.y}" r="2.5"
                                         class="fill-accent stroke-base-200" stroke-width="1" style="pointer-events:none" />
                             </g>
                         `
-                              )
-                        : ''}
+                                  )
+                            : ''
+                    }
 
                     <!-- X-axis labels -->
                     ${xLabels.map(
@@ -356,40 +366,44 @@ export class FcExceptionChart extends BaseElement {
                     )}
                 </svg>
 
-                ${this._tooltip
-                    ? html`
-                          <div
-                              class="absolute z-50 pointer-events-none"
-                              style="left:${this._tooltip.x}px;top:${this._tooltip.y}px;transform:translate(-50%,calc(-100% - 10px))"
-                          >
+                ${
+                    this._tooltip
+                        ? html`
                               <div
-                                  class="bg-base-300 border border-base-content/10 rounded-lg shadow-xl px-3 py-2 text-xs whitespace-nowrap"
+                                  class="absolute z-50 pointer-events-none"
+                                  style="left:${this._tooltip.x}px;top:${this._tooltip.y}px;transform:translate(-50%,calc(-100% - 10px))"
                               >
-                                  <div class="font-semibold text-base-content/80 mb-2">${longDate(this._tooltip.coord.date)}</div>
-                                  <div class="flex items-center gap-2 text-base-content/60">
-                                      <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--er))"></span>
-                                      <span>Flow</span>
-                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.flow}</span>
-                                  </div>
-                                  <div class="flex items-center gap-2 text-base-content/60 mt-1">
-                                      <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--wa))"></span>
-                                      <span>Schedule</span>
-                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.schedule}</span>
-                                  </div>
-                                  <div class="flex items-center gap-2 text-base-content/60 mt-1">
-                                      <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--in))"></span>
-                                      <span>Observer</span>
-                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.observer}</span>
-                                  </div>
-                                  <div class="flex items-center gap-2 text-base-content/60 mt-1">
-                                      <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--ac))"></span>
-                                      <span>Projection</span>
-                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.projection ?? 0}</span>
+                                  <div
+                                      class="bg-base-300 border border-base-content/10 rounded-lg shadow-xl px-3 py-2 text-xs whitespace-nowrap"
+                                  >
+                                      <div class="font-semibold text-base-content/80 mb-2">${longDate(this._tooltip.coord.date)}</div>
+                                      <div class="flex items-center gap-2 text-base-content/60">
+                                          <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--er))"></span>
+                                          <span>Flow</span>
+                                          <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.flow}</span>
+                                      </div>
+                                      <div class="flex items-center gap-2 text-base-content/60 mt-1">
+                                          <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--wa))"></span>
+                                          <span>Schedule</span>
+                                          <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.schedule}</span>
+                                      </div>
+                                      <div class="flex items-center gap-2 text-base-content/60 mt-1">
+                                          <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--in))"></span>
+                                          <span>Observer</span>
+                                          <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.observer}</span>
+                                      </div>
+                                      <div class="flex items-center gap-2 text-base-content/60 mt-1">
+                                          <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:oklch(var(--ac))"></span>
+                                          <span>Projection</span>
+                                          <span class="ml-auto font-medium text-base-content pl-3"
+                                              >${this._tooltip.coord.projection ?? 0}</span
+                                          >
+                                      </div>
                                   </div>
                               </div>
-                          </div>
-                      `
-                    : ''}
+                          `
+                        : ''
+                }
             </div>
         `
     }

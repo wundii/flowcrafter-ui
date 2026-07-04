@@ -27,11 +27,6 @@ import './fc-tooltip.js'
 const TABS = ['overview', 'schemas', 'flows', 'exceptions', 'schedules', 'queues']
 const VERSION_MISMATCH_ACK = 'fc_version_mismatch_ack'
 const SEARCH_LIMIT = 5
-const ANTHROPIC_MODELS = [
-    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4', provider: 'anthropic' },
-    { id: 'claude-opus-4-20250514', label: 'Claude Opus 4', provider: 'anthropic' },
-    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', provider: 'anthropic' },
-]
 
 function workerAgeSecs(heartbeatIso) {
     return Math.floor((Date.now() - new Date(heartbeatIso).getTime()) / 1000)
@@ -92,7 +87,7 @@ export class FcApp extends BaseElement {
 
     constructor() {
         super()
-        this._aiAnthropicModels = ANTHROPIC_MODELS
+        this._aiAnthropicModels = []
         this._aiConfigured = false
         this._aiModal = null
         this._aiModel = null
@@ -177,7 +172,7 @@ export class FcApp extends BaseElement {
             const config = await api.getAiConfig()
             this._aiConfigured = config.configured
             this._aiModel = config.model ?? null
-            this._aiAnthropicModels = config.anthropicModels ?? ANTHROPIC_MODELS
+            this._aiAnthropicModels = config.anthropicModels ?? []
             this._aiOllamaModels = config.provider === 'ollama' ? (config.models ?? []) : this._aiOllamaModels
             this._aiProvider = config.provider ?? 'anthropic'
             this._aiOllamaUrl = config.ollamaUrl ?? 'http://localhost:11434'
@@ -694,209 +689,247 @@ export class FcApp extends BaseElement {
                                 ${logoIcon(24)}
                                 <div class="flex flex-col leading-tight text-left">
                                     <span
-                                        class="text-base font-bold tracking-tight whitespace-nowrap ${this._versionMismatch
-                                            ? 'text-warning'
-                                            : ''}"
+                                        class="text-base font-bold tracking-tight whitespace-nowrap ${
+                                            this._versionMismatch ? 'text-warning' : ''
+                                        }"
                                         >FlowCrafter UI</span
                                     >
-                                    ${this._serverDescription || this._serverInfo
-                                        ? html` <span
-                                              class="text-xs whitespace-nowrap ${this._serverInfo?.workers?.length > 0
-                                                  ? 'text-base-content/40'
-                                                  : 'text-error/70 animate-pulse'}"
-                                          >
-                                              ${[...(this._serverDescription ?? '')].length > 24
-                                                  ? [...this._serverDescription].slice(0, 21).join('') + '...'
-                                                  : this._serverDescription ||
-                                                    (!(this._serverInfo?.workers?.length > 0) ? 'Observer stopped' : '')}
-                                          </span>`
-                                        : ''}
+                                    ${
+                                        this._serverDescription || this._serverInfo
+                                            ? html` <span
+                                                  class="text-xs whitespace-nowrap ${
+                                                      this._serverInfo?.workers?.length > 0
+                                                          ? 'text-base-content/40'
+                                                          : 'text-error/70 animate-pulse'
+                                                  }"
+                                              >
+                                                  ${
+                                                      [...(this._serverDescription ?? '')].length > 24
+                                                          ? [...this._serverDescription].slice(0, 21).join('') + '...'
+                                                          : this._serverDescription ||
+                                                            (!(this._serverInfo?.workers?.length > 0) ? 'Observer stopped' : '')
+                                                  }
+                                              </span>`
+                                            : ''
+                                    }
                                 </div>
                             </button>
 
-                            ${this._toolboxOpen
-                                ? html`
-                                      <!-- Dropdown card -->
-                                      <div
-                                          class="absolute left-0 top-full mt-2 z-50 w-75 rounded-box border border-base-300 bg-base-100 shadow-lg p-4"
-                                      >
+                            ${
+                                this._toolboxOpen
+                                    ? html`
+                                          <!-- Dropdown card -->
                                           <div
-                                              class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box text-xs font-semibold text-base-content/50 uppercase tracking-wider"
+                                              class="absolute left-0 top-full mt-2 z-50 w-75 rounded-box border border-base-300 bg-base-100 shadow-lg p-4"
                                           >
-                                              Server Info
-                                          </div>
-                                          <div class="bg-base-100 -mx-4 px-4 py-3 flex flex-col gap-2.5">
-                                              ${[...(this._serverDescription ?? '')].length > 24
-                                                  ? html`<div class="flex items-baseline justify-between gap-3">
-                                                        <span class="text-xs text-base-content/50 shrink-0">Description</span>
-                                                        <span class="text-xs text-right break-all text-base-content/60"
-                                                            >${this._serverDescription}</span
-                                                        >
-                                                    </div>`
-                                                  : ''}
-                                              ${this._uiVersion && this._serverInfo?.version
-                                                  ? this._uiVersion === 'preview'
-                                                      ? html`<div
-                                                            class="rounded-md bg-info/10 border border-info/30 px-3 py-2 flex flex-col gap-1.5"
-                                                        >
-                                                            <span class="text-xs text-info/80 font-medium"
-                                                                >Es ist eine Preview UI-Version aktiv</span
-                                                            >
-                                                            <div class="flex items-baseline justify-between gap-3">
-                                                                <span class="text-xs text-base-content/50 shrink-0">Server</span>
-                                                                <span class="font-mono text-xs text-right text-base-content/60"
-                                                                    >${this._serverInfo.version}</span
-                                                                >
-                                                            </div>
-                                                        </div>`
-                                                      : this._versionMismatch
-                                                        ? html`<div
-                                                              class="rounded-md bg-warning/10 border border-warning/30 px-3 py-2 flex flex-col gap-1.5"
-                                                          >
-                                                              <span class="text-xs text-warning/80 font-medium"
-                                                                  >Achtung: Versionsunterschied</span
-                                                              >
-                                                              <div class="flex items-baseline justify-between gap-3">
-                                                                  <span class="text-xs text-base-content/50 shrink-0">UI</span>
-                                                                  <span class="font-mono text-xs text-right text-warning"
-                                                                      >${this._uiVersion}</span
-                                                                  >
-                                                              </div>
-                                                              <div class="flex items-baseline justify-between gap-3">
-                                                                  <span class="text-xs text-base-content/50 shrink-0">Server</span>
-                                                                  <span class="font-mono text-xs text-right text-warning"
-                                                                      >${this._serverInfo.version}</span
-                                                                  >
-                                                              </div>
-                                                          </div>`
-                                                        : this._versionPatchDiffers
-                                                          ? html`<div class="flex flex-col gap-1.5">
-                                                                <div class="flex items-baseline justify-between gap-3">
-                                                                    <span class="text-xs text-base-content/50 shrink-0">UI</span>
-                                                                    <span class="font-mono text-xs text-right text-base-content/60"
-                                                                        >${this._uiVersion}</span
-                                                                    >
-                                                                </div>
-                                                                <div class="flex items-baseline justify-between gap-3">
-                                                                    <span class="text-xs text-base-content/50 shrink-0">Server</span>
-                                                                    <span class="font-mono text-xs text-right text-base-content/60"
-                                                                        >${this._serverInfo.version}</span
-                                                                    >
-                                                                </div>
-                                                            </div>`
-                                                          : html`<div class="flex items-baseline justify-between gap-3">
-                                                                <span class="text-xs text-base-content/50 shrink-0">Server + UI</span>
-                                                                <span class="font-mono text-xs text-right text-base-content/60"
-                                                                    >${this._uiVersion}</span
+                                              <div
+                                                  class="bg-base-200 -mx-4 -mt-4 px-4 py-3 rounded-t-box text-xs font-semibold text-base-content/50 uppercase tracking-wider"
+                                              >
+                                                  Server Info
+                                              </div>
+                                              <div class="bg-base-100 -mx-4 px-4 py-3 flex flex-col gap-2.5">
+                                                  ${
+                                                      [...(this._serverDescription ?? '')].length > 24
+                                                          ? html`<div class="flex items-baseline justify-between gap-3">
+                                                                <span class="text-xs text-base-content/50 shrink-0">Description</span>
+                                                                <span class="text-xs text-right break-all text-base-content/60"
+                                                                    >${this._serverDescription}</span
                                                                 >
                                                             </div>`
-                                                  : ''}
-                                              ${this._serverInfo?.php
-                                                  ? html`<div class="flex items-baseline justify-between gap-3">
-                                                        <span class="text-xs text-base-content/50 shrink-0">PHP</span>
-                                                        <span class="font-mono text-xs text-right text-base-content/60"
-                                                            >${this._serverInfo.php}</span
-                                                        >
-                                                    </div>`
-                                                  : ''}
-                                              ${this._serverInfo?.storage
-                                                  ? html`<div class="flex items-baseline justify-between gap-3">
-                                                        <span class="text-xs text-base-content/50 shrink-0">Storage</span>
-                                                        <span class="font-mono text-xs text-right text-base-content/60"
-                                                            >${this._serverInfo.storage}</span
-                                                        >
-                                                    </div>`
-                                                  : ''}
-                                              ${this._serverInfo?.queue
-                                                  ? html`<div class="flex items-baseline justify-between gap-3">
-                                                        <span class="text-xs text-base-content/50 shrink-0">Queue</span>
-                                                        <span class="font-mono text-xs text-right text-base-content/60"
-                                                            >${this._serverInfo.queue}</span
-                                                        >
-                                                    </div>`
-                                                  : ''}
-                                              <div class="flex items-baseline justify-between gap-3">
-                                                  <span class="text-xs text-base-content/50 shrink-0">Service URL</span>
-                                                  <span class="font-mono text-xs text-right break-all text-base-content/60"
-                                                      >${connection.getUrl()}</span
-                                                  >
-                                              </div>
-                                              <div class="flex items-start justify-between gap-3">
-                                                  <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Observer</span>
-                                                  ${this._serverInfo?.workers?.length > 0
-                                                      ? html`<div class="flex flex-col items-end gap-1">
-                                                            ${this._serverInfo.workers.map(w => {
-                                                                const secs = workerAgeSecs(w.lastHeartbeat)
-                                                                const color = workerAgeColor(secs)
-                                                                return html`<span
-                                                                    class="flex items-center gap-1.5 font-mono text-[10px] text-${color}"
-                                                                    title="Letzter Heartbeat: ${w.lastHeartbeat}"
+                                                          : ''
+                                                  }
+                                                  ${
+                                                      this._uiVersion && this._serverInfo?.version
+                                                          ? this._uiVersion === 'preview'
+                                                              ? html`<div
+                                                                    class="rounded-md bg-info/10 border border-info/30 px-3 py-2 flex flex-col gap-1.5"
                                                                 >
-                                                                    <span
-                                                                        class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
-                                                                    ></span>
-                                                                    ${w.hostname}:${w.pid}
-                                                                    <span class="text-base-content/40">(${workerAgeLabel(secs)})</span>
-                                                                </span>`
-                                                            })}
-                                                        </div>`
-                                                      : html`<span class="flex items-center gap-1.5 text-xs text-error"
-                                                            ><span class="inline-block w-1.5 h-1.5 rounded-full bg-error"></span
-                                                            >stopped</span
-                                                        >`}
-                                              </div>
-                                              <div class="flex items-start justify-between gap-3">
-                                                  <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Projection</span>
-                                                  ${this._serverInfo?.projection?.length > 0
-                                                      ? html`<div class="flex flex-col items-end gap-1">
-                                                            ${this._serverInfo.projection.map(p => {
-                                                                const secs = workerAgeSecs(p.lastHeartbeat)
-                                                                const color = workerAgeColor(secs)
-                                                                return html`<span
-                                                                    class="flex items-center gap-1.5 font-mono text-[10px] text-${color}"
-                                                                    title="Letzter Heartbeat: ${p.lastHeartbeat}"
+                                                                    <span class="text-xs text-info/80 font-medium"
+                                                                        >Es ist eine Preview UI-Version aktiv</span
+                                                                    >
+                                                                    <div class="flex items-baseline justify-between gap-3">
+                                                                        <span class="text-xs text-base-content/50 shrink-0">Server</span>
+                                                                        <span class="font-mono text-xs text-right text-base-content/60"
+                                                                            >${this._serverInfo.version}</span
+                                                                        >
+                                                                    </div>
+                                                                </div>`
+                                                              : this._versionMismatch
+                                                                ? html`<div
+                                                                      class="rounded-md bg-warning/10 border border-warning/30 px-3 py-2 flex flex-col gap-1.5"
+                                                                  >
+                                                                      <span class="text-xs text-warning/80 font-medium"
+                                                                          >Achtung: Versionsunterschied</span
+                                                                      >
+                                                                      <div class="flex items-baseline justify-between gap-3">
+                                                                          <span class="text-xs text-base-content/50 shrink-0">UI</span>
+                                                                          <span class="font-mono text-xs text-right text-warning"
+                                                                              >${this._uiVersion}</span
+                                                                          >
+                                                                      </div>
+                                                                      <div class="flex items-baseline justify-between gap-3">
+                                                                          <span class="text-xs text-base-content/50 shrink-0">Server</span>
+                                                                          <span class="font-mono text-xs text-right text-warning"
+                                                                              >${this._serverInfo.version}</span
+                                                                          >
+                                                                      </div>
+                                                                  </div>`
+                                                                : this._versionPatchDiffers
+                                                                  ? html`<div class="flex flex-col gap-1.5">
+                                                                        <div class="flex items-baseline justify-between gap-3">
+                                                                            <span class="text-xs text-base-content/50 shrink-0">UI</span>
+                                                                            <span class="font-mono text-xs text-right text-base-content/60"
+                                                                                >${this._uiVersion}</span
+                                                                            >
+                                                                        </div>
+                                                                        <div class="flex items-baseline justify-between gap-3">
+                                                                            <span class="text-xs text-base-content/50 shrink-0"
+                                                                                >Server</span
+                                                                            >
+                                                                            <span class="font-mono text-xs text-right text-base-content/60"
+                                                                                >${this._serverInfo.version}</span
+                                                                            >
+                                                                        </div>
+                                                                    </div>`
+                                                                  : html`<div class="flex items-baseline justify-between gap-3">
+                                                                        <span class="text-xs text-base-content/50 shrink-0"
+                                                                            >Server + UI</span
+                                                                        >
+                                                                        <span class="font-mono text-xs text-right text-base-content/60"
+                                                                            >${this._uiVersion}</span
+                                                                        >
+                                                                    </div>`
+                                                          : ''
+                                                  }
+                                                  ${
+                                                      this._serverInfo?.php
+                                                          ? html`<div class="flex items-baseline justify-between gap-3">
+                                                                <span class="text-xs text-base-content/50 shrink-0">PHP</span>
+                                                                <span class="font-mono text-xs text-right text-base-content/60"
+                                                                    >${this._serverInfo.php}</span
                                                                 >
-                                                                    <span
-                                                                        class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
-                                                                    ></span>
-                                                                    ${p.hostname}:${p.pid}
-                                                                    <span class="text-base-content/40">(${workerAgeLabel(secs)})</span>
-                                                                </span>`
-                                                            })}
-                                                        </div>`
-                                                      : html`<span class="flex items-center gap-1.5 text-xs text-base-content/30"
-                                                            ><span class="inline-block w-1.5 h-1.5 rounded-full bg-base-content/20"></span
-                                                            >not running</span
-                                                        >`}
-                                              </div>
-                                              <div class="flex items-start justify-between gap-3">
-                                                  <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Scheduler</span>
-                                                  ${this._serverInfo?.scheduler?.length > 0
-                                                      ? html`<div class="flex flex-col items-end gap-1">
-                                                            ${this._serverInfo.scheduler.map(s => {
-                                                                const secs = workerAgeSecs(s.lastHeartbeat)
-                                                                const color = schedulerAgeColor(secs)
-                                                                return html`<span
-                                                                    class="flex items-center gap-1.5 font-mono text-[10px] text-${color}"
-                                                                    title="Letzter Heartbeat: ${s.lastHeartbeat}"
+                                                            </div>`
+                                                          : ''
+                                                  }
+                                                  ${
+                                                      this._serverInfo?.storage
+                                                          ? html`<div class="flex items-baseline justify-between gap-3">
+                                                                <span class="text-xs text-base-content/50 shrink-0">Storage</span>
+                                                                <span class="font-mono text-xs text-right text-base-content/60"
+                                                                    >${this._serverInfo.storage}</span
                                                                 >
-                                                                    <span
-                                                                        class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
-                                                                    ></span>
-                                                                    ${s.hostname}:${s.pid}
-                                                                    <span class="text-base-content/40">(${workerAgeLabel(secs)})</span>
-                                                                </span>`
-                                                            })}
-                                                        </div>`
-                                                      : html`<span class="flex items-center gap-1.5 text-xs text-base-content/30"
-                                                            ><span class="inline-block w-1.5 h-1.5 rounded-full bg-base-content/20"></span
-                                                            >not running</span
-                                                        >`}
+                                                            </div>`
+                                                          : ''
+                                                  }
+                                                  ${
+                                                      this._serverInfo?.queue
+                                                          ? html`<div class="flex items-baseline justify-between gap-3">
+                                                                <span class="text-xs text-base-content/50 shrink-0">Queue</span>
+                                                                <span class="font-mono text-xs text-right text-base-content/60"
+                                                                    >${this._serverInfo.queue}</span
+                                                                >
+                                                            </div>`
+                                                          : ''
+                                                  }
+                                                  <div class="flex items-baseline justify-between gap-3">
+                                                      <span class="text-xs text-base-content/50 shrink-0">Service URL</span>
+                                                      <span class="font-mono text-xs text-right break-all text-base-content/60"
+                                                          >${connection.getUrl()}</span
+                                                      >
+                                                  </div>
+                                                  <div class="flex items-start justify-between gap-3">
+                                                      <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Observer</span>
+                                                      ${
+                                                          this._serverInfo?.workers?.length > 0
+                                                              ? html`<div class="flex flex-col items-end gap-1">
+                                                                    ${this._serverInfo.workers.map(w => {
+                                                                        const secs = workerAgeSecs(w.lastHeartbeat)
+                                                                        const color = workerAgeColor(secs)
+                                                                        return html`<span
+                                                                            class="flex items-center gap-1.5 font-mono text-[10px] text-${color}"
+                                                                            title="Letzter Heartbeat: ${w.lastHeartbeat}"
+                                                                        >
+                                                                            <span
+                                                                                class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
+                                                                            ></span>
+                                                                            ${w.hostname}:${w.pid}
+                                                                            <span class="text-base-content/40"
+                                                                                >(${workerAgeLabel(secs)})</span
+                                                                            >
+                                                                        </span>`
+                                                                    })}
+                                                                </div>`
+                                                              : html`<span class="flex items-center gap-1.5 text-xs text-error"
+                                                                    ><span class="inline-block w-1.5 h-1.5 rounded-full bg-error"></span
+                                                                    >stopped</span
+                                                                >`
+                                                      }
+                                                  </div>
+                                                  <div class="flex items-start justify-between gap-3">
+                                                      <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Projection</span>
+                                                      ${
+                                                          this._serverInfo?.projection?.length > 0
+                                                              ? html`<div class="flex flex-col items-end gap-1">
+                                                                    ${this._serverInfo.projection.map(p => {
+                                                                        const secs = workerAgeSecs(p.lastHeartbeat)
+                                                                        const color = workerAgeColor(secs)
+                                                                        return html`<span
+                                                                            class="flex items-center gap-1.5 font-mono text-[10px] text-${color}"
+                                                                            title="Letzter Heartbeat: ${p.lastHeartbeat}"
+                                                                        >
+                                                                            <span
+                                                                                class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
+                                                                            ></span>
+                                                                            ${p.hostname}:${p.pid}
+                                                                            <span class="text-base-content/40"
+                                                                                >(${workerAgeLabel(secs)})</span
+                                                                            >
+                                                                        </span>`
+                                                                    })}
+                                                                </div>`
+                                                              : html`<span class="flex items-center gap-1.5 text-xs text-base-content/30"
+                                                                    ><span
+                                                                        class="inline-block w-1.5 h-1.5 rounded-full bg-base-content/20"
+                                                                    ></span
+                                                                    >not running</span
+                                                                >`
+                                                      }
+                                                  </div>
+                                                  <div class="flex items-start justify-between gap-3">
+                                                      <span class="text-xs text-base-content/50 shrink-0 mt-0.5">Scheduler</span>
+                                                      ${
+                                                          this._serverInfo?.scheduler?.length > 0
+                                                              ? html`<div class="flex flex-col items-end gap-1">
+                                                                    ${this._serverInfo.scheduler.map(s => {
+                                                                        const secs = workerAgeSecs(s.lastHeartbeat)
+                                                                        const color = schedulerAgeColor(secs)
+                                                                        return html`<span
+                                                                            class="flex items-center gap-1.5 font-mono text-[10px] text-${color}"
+                                                                            title="Letzter Heartbeat: ${s.lastHeartbeat}"
+                                                                        >
+                                                                            <span
+                                                                                class="inline-block w-1.5 h-1.5 rounded-full bg-${color} shrink-0"
+                                                                            ></span>
+                                                                            ${s.hostname}:${s.pid}
+                                                                            <span class="text-base-content/40"
+                                                                                >(${workerAgeLabel(secs)})</span
+                                                                            >
+                                                                        </span>`
+                                                                    })}
+                                                                </div>`
+                                                              : html`<span class="flex items-center gap-1.5 text-xs text-base-content/30"
+                                                                    ><span
+                                                                        class="inline-block w-1.5 h-1.5 rounded-full bg-base-content/20"
+                                                                    ></span
+                                                                    >not running</span
+                                                                >`
+                                                      }
+                                                  </div>
                                               </div>
                                           </div>
-                                      </div>
-                                  `
-                                : ''}
+                                      `
+                                    : ''
+                            }
                         </div>
 
                         <!-- Mobile: logo only (no dropdown) -->
@@ -916,58 +949,68 @@ export class FcApp extends BaseElement {
                                 />
                                 <button class="btn btn-sm btn-ghost join-item border-transparent" @click=${this._onSearch}>↵</button>
                             </div>
-                            ${this._searchResults?.length
-                                ? html`
-                                      <div
-                                          class="fc-search-dropdown absolute top-full left-0 mt-1 w-84 bg-base-100 border border-base-content/10 rounded-box shadow-xl z-50"
-                                      >
-                                          <div class="px-3 py-1.5 text-[10px] uppercase tracking-wider text-base-content/40 font-semibold">
-                                              Suchergebnisse
+                            ${
+                                this._searchResults?.length
+                                    ? html`
+                                          <div
+                                              class="fc-search-dropdown absolute top-full left-0 mt-1 w-84 bg-base-100 border border-base-content/10 rounded-box shadow-xl z-50"
+                                          >
+                                              <div
+                                                  class="px-3 py-1.5 text-[10px] uppercase tracking-wider text-base-content/40 font-semibold"
+                                              >
+                                                  Suchergebnisse
+                                              </div>
+                                              ${this._searchResults.slice(0, SEARCH_LIMIT).map(
+                                                  item => html`
+                                                      <button
+                                                          class="group w-full text-left px-3 py-2.5 hover:bg-primary/10 transition-colors border-t border-base-content/5"
+                                                          @click=${() => this._selectSearchResult(item.flowHash)}
+                                                      >
+                                                          <div class="flex items-center justify-between gap-2">
+                                                              <span
+                                                                  class="text-sm font-semibold truncate group-hover:text-primary transition-colors"
+                                                                  >${item.flowSource?.split('\\').pop()}</span
+                                                              >
+                                                              <span class="text-xs text-base-content/35 flex-shrink-0"
+                                                                  >${new Date(item.flowTime).toLocaleString('de-DE', {
+                                                                      dateStyle: 'short',
+                                                                      timeStyle: 'short',
+                                                                  })}</span
+                                                              >
+                                                          </div>
+                                                          ${
+                                                              item.flowSubject
+                                                                  ? html`<div class="text-sm text-base-content/60 truncate mt-0.5">
+                                                                        ${item.flowSubject}
+                                                                    </div>`
+                                                                  : ''
+                                                          }
+                                                          <div class="text-xs font-mono text-base-content/30 mt-0.5">
+                                                              ${item.flowHash}
+                                                              ${
+                                                                  item.status === 'FAILED' || item.status === 'WARNING'
+                                                                      ? html`<span class="text-error/60 ml-2">${item.status}</span>`
+                                                                      : ''
+                                                              }
+                                                          </div>
+                                                      </button>
+                                                  `
+                                              )}
+                                              ${
+                                                  this._searchTotal > SEARCH_LIMIT
+                                                      ? html`
+                                                            <div
+                                                                class="px-3 py-2 text-[11px] text-base-content/40 text-center border-t border-base-content/5 bg-base-200/50"
+                                                            >
+                                                                ${SEARCH_LIMIT} von ${this._searchTotal} Ergebnissen
+                                                            </div>
+                                                        `
+                                                      : ''
+                                              }
                                           </div>
-                                          ${this._searchResults.slice(0, SEARCH_LIMIT).map(
-                                              item => html`
-                                                  <button
-                                                      class="group w-full text-left px-3 py-2.5 hover:bg-primary/10 transition-colors border-t border-base-content/5"
-                                                      @click=${() => this._selectSearchResult(item.flowHash)}
-                                                  >
-                                                      <div class="flex items-center justify-between gap-2">
-                                                          <span
-                                                              class="text-sm font-semibold truncate group-hover:text-primary transition-colors"
-                                                              >${item.flowSource?.split('\\').pop()}</span
-                                                          >
-                                                          <span class="text-xs text-base-content/35 flex-shrink-0"
-                                                              >${new Date(item.flowTime).toLocaleString('de-DE', {
-                                                                  dateStyle: 'short',
-                                                                  timeStyle: 'short',
-                                                              })}</span
-                                                          >
-                                                      </div>
-                                                      ${item.flowSubject
-                                                          ? html`<div class="text-sm text-base-content/60 truncate mt-0.5">
-                                                                ${item.flowSubject}
-                                                            </div>`
-                                                          : ''}
-                                                      <div class="text-xs font-mono text-base-content/30 mt-0.5">
-                                                          ${item.flowHash}
-                                                          ${item.status === 'FAILED' || item.status === 'WARNING'
-                                                              ? html`<span class="text-error/60 ml-2">${item.status}</span>`
-                                                              : ''}
-                                                      </div>
-                                                  </button>
-                                              `
-                                          )}
-                                          ${this._searchTotal > SEARCH_LIMIT
-                                              ? html`
-                                                    <div
-                                                        class="px-3 py-2 text-[11px] text-base-content/40 text-center border-t border-base-content/5 bg-base-200/50"
-                                                    >
-                                                        ${SEARCH_LIMIT} von ${this._searchTotal} Ergebnissen
-                                                    </div>
-                                                `
-                                              : ''}
-                                      </div>
-                                  `
-                                : ''}
+                                      `
+                                    : ''
+                            }
                         </div>
                     </div>
 
@@ -1117,9 +1160,9 @@ export class FcApp extends BaseElement {
                             tab => html`
                                 <a
                                     role="tab"
-                                    class="tab gap-1.5 ${this.activeTab === tab ? 'tab-active' : ''} ${tab === 'dev-tool'
-                                        ? 'fc-dev-glow'
-                                        : ''}"
+                                    class="tab gap-1.5 ${this.activeTab === tab ? 'tab-active' : ''} ${
+                                        tab === 'dev-tool' ? 'fc-dev-glow' : ''
+                                    }"
                                     @click=${() => {
                                         this.activeTab = tab
                                         this.selectedPrefix = null
@@ -1128,107 +1171,111 @@ export class FcApp extends BaseElement {
                                         this._excChartDate = null
                                     }}
                                 >
-                                    ${{
-                                        overview: html`<svg
-                                            class="w-3.5 h-3.5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
-                                            />
-                                        </svg>`,
-                                        schemas: html`<svg
-                                            class="w-3.5 h-3.5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-                                            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-                                            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
-                                            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
-                                        </svg>`,
-                                        flows: html`<svg
-                                            class="w-3.5 h-3.5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
-                                            />
-                                        </svg>`,
-                                        exceptions: html`<svg
-                                            class="w-3.5 h-3.5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                                            />
-                                        </svg>`,
-                                        schedules: html`<svg
-                                            class="w-3.5 h-3.5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                                            />
-                                        </svg>`,
-                                        queues: html`<svg
-                                            class="w-3.5 h-3.5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859M12 3v8.25m0 0l-3-3m3 3l3-3"
-                                            />
-                                        </svg>`,
-                                        'dev-tool': html`<svg
-                                            class="w-3.5 h-3.5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
-                                            />
-                                        </svg>`,
-                                    }[tab]}
-                                    ${{
-                                        overview: 'Overview',
-                                        schemas: 'Schemas',
-                                        flows: 'Flows',
-                                        exceptions: 'Exceptions',
-                                        schedules: 'Schedules',
-                                        queues: 'Queues',
-                                        'dev-tool': 'DevTool',
-                                    }[tab]}
+                                    ${
+                                        {
+                                            overview: html`<svg
+                                                class="w-3.5 h-3.5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                                                />
+                                            </svg>`,
+                                            schemas: html`<svg
+                                                class="w-3.5 h-3.5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                                                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                                                <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                                                <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                                            </svg>`,
+                                            flows: html`<svg
+                                                class="w-3.5 h-3.5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+                                                />
+                                            </svg>`,
+                                            exceptions: html`<svg
+                                                class="w-3.5 h-3.5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                                />
+                                            </svg>`,
+                                            schedules: html`<svg
+                                                class="w-3.5 h-3.5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                />
+                                            </svg>`,
+                                            queues: html`<svg
+                                                class="w-3.5 h-3.5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859M12 3v8.25m0 0l-3-3m3 3l3-3"
+                                                />
+                                            </svg>`,
+                                            'dev-tool': html`<svg
+                                                class="w-3.5 h-3.5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
+                                                />
+                                            </svg>`,
+                                        }[tab]
+                                    }
+                                    ${
+                                        {
+                                            overview: 'Overview',
+                                            schemas: 'Schemas',
+                                            flows: 'Flows',
+                                            exceptions: 'Exceptions',
+                                            schedules: 'Schedules',
+                                            queues: 'Queues',
+                                            'dev-tool': 'DevTool',
+                                        }[tab]
+                                    }
                                 </a>
                             `
                         )}
@@ -1236,346 +1283,385 @@ export class FcApp extends BaseElement {
                 </div>
 
                 <!-- Masking settings modal -->
-                ${this._maskingModal
-                    ? html`
-                          <dialog id="masking-modal" class="modal modal-open backdrop-blur-sm">
-                              <div class="modal-box max-w-2xl p-0 overflow-hidden">
-                                  <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-6 pt-5 pb-4">
-                                      <div class="flex items-center justify-between">
-                                          <div class="flex items-center gap-3">
-                                              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                                  <svg
-                                                      class="w-5 h-5 text-primary"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      stroke-width="2"
-                                                      viewBox="0 0 24 24"
-                                                  >
-                                                      <path
-                                                          stroke-linecap="round"
-                                                          stroke-linejoin="round"
-                                                          d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-                                                      />
-                                                  </svg>
+                ${
+                    this._maskingModal
+                        ? html`
+                              <dialog id="masking-modal" class="modal modal-open backdrop-blur-sm">
+                                  <div class="modal-box max-w-2xl p-0 overflow-hidden">
+                                      <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-6 pt-5 pb-4">
+                                          <div class="flex items-center justify-between">
+                                              <div class="flex items-center gap-3">
+                                                  <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                      <svg
+                                                          class="w-5 h-5 text-primary"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+                                                          />
+                                                      </svg>
+                                                  </div>
+                                                  <h3 class="font-bold text-base">Datenschutz-Maskierung</h3>
                                               </div>
-                                              <h3 class="font-bold text-base">Datenschutz-Maskierung</h3>
+                                              <button
+                                                  class="btn btn-sm btn-ghost btn-square btn-circle"
+                                                  @click=${() => this._closeMaskingModal()}
+                                              >
+                                                  ✕
+                                              </button>
                                           </div>
-                                          <button
-                                              class="btn btn-sm btn-ghost btn-square btn-circle"
-                                              @click=${() => this._closeMaskingModal()}
-                                          >
-                                              ✕
-                                          </button>
+                                      </div>
+                                      <div class="px-6 pb-6 pt-4">
+                                          <fc-masking-settings></fc-masking-settings>
                                       </div>
                                   </div>
-                                  <div class="px-6 pb-6 pt-4">
-                                      <fc-masking-settings></fc-masking-settings>
-                                  </div>
-                              </div>
-                              <form method="dialog" class="modal-backdrop">
-                                  <button @click=${() => this._closeMaskingModal()}>close</button>
-                              </form>
-                          </dialog>
-                      `
-                    : ''}
+                                  <form method="dialog" class="modal-backdrop">
+                                      <button @click=${() => this._closeMaskingModal()}>close</button>
+                                  </form>
+                              </dialog>
+                          `
+                        : ''
+                }
 
                 <!-- Change password modal -->
                 <dialog id="pw-change-modal" class="modal">
-                    ${this._pwModal
-                        ? html`
-                              <div class="modal-box max-w-sm p-0 overflow-hidden">
-                                  <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-6 pt-5 pb-4">
-                                      <div class="flex items-center justify-between">
-                                          <div class="flex items-center gap-3">
-                                              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                                  <svg
-                                                      class="w-5 h-5 text-primary"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      stroke-width="2"
-                                                      viewBox="0 0 24 24"
-                                                  >
-                                                      <path
-                                                          stroke-linecap="round"
-                                                          stroke-linejoin="round"
-                                                          d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-                                                      />
-                                                  </svg>
+                    ${
+                        this._pwModal
+                            ? html`
+                                  <div class="modal-box max-w-sm p-0 overflow-hidden">
+                                      <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-6 pt-5 pb-4">
+                                          <div class="flex items-center justify-between">
+                                              <div class="flex items-center gap-3">
+                                                  <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                      <svg
+                                                          class="w-5 h-5 text-primary"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          stroke-width="2"
+                                                          viewBox="0 0 24 24"
+                                                      >
+                                                          <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+                                                          />
+                                                      </svg>
+                                                  </div>
+                                                  <h3 class="font-bold text-base">Passwort ändern</h3>
                                               </div>
-                                              <h3 class="font-bold text-base">Passwort ändern</h3>
+                                              <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${this._closePwModal}>
+                                                  ✕
+                                              </button>
                                           </div>
-                                          <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${this._closePwModal}>✕</button>
                                       </div>
-                                  </div>
-                                  <form @submit=${this._onChangePassword} class="flex flex-col gap-3 px-6 pb-6 pt-4">
-                                      <div class="form-control">
-                                          <label class="label py-1"><span class="label-text text-xs">Aktuelles Passwort</span></label>
-                                          <input
-                                              type="password"
-                                              name="current"
-                                              class="input input-bordered input-sm"
-                                              autocomplete="current-password"
-                                              ?disabled=${this._pwModal.loading}
-                                              required
-                                          />
-                                      </div>
-                                      <div class="form-control">
-                                          <label class="label py-1"><span class="label-text text-xs">Neues Passwort</span></label>
-                                          <input
-                                              type="password"
-                                              name="next"
-                                              class="input input-bordered input-sm"
-                                              autocomplete="new-password"
-                                              ?disabled=${this._pwModal.loading}
-                                              required
-                                          />
-                                      </div>
-                                      <div class="form-control">
-                                          <label class="label py-1"
-                                              ><span class="label-text text-xs">Neues Passwort wiederholen</span></label
-                                          >
-                                          <input
-                                              type="password"
-                                              name="confirm"
-                                              class="input input-bordered input-sm"
-                                              autocomplete="new-password"
-                                              ?disabled=${this._pwModal.loading}
-                                              required
-                                          />
-                                      </div>
-                                      ${this._pwModal.error
-                                          ? html`
-                                                <div class="alert alert-error py-2 px-3 text-xs">
-                                                    <span>${this._pwModal.error}</span>
-                                                </div>
-                                            `
-                                          : ''}
-                                      <div class="modal-action mt-0">
-                                          <button type="button" class="btn btn-ghost btn-sm" @click=${this._closePwModal}>Abbrechen</button>
-                                          <button type="submit" class="btn btn-primary btn-sm" ?disabled=${this._pwModal.loading}>
-                                              ${this._pwModal.loading
-                                                  ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                                  : 'Speichern'}
-                                          </button>
-                                      </div>
-                                  </form>
-                              </div>
-                              <form method="dialog" class="modal-backdrop backdrop-blur-sm">
-                                  <button @click=${this._closePwModal}>close</button>
-                              </form>
-                          `
-                        : ''}
-                </dialog>
-                <!-- AI config modal -->
-                <dialog id="ai-config-modal" class="modal">
-                    ${this._aiModal
-                        ? html`
-                              <div class="modal-box max-w-sm p-0 overflow-hidden">
-                                  <!-- Header mit Gradient -->
-                                  <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-6 pt-5 pb-4">
-                                      <div class="flex items-center justify-between">
-                                          <div class="flex items-center gap-3">
-                                              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                                  <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
-                                                      <path
-                                                          d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813A3.75 3.75 0 007.466 7.89l.813-2.846A.75.75 0 019 4.5zM18 1.5a.75.75 0 01.728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 010 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 01-1.456 0l-.258-1.036a2.625 2.625 0 00-1.91-1.91l-1.036-.258a.75.75 0 010-1.456l1.036-.258a2.625 2.625 0 001.91-1.91l.258-1.036A.75.75 0 0118 1.5zM16.5 15a.75.75 0 01.712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 010 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 01-1.422 0l-.395-1.183a1.5 1.5 0 00-.948-.948l-1.183-.395a.75.75 0 010-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0116.5 15z"
-                                                      />
-                                                  </svg>
-                                              </div>
-                                              <div>
-                                                  <h3 class="font-bold text-base">AI-Einstellungen</h3>
-                                                  <span class="text-xs text-base-content/50"
-                                                      >${this._aiModal.provider === 'ollama' ? 'Ollama (lokal)' : 'Anthropic Claude'}</span
-                                                  >
-                                              </div>
+                                      <form @submit=${this._onChangePassword} class="flex flex-col gap-3 px-6 pb-6 pt-4">
+                                          <div class="form-control">
+                                              <label class="label py-1"><span class="label-text text-xs">Aktuelles Passwort</span></label>
+                                              <input
+                                                  type="password"
+                                                  name="current"
+                                                  class="input input-bordered input-sm"
+                                                  autocomplete="current-password"
+                                                  ?disabled=${this._pwModal.loading}
+                                                  required
+                                              />
                                           </div>
-                                          <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${this._closeAiModal}>✕</button>
-                                      </div>
-                                  </div>
-
-                                  <div class="px-6 pb-6 pt-4">
-                                      <!-- Provider tabs -->
-                                      <div class="flex gap-1 rounded-lg bg-base-200 p-1 mb-4">
-                                          <button
-                                              type="button"
-                                              class="flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${this._aiModal
-                                                  .provider !== 'ollama'
-                                                  ? 'bg-base-100 shadow text-base-content'
-                                                  : 'text-base-content/50 hover:text-base-content'}"
-                                              @click=${() => {
-                                                  this._aiModal = { ...this._aiModal, provider: 'anthropic', error: null }
-                                              }}
-                                          >
-                                              Anthropic Claude
-                                          </button>
-                                          <button
-                                              type="button"
-                                              class="flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${this._aiModal
-                                                  .provider === 'ollama'
-                                                  ? 'bg-base-100 shadow text-base-content'
-                                                  : 'text-base-content/50 hover:text-base-content'}"
-                                              @click=${async () => {
-                                                  this._aiModal = { ...this._aiModal, provider: 'ollama', error: null }
-                                                  await this._loadAiConfig()
-                                              }}
-                                          >
-                                              Ollama (lokal)
-                                          </button>
-                                      </div>
-
-                                      ${this._aiModal.provider === 'ollama'
-                                          ? html`
-                                                <div class="rounded-lg bg-base-200 border border-base-300 px-3 py-2.5 mb-3">
-                                                    <p class="text-xs text-base-content/60">
-                                                        Ollama läuft lokal auf deinem Server — kein API-Key nötig, keine Daten verlassen die
-                                                        Umgebung.
-                                                    </p>
-                                                </div>
-                                            `
-                                          : html`
-                                                <div class="rounded-lg bg-base-200 border border-base-300 px-3 py-2.5 mb-3">
-                                                    <p class="text-xs text-base-content/60">
-                                                        Die AI-Analyse nutzt Claude von Anthropic. Ein API-Key wird unter
-                                                        <a
-                                                            href="https://console.anthropic.com/settings/keys"
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            class="link link-primary"
-                                                            >console.anthropic.com</a
-                                                        >
-                                                        erstellt.
-                                                    </p>
-                                                </div>
-                                            `}
-                                      ${this._aiConfigured && this._aiProvider === this._aiModal.provider
-                                          ? html`
-                                                <div
-                                                    class="flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 mb-4"
-                                                >
-                                                    <svg
-                                                        class="w-4 h-4 text-success flex-shrink-0"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        stroke-width="2"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path
-                                                            stroke-linecap="round"
-                                                            stroke-linejoin="round"
-                                                            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                        />
-                                                    </svg>
-                                                    <span class="text-xs text-success font-medium"
-                                                        >${this._aiModal.provider === 'ollama'
-                                                            ? 'Ollama ist konfiguriert'
-                                                            : 'API-Key ist hinterlegt'}</span
-                                                    >
-                                                </div>
-                                            `
-                                          : ''}
-
-                                      <form @submit=${this._onSaveAiConfig} class="flex flex-col gap-3">
-                                          ${this._aiModal.provider === 'ollama'
-                                              ? html`
-                                                    <div class="form-control">
-                                                        <label class="label py-1"
-                                                            ><span class="label-text text-xs font-medium">Ollama URL</span></label
-                                                        >
-                                                        <input
-                                                            type="url"
-                                                            name="ollamaUrl"
-                                                            class="input input-bordered input-sm font-mono w-full"
-                                                            placeholder="http://localhost:11434"
-                                                            .value=${this._aiOllamaUrl}
-                                                            ?disabled=${this._aiModal.loading}
-                                                        />
-                                                    </div>
-                                                `
-                                              : html`
-                                                    <div class="form-control">
-                                                        <label class="label py-1"
-                                                            ><span class="label-text text-xs font-medium"
-                                                                >${this._aiConfigured && this._aiProvider === 'anthropic'
-                                                                    ? 'Neuer API-Key'
-                                                                    : 'API-Key'}</span
-                                                            ></label
-                                                        >
-                                                        <input
-                                                            type="password"
-                                                            name="apiKey"
-                                                            class="input input-bordered input-sm font-mono w-full"
-                                                            placeholder="sk-ant-..."
-                                                            ?disabled=${this._aiModal.loading}
-                                                            ?required=${!(this._aiConfigured && this._aiProvider === 'anthropic')}
-                                                        />
-                                                    </div>
-                                                `}
-                                          ${((this._aiModal.provider === 'ollama' ? this._aiOllamaModels : this._aiAnthropicModels) ?? [])
-                                              .length > 0
-                                              ? html`
-                                                    <div class="form-control">
-                                                        <label class="label py-1"
-                                                            ><span class="label-text text-xs font-medium">Modell</span></label
-                                                        >
-                                                        <select
-                                                            name="model"
-                                                            class="select select-bordered select-sm w-full"
-                                                            ?disabled=${this._aiModal.loading}
-                                                        >
-                                                            ${(this._aiModal.provider === 'ollama'
-                                                                ? this._aiOllamaModels
-                                                                : this._aiAnthropicModels
-                                                            ).map(
-                                                                m => html`
-                                                                    <option value=${m.id} ?selected=${m.id === this._aiModel}>
-                                                                        ${m.label}
-                                                                    </option>
-                                                                `
-                                                            )}
-                                                        </select>
-                                                    </div>
-                                                `
-                                              : ''}
-                                          ${this._aiModal.error
-                                              ? html`
-                                                    <div class="alert alert-error py-2 px-3 text-xs">
-                                                        <span>${this._aiModal.error}</span>
-                                                    </div>
-                                                `
-                                              : ''}
-                                          <div class="flex items-center justify-between mt-4">
-                                              ${this._aiConfigured && this._aiProvider === this._aiModal.provider
-                                                  ? html`<button
-                                                        type="button"
-                                                        class="btn btn-ghost btn-sm text-error"
-                                                        @click=${this._onClearAiConfig}
-                                                    >
-                                                        Entfernen
-                                                    </button>`
-                                                  : html`<span></span>`}
-                                              <div class="flex gap-2">
-                                                  <button type="button" class="btn btn-ghost btn-sm" @click=${this._closeAiModal}>
-                                                      Abbrechen
-                                                  </button>
-                                                  <button
-                                                      type="submit"
-                                                      class="btn btn-primary btn-sm min-w-24"
-                                                      ?disabled=${this._aiModal.loading}
-                                                  >
-                                                      ${this._aiModal.loading
+                                          <div class="form-control">
+                                              <label class="label py-1"><span class="label-text text-xs">Neues Passwort</span></label>
+                                              <input
+                                                  type="password"
+                                                  name="next"
+                                                  class="input input-bordered input-sm"
+                                                  autocomplete="new-password"
+                                                  ?disabled=${this._pwModal.loading}
+                                                  required
+                                              />
+                                          </div>
+                                          <div class="form-control">
+                                              <label class="label py-1"
+                                                  ><span class="label-text text-xs">Neues Passwort wiederholen</span></label
+                                              >
+                                              <input
+                                                  type="password"
+                                                  name="confirm"
+                                                  class="input input-bordered input-sm"
+                                                  autocomplete="new-password"
+                                                  ?disabled=${this._pwModal.loading}
+                                                  required
+                                              />
+                                          </div>
+                                          ${
+                                              this._pwModal.error
+                                                  ? html`
+                                                        <div class="alert alert-error py-2 px-3 text-xs">
+                                                            <span>${this._pwModal.error}</span>
+                                                        </div>
+                                                    `
+                                                  : ''
+                                          }
+                                          <div class="modal-action mt-0">
+                                              <button type="button" class="btn btn-ghost btn-sm" @click=${this._closePwModal}>
+                                                  Abbrechen
+                                              </button>
+                                              <button type="submit" class="btn btn-primary btn-sm" ?disabled=${this._pwModal.loading}>
+                                                  ${
+                                                      this._pwModal.loading
                                                           ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                                          : 'Speichern'}
-                                                  </button>
-                                              </div>
+                                                          : 'Speichern'
+                                                  }
+                                              </button>
                                           </div>
                                       </form>
                                   </div>
-                              </div>
-                              <form method="dialog" class="modal-backdrop backdrop-blur-sm">
-                                  <button @click=${this._closeAiModal}>close</button>
-                              </form>
-                          `
-                        : ''}
+                                  <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                                      <button @click=${this._closePwModal}>close</button>
+                                  </form>
+                              `
+                            : ''
+                    }
+                </dialog>
+                <!-- AI config modal -->
+                <dialog id="ai-config-modal" class="modal">
+                    ${
+                        this._aiModal
+                            ? html`
+                                  <div class="modal-box max-w-sm p-0 overflow-hidden">
+                                      <!-- Header mit Gradient -->
+                                      <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-6 pt-5 pb-4">
+                                          <div class="flex items-center justify-between">
+                                              <div class="flex items-center gap-3">
+                                                  <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                      <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                                                          <path
+                                                              d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813A3.75 3.75 0 007.466 7.89l.813-2.846A.75.75 0 019 4.5zM18 1.5a.75.75 0 01.728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 010 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 01-1.456 0l-.258-1.036a2.625 2.625 0 00-1.91-1.91l-1.036-.258a.75.75 0 010-1.456l1.036-.258a2.625 2.625 0 001.91-1.91l.258-1.036A.75.75 0 0118 1.5zM16.5 15a.75.75 0 01.712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 010 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 01-1.422 0l-.395-1.183a1.5 1.5 0 00-.948-.948l-1.183-.395a.75.75 0 010-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0116.5 15z"
+                                                          />
+                                                      </svg>
+                                                  </div>
+                                                  <div>
+                                                      <h3 class="font-bold text-base">AI-Einstellungen</h3>
+                                                      <span class="text-xs text-base-content/50"
+                                                          >${this._aiModal.provider === 'ollama' ? 'Ollama (lokal)' : 'Anthropic Claude'}</span
+                                                      >
+                                                  </div>
+                                              </div>
+                                              <button class="btn btn-sm btn-ghost btn-square btn-circle" @click=${this._closeAiModal}>
+                                                  ✕
+                                              </button>
+                                          </div>
+                                      </div>
+
+                                      <div class="px-6 pb-6 pt-4">
+                                          <!-- Provider tabs -->
+                                          <div class="flex gap-1 rounded-lg bg-base-200 p-1 mb-4">
+                                              <button
+                                                  type="button"
+                                                  class="flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${
+                                                      this._aiModal.provider !== 'ollama'
+                                                          ? 'bg-base-100 shadow text-base-content'
+                                                          : 'text-base-content/50 hover:text-base-content'
+                                                  }"
+                                                  @click=${() => {
+                                                      this._aiModal = { ...this._aiModal, provider: 'anthropic', error: null }
+                                                  }}
+                                              >
+                                                  Anthropic Claude
+                                              </button>
+                                              <button
+                                                  type="button"
+                                                  class="flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${
+                                                      this._aiModal.provider === 'ollama'
+                                                          ? 'bg-base-100 shadow text-base-content'
+                                                          : 'text-base-content/50 hover:text-base-content'
+                                                  }"
+                                                  @click=${async () => {
+                                                      this._aiModal = { ...this._aiModal, provider: 'ollama', error: null }
+                                                      await this._loadAiConfig()
+                                                  }}
+                                              >
+                                                  Ollama (lokal)
+                                              </button>
+                                          </div>
+
+                                          ${
+                                              this._aiModal.provider === 'ollama'
+                                                  ? html`
+                                                        <div class="rounded-lg bg-base-200 border border-base-300 px-3 py-2.5 mb-3">
+                                                            <p class="text-xs text-base-content/60">
+                                                                Ollama läuft lokal auf deinem Server — kein API-Key nötig, keine Daten
+                                                                verlassen die Umgebung.
+                                                            </p>
+                                                        </div>
+                                                    `
+                                                  : html`
+                                                        <div class="rounded-lg bg-base-200 border border-base-300 px-3 py-2.5 mb-3">
+                                                            <p class="text-xs text-base-content/60">
+                                                                Die AI-Analyse nutzt Claude von Anthropic. Ein API-Key wird unter
+                                                                <a
+                                                                    href="https://console.anthropic.com/settings/keys"
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    class="link link-primary"
+                                                                    >console.anthropic.com</a
+                                                                >
+                                                                erstellt.
+                                                            </p>
+                                                        </div>
+                                                    `
+                                          }
+                                          ${
+                                              this._aiConfigured && this._aiProvider === this._aiModal.provider
+                                                  ? html`
+                                                        <div
+                                                            class="flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 mb-4"
+                                                        >
+                                                            <svg
+                                                                class="w-4 h-4 text-success flex-shrink-0"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                stroke-width="2"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    stroke-linecap="round"
+                                                                    stroke-linejoin="round"
+                                                                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                />
+                                                            </svg>
+                                                            <span class="text-xs text-success font-medium"
+                                                                >${
+                                                                    this._aiModal.provider === 'ollama'
+                                                                        ? 'Ollama ist konfiguriert'
+                                                                        : 'API-Key ist hinterlegt'
+                                                                }</span
+                                                            >
+                                                        </div>
+                                                    `
+                                                  : ''
+                                          }
+
+                                          <form @submit=${this._onSaveAiConfig} class="flex flex-col gap-3">
+                                              ${
+                                                  this._aiModal.provider === 'ollama'
+                                                      ? html`
+                                                            <div class="form-control">
+                                                                <label class="label py-1"
+                                                                    ><span class="label-text text-xs font-medium">Ollama URL</span></label
+                                                                >
+                                                                <input
+                                                                    type="url"
+                                                                    name="ollamaUrl"
+                                                                    class="input input-bordered input-sm font-mono w-full"
+                                                                    placeholder="http://localhost:11434"
+                                                                    .value=${this._aiOllamaUrl}
+                                                                    ?disabled=${this._aiModal.loading}
+                                                                />
+                                                            </div>
+                                                        `
+                                                      : html`
+                                                            <div class="form-control">
+                                                                <label class="label py-1"
+                                                                    ><span class="label-text text-xs font-medium"
+                                                                        >${
+                                                                            this._aiConfigured && this._aiProvider === 'anthropic'
+                                                                                ? 'Neuer API-Key'
+                                                                                : 'API-Key'
+                                                                        }</span
+                                                                    ></label
+                                                                >
+                                                                <input
+                                                                    type="password"
+                                                                    name="apiKey"
+                                                                    class="input input-bordered input-sm font-mono w-full"
+                                                                    placeholder="sk-ant-..."
+                                                                    ?disabled=${this._aiModal.loading}
+                                                                    ?required=${!(this._aiConfigured && this._aiProvider === 'anthropic')}
+                                                                />
+                                                            </div>
+                                                        `
+                                              }
+                                              ${
+                                                  (
+                                                      (this._aiModal.provider === 'ollama'
+                                                          ? this._aiOllamaModels
+                                                          : this._aiAnthropicModels) ?? []
+                                                  ).length > 0
+                                                      ? html`
+                                                            <div class="form-control">
+                                                                <label class="label py-1"
+                                                                    ><span class="label-text text-xs font-medium">Modell</span></label
+                                                                >
+                                                                <select
+                                                                    name="model"
+                                                                    class="select select-bordered select-sm w-full"
+                                                                    ?disabled=${this._aiModal.loading}
+                                                                >
+                                                                    ${(this._aiModal.provider === 'ollama'
+                                                                        ? this._aiOllamaModels
+                                                                        : this._aiAnthropicModels
+                                                                    ).map(
+                                                                        m => html`
+                                                                            <option value=${m.id} ?selected=${m.id === this._aiModel}>
+                                                                                ${m.label}
+                                                                            </option>
+                                                                        `
+                                                                    )}
+                                                                </select>
+                                                            </div>
+                                                        `
+                                                      : ''
+                                              }
+                                              ${
+                                                  this._aiModal.error
+                                                      ? html`
+                                                            <div class="alert alert-error py-2 px-3 text-xs">
+                                                                <span>${this._aiModal.error}</span>
+                                                            </div>
+                                                        `
+                                                      : ''
+                                              }
+                                              <div class="flex items-center justify-between mt-4">
+                                                  ${
+                                                      this._aiConfigured && this._aiProvider === this._aiModal.provider
+                                                          ? html`<button
+                                                                type="button"
+                                                                class="btn btn-ghost btn-sm text-error"
+                                                                @click=${this._onClearAiConfig}
+                                                            >
+                                                                Entfernen
+                                                            </button>`
+                                                          : html`<span></span>`
+                                                  }
+                                                  <div class="flex gap-2">
+                                                      <button type="button" class="btn btn-ghost btn-sm" @click=${this._closeAiModal}>
+                                                          Abbrechen
+                                                      </button>
+                                                      <button
+                                                          type="submit"
+                                                          class="btn btn-primary btn-sm min-w-24"
+                                                          ?disabled=${this._aiModal.loading}
+                                                      >
+                                                          ${
+                                                              this._aiModal.loading
+                                                                  ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                                                  : 'Speichern'
+                                                          }
+                                                      </button>
+                                                  </div>
+                                              </div>
+                                          </form>
+                                      </div>
+                                  </div>
+                                  <form method="dialog" class="modal-backdrop backdrop-blur-sm">
+                                      <button @click=${this._closeAiModal}>close</button>
+                                  </form>
+                              `
+                            : ''
+                    }
                 </dialog>
 
                 <main class="p-4" @flow-selected=${this._onFlowSelected} @flow-loaded=${this._onFlowLoaded}>${this._renderContent()}</main>
@@ -1605,47 +1691,51 @@ export class FcApp extends BaseElement {
                                 </div>
                             </div>
                         </div>
-                        ${this._confirmResetConnection
-                            ? html`
-                                  <div class="px-6 pb-6 pt-4 text-center">
-                                      <p class="text-sm text-base-content/70">
-                                          Soll die aktuelle Verbindung wirklich zurückgesetzt werden?
-                                      </p>
-                                      <p class="text-xs text-base-content/40 mt-2 font-mono break-all">${connection.getUrl()}</p>
-                                      <div class="flex gap-2 justify-center mt-4">
-                                          <button class="btn btn-sm btn-outline" @click=${() => (this._confirmResetConnection = false)}>
-                                              Abbrechen
-                                          </button>
-                                          <button class="btn btn-sm btn-error" @click=${this._resetConnection}>
-                                              Verbindung zurücksetzen
-                                          </button>
+                        ${
+                            this._confirmResetConnection
+                                ? html`
+                                      <div class="px-6 pb-6 pt-4 text-center">
+                                          <p class="text-sm text-base-content/70">
+                                              Soll die aktuelle Verbindung wirklich zurückgesetzt werden?
+                                          </p>
+                                          <p class="text-xs text-base-content/40 mt-2 font-mono break-all">${connection.getUrl()}</p>
+                                          <div class="flex gap-2 justify-center mt-4">
+                                              <button class="btn btn-sm btn-outline" @click=${() => (this._confirmResetConnection = false)}>
+                                                  Abbrechen
+                                              </button>
+                                              <button class="btn btn-sm btn-error" @click=${this._resetConnection}>
+                                                  Verbindung zurücksetzen
+                                              </button>
+                                          </div>
                                       </div>
-                                  </div>
-                              `
-                            : html`
-                                  <div class="px-6 pb-6 pt-4 text-center">
-                                      <span class="loading loading-ring loading-lg text-warning"></span>
-                                      <p class="text-sm text-base-content/60 mt-3">
-                                          Die Verbindung zum FlowCrafter-Server ist unterbrochen. Die Anwendung versucht automatisch, die
-                                          Verbindung wiederherzustellen.
-                                      </p>
-                                      <p class="text-xs text-base-content/40 mt-2 font-mono break-all">${connection.getUrl()}</p>
-                                      <div class="flex gap-2 justify-center mt-4">
-                                          <button
-                                              class="btn btn-sm btn-outline btn-warning"
-                                              ?disabled=${this._checkingConnection}
-                                              @click=${this._checkConnection}
-                                          >
-                                              ${this._checkingConnection
-                                                  ? html`<span class="loading loading-spinner loading-xs"></span> Prüfe…`
-                                                  : 'Jetzt prüfen'}
-                                          </button>
-                                          <button class="btn btn-sm btn-outline" @click=${() => (this._confirmResetConnection = true)}>
-                                              Verbindung ändern
-                                          </button>
+                                  `
+                                : html`
+                                      <div class="px-6 pb-6 pt-4 text-center">
+                                          <span class="loading loading-ring loading-lg text-warning"></span>
+                                          <p class="text-sm text-base-content/60 mt-3">
+                                              Die Verbindung zum FlowCrafter-Server ist unterbrochen. Die Anwendung versucht automatisch,
+                                              die Verbindung wiederherzustellen.
+                                          </p>
+                                          <p class="text-xs text-base-content/40 mt-2 font-mono break-all">${connection.getUrl()}</p>
+                                          <div class="flex gap-2 justify-center mt-4">
+                                              <button
+                                                  class="btn btn-sm btn-outline btn-warning"
+                                                  ?disabled=${this._checkingConnection}
+                                                  @click=${this._checkConnection}
+                                              >
+                                                  ${
+                                                      this._checkingConnection
+                                                          ? html`<span class="loading loading-spinner loading-xs"></span> Prüfe…`
+                                                          : 'Jetzt prüfen'
+                                                  }
+                                              </button>
+                                              <button class="btn btn-sm btn-outline" @click=${() => (this._confirmResetConnection = true)}>
+                                                  Verbindung ändern
+                                              </button>
+                                          </div>
                                       </div>
-                                  </div>
-                              `}
+                                  `
+                        }
                     </div>
                     <div class="modal-backdrop backdrop-blur-sm"></div>
                 </dialog>
@@ -1703,8 +1793,7 @@ export class FcApp extends BaseElement {
                                 <pre
                                     class="mt-2 bg-base-200 rounded px-3 py-2 text-xs font-mono text-base-content/70 whitespace-pre-wrap break-all"
                                 >
-docker pull wundii/flowcrafter-ui:${this._serverInfo?.version}</pre
-                                >
+docker pull wundii/flowcrafter-ui:${this._serverInfo?.version}</pre>
                                 <p class="text-sm text-base-content/70 mt-3">
                                     — oder aktualisiere den FlowCrafter-Server auf die Version der UI (
                                     <span class="font-mono text-xs">${this._uiVersion}</span>).

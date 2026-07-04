@@ -52,8 +52,8 @@ export const aiConfigUnconfigured = {
     model: null,
     provider: 'anthropic',
     anthropicModels: [
-        { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4', provider: 'anthropic' },
-        { id: 'claude-opus-4-20250514', label: 'Claude Opus 4', provider: 'anthropic' },
+        { id: 'claude-opus-4-8', label: 'Claude Opus 4.8', provider: 'anthropic' },
+        { id: 'claude-sonnet-5', label: 'Claude Sonnet 5', provider: 'anthropic' },
     ],
 }
 

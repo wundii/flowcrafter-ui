@@ -255,36 +255,38 @@ export class FcFlowChart extends BaseElement {
                     )}
                 </svg>
 
-                ${this._tooltip
-                    ? html`
-                          <div
-                              class="absolute z-50 pointer-events-none"
-                              style="left:${this._tooltip.x}px;top:${this._tooltip.y}px;transform:translate(-50%,calc(-100% - 10px))"
-                          >
+                ${
+                    this._tooltip
+                        ? html`
                               <div
-                                  class="bg-base-300 border border-base-content/10 rounded-lg shadow-xl px-3 py-2 text-xs whitespace-nowrap"
+                                  class="absolute z-50 pointer-events-none"
+                                  style="left:${this._tooltip.x}px;top:${this._tooltip.y}px;transform:translate(-50%,calc(-100% - 10px))"
                               >
-                                  <div class="font-semibold text-base-content/80 mb-2">${longDate(this._tooltip.coord.date)}</div>
-                                  <div class="flex items-center gap-2 text-base-content/60">
-                                      <span
-                                          class="w-2 h-2 rounded-full flex-shrink-0 border border-current opacity-60"
-                                          style="background:oklch(var(--p))"
-                                      ></span>
-                                      <span>Flows</span>
-                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.flows}</span>
-                                  </div>
-                                  <div class="flex items-center gap-2 text-base-content/60 mt-1">
-                                      <span
-                                          class="w-2 h-2 rounded-full flex-shrink-0 border border-current opacity-60"
-                                          style="background:oklch(var(--s))"
-                                      ></span>
-                                      <span>Runs</span>
-                                      <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.runs}</span>
+                                  <div
+                                      class="bg-base-300 border border-base-content/10 rounded-lg shadow-xl px-3 py-2 text-xs whitespace-nowrap"
+                                  >
+                                      <div class="font-semibold text-base-content/80 mb-2">${longDate(this._tooltip.coord.date)}</div>
+                                      <div class="flex items-center gap-2 text-base-content/60">
+                                          <span
+                                              class="w-2 h-2 rounded-full flex-shrink-0 border border-current opacity-60"
+                                              style="background:oklch(var(--p))"
+                                          ></span>
+                                          <span>Flows</span>
+                                          <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.flows}</span>
+                                      </div>
+                                      <div class="flex items-center gap-2 text-base-content/60 mt-1">
+                                          <span
+                                              class="w-2 h-2 rounded-full flex-shrink-0 border border-current opacity-60"
+                                              style="background:oklch(var(--s))"
+                                          ></span>
+                                          <span>Runs</span>
+                                          <span class="ml-auto font-medium text-base-content pl-3">${this._tooltip.coord.runs}</span>
+                                      </div>
                                   </div>
                               </div>
-                          </div>
-                      `
-                    : ''}
+                          `
+                        : ''
+                }
             </div>
         `
     }

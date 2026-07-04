@@ -759,28 +759,36 @@ export class FcDev extends BaseElement {
                         />
                     </svg>
                     <div class="flex-1 min-w-0">
-                        ${stepName
-                            ? html`
-                                  <div class="flex items-center gap-1.5 mb-1">
-                                      <span class="text-xs text-base-content/40">${stepName}</span>
-                                  </div>
-                              `
-                            : ''}
+                        ${
+                            stepName
+                                ? html`
+                                      <div class="flex items-center gap-1.5 mb-1">
+                                          <span class="text-xs text-base-content/40">${stepName}</span>
+                                      </div>
+                                  `
+                                : ''
+                        }
                         <div class="text-xs text-error font-medium">${msg}</div>
-                        ${fileLine
-                            ? html`<div class="text-[10px] font-mono text-base-content/40 mt-1 break-all leading-relaxed">${fileLine}</div>`
-                            : ''}
+                        ${
+                            fileLine
+                                ? html`<div class="text-[10px] font-mono text-base-content/40 mt-1 break-all leading-relaxed">
+                                      ${fileLine}
+                                  </div>`
+                                : ''
+                        }
                     </div>
-                    ${hasDetails
-                        ? html`
-                              <button
-                                  class="btn btn-xs btn-ghost text-error/70 hover:text-error shrink-0"
-                                  @click=${() => this._openRunErrorModal()}
-                              >
-                                  Details
-                              </button>
-                          `
-                        : ''}
+                    ${
+                        hasDetails
+                            ? html`
+                                  <button
+                                      class="btn btn-xs btn-ghost text-error/70 hover:text-error shrink-0"
+                                      @click=${() => this._openRunErrorModal()}
+                                  >
+                                      Details
+                                  </button>
+                              `
+                            : ''
+                    }
                 </div>
             </div>
         `
@@ -825,16 +833,18 @@ export class FcDev extends BaseElement {
         const active = this._selected === f.className
         return html`
             <button
-                class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors ${active
-                    ? 'bg-primary/10 text-primary'
-                    : 'hover:bg-base-content/5'}"
+                class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+                    active ? 'bg-primary/10 text-primary' : 'hover:bg-base-content/5'
+                }"
                 @click=${() => this._selectFlow(f.className)}
             >
                 <div class="min-w-0 flex-1">
                     <div class="text-sm font-medium truncate">${shortClass(f.className)}</div>
-                    ${f.type
-                        ? html`<div class="text-[10px] font-mono text-base-content/40 truncate mt-0.5">${f.type}</div>`
-                        : html`<div class="text-[10px] text-error/60 mt-0.5">schema() fehlgeschlagen</div>`}
+                    ${
+                        f.type
+                            ? html`<div class="text-[10px] font-mono text-base-content/40 truncate mt-0.5">${f.type}</div>`
+                            : html`<div class="text-[10px] text-error/60 mt-0.5">schema() fehlgeschlagen</div>`
+                    }
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
                     ${this._renderProjectionWarningIcon(f.className)} ${this._renderValidationIcon(f.className)}
@@ -860,144 +870,159 @@ export class FcDev extends BaseElement {
                         @input=${e => (this._filter = e.target.value)}
                     />
                     ${this._filter ? html`<button class="btn btn-sm btn-ghost px-2" @click=${() => (this._filter = '')}>✕</button>` : ''}
-                    ${sortedGroups.length > 0
-                        ? html`
-                              <div class="flex items-center gap-0.5 shrink-0">
-                                  <fc-tooltip
-                                      text="Alle aufklappen"
-                                      .content=${html`
-                                          <button
-                                              class="btn btn-ghost btn-xs btn-circle"
-                                              @click=${() => (this._collapsedGroups = new Set())}
-                                          >
-                                              <svg
-                                                  class="w-3.5 h-3.5"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  stroke-width="2"
-                                                  viewBox="0 0 24 24"
+                    ${
+                        sortedGroups.length > 0
+                            ? html`
+                                  <div class="flex items-center gap-0.5 shrink-0">
+                                      <fc-tooltip
+                                          text="Alle aufklappen"
+                                          .content=${html`
+                                              <button
+                                                  class="btn btn-ghost btn-xs btn-circle"
+                                                  @click=${() => (this._collapsedGroups = new Set())}
                                               >
-                                                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                              </svg>
-                                          </button>
-                                      `}
-                                  ></fc-tooltip>
-                                  <fc-tooltip
-                                      text="Alle zuklappen"
-                                      .content=${html`
-                                          <button
-                                              class="btn btn-ghost btn-xs btn-circle"
-                                              @click=${() =>
-                                                  (this._collapsedGroups = new Set([
-                                                      ...sortedGroups.map(([name]) => name),
-                                                      '__ungrouped__',
-                                                  ]))}
-                                          >
-                                              <svg
-                                                  class="w-3.5 h-3.5"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  stroke-width="2"
-                                                  viewBox="0 0 24 24"
+                                                  <svg
+                                                      class="w-3.5 h-3.5"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                      viewBox="0 0 24 24"
+                                                  >
+                                                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                                  </svg>
+                                              </button>
+                                          `}
+                                      ></fc-tooltip>
+                                      <fc-tooltip
+                                          text="Alle zuklappen"
+                                          .content=${html`
+                                              <button
+                                                  class="btn btn-ghost btn-xs btn-circle"
+                                                  @click=${() =>
+                                                      (this._collapsedGroups = new Set([
+                                                          ...sortedGroups.map(([name]) => name),
+                                                          '__ungrouped__',
+                                                      ]))}
                                               >
-                                                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
-                                              </svg>
-                                          </button>
-                                      `}
-                                  ></fc-tooltip>
-                              </div>
-                          `
-                        : ''}
+                                                  <svg
+                                                      class="w-3.5 h-3.5"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                      viewBox="0 0 24 24"
+                                                  >
+                                                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                                  </svg>
+                                              </button>
+                                          `}
+                                      ></fc-tooltip>
+                                  </div>
+                              `
+                            : ''
+                    }
                 </div>
 
-                ${this._flows.length === 0
-                    ? html`<div class="text-sm text-base-content/40 text-center py-8">Keine lokalen Flows gefunden</div>`
-                    : this._filter && this._filtered(this._flows).length === 0
-                      ? html`<div class="text-sm text-base-content/40 text-center py-4">Kein Treffer</div>`
-                      : html`
-                            ${sortedGroups.map(([groupName, items]) => {
-                                const filtered = this._filtered(items)
-                                if (filtered.length === 0) return ''
-                                const collapsed = !this._filter && this._collapsedGroups.has(groupName)
-                                return html`
-                                    <div class="mb-1">
-                                        <button
-                                            class="flex items-center gap-1.5 w-full px-2 py-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider hover:text-base-content/70 transition-colors"
-                                            @click=${() => {
-                                                const next = new Set(this._collapsedGroups)
-                                                collapsed ? next.delete(groupName) : next.add(groupName)
-                                                this._collapsedGroups = next
-                                            }}
-                                        >
-                                            <svg
-                                                class="w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                                viewBox="0 0 24 24"
+                ${
+                    this._flows.length === 0
+                        ? html`<div class="text-sm text-base-content/40 text-center py-8">Keine lokalen Flows gefunden</div>`
+                        : this._filter && this._filtered(this._flows).length === 0
+                          ? html`<div class="text-sm text-base-content/40 text-center py-4">Kein Treffer</div>`
+                          : html`
+                                ${sortedGroups.map(([groupName, items]) => {
+                                    const filtered = this._filtered(items)
+                                    if (filtered.length === 0) return ''
+                                    const collapsed = !this._filter && this._collapsedGroups.has(groupName)
+                                    return html`
+                                        <div class="mb-1">
+                                            <button
+                                                class="flex items-center gap-1.5 w-full px-2 py-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider hover:text-base-content/70 transition-colors"
+                                                @click=${() => {
+                                                    const next = new Set(this._collapsedGroups)
+                                                    collapsed ? next.delete(groupName) : next.add(groupName)
+                                                    this._collapsedGroups = next
+                                                }}
                                             >
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                            <svg
-                                                class="w-3 h-3 shrink-0"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v8.25A2.25 2.25 0 004.5 16.5h15a2.25 2.25 0 002.25-2.25V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
-                                                />
-                                            </svg>
-                                            <span class="flex-1 text-left">${groupName}</span>
-                                            <span class="font-mono font-normal normal-case tracking-normal text-base-content/30"
-                                                >${filtered.length}</span
-                                            >
-                                        </button>
-                                        ${collapsed ? '' : filtered.map(f => this._renderFlowItem(f))}
-                                    </div>
-                                `
-                            })}
-                            ${ungrouped.length > 0
-                                ? html`
-                                      <div class="mb-1">
-                                          ${sortedGroups.length > 0
-                                              ? (() => {
-                                                    const collapsed = !this._filter && this._collapsedGroups.has('__ungrouped__')
-                                                    return html`
-                                                        <button
-                                                            class="flex items-center gap-1.5 w-full px-2 py-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider hover:text-base-content/70 transition-colors"
-                                                            @click=${() => {
-                                                                const next = new Set(this._collapsedGroups)
-                                                                collapsed ? next.delete('__ungrouped__') : next.add('__ungrouped__')
-                                                                this._collapsedGroups = next
-                                                            }}
-                                                        >
-                                                            <svg
-                                                                class="w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                stroke-width="2"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                                            </svg>
-                                                            <span class="flex-1 text-left">Ohne Gruppe</span>
-                                                            <span
-                                                                class="font-mono font-normal normal-case tracking-normal text-base-content/30"
-                                                                >${ungrouped.length}</span
-                                                            >
-                                                        </button>
-                                                        ${collapsed ? '' : ungrouped.map(f => this._renderFlowItem(f))}
-                                                    `
-                                                })()
-                                              : ungrouped.map(f => this._renderFlowItem(f))}
-                                      </div>
-                                  `
-                                : ''}
-                        `}
+                                                <svg
+                                                    class="w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                                <svg
+                                                    class="w-3 h-3 shrink-0"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v8.25A2.25 2.25 0 004.5 16.5h15a2.25 2.25 0 002.25-2.25V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
+                                                    />
+                                                </svg>
+                                                <span class="flex-1 text-left">${groupName}</span>
+                                                <span class="font-mono font-normal normal-case tracking-normal text-base-content/30"
+                                                    >${filtered.length}</span
+                                                >
+                                            </button>
+                                            ${collapsed ? '' : filtered.map(f => this._renderFlowItem(f))}
+                                        </div>
+                                    `
+                                })}
+                                ${
+                                    ungrouped.length > 0
+                                        ? html`
+                                              <div class="mb-1">
+                                                  ${
+                                                      sortedGroups.length > 0
+                                                          ? (() => {
+                                                                const collapsed =
+                                                                    !this._filter && this._collapsedGroups.has('__ungrouped__')
+                                                                return html`
+                                                                    <button
+                                                                        class="flex items-center gap-1.5 w-full px-2 py-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider hover:text-base-content/70 transition-colors"
+                                                                        @click=${() => {
+                                                                            const next = new Set(this._collapsedGroups)
+                                                                            collapsed
+                                                                                ? next.delete('__ungrouped__')
+                                                                                : next.add('__ungrouped__')
+                                                                            this._collapsedGroups = next
+                                                                        }}
+                                                                    >
+                                                                        <svg
+                                                                            class="w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}"
+                                                                            fill="none"
+                                                                            stroke="currentColor"
+                                                                            stroke-width="2"
+                                                                            viewBox="0 0 24 24"
+                                                                        >
+                                                                            <path
+                                                                                stroke-linecap="round"
+                                                                                stroke-linejoin="round"
+                                                                                d="M19 9l-7 7-7-7"
+                                                                            />
+                                                                        </svg>
+                                                                        <span class="flex-1 text-left">Ohne Gruppe</span>
+                                                                        <span
+                                                                            class="font-mono font-normal normal-case tracking-normal text-base-content/30"
+                                                                            >${ungrouped.length}</span
+                                                                        >
+                                                                    </button>
+                                                                    ${collapsed ? '' : ungrouped.map(f => this._renderFlowItem(f))}
+                                                                `
+                                                            })()
+                                                          : ungrouped.map(f => this._renderFlowItem(f))
+                                                  }
+                                              </div>
+                                          `
+                                        : ''
+                                }
+                            `
+                }
             </div>
         `
     }
@@ -1115,15 +1140,17 @@ export class FcDev extends BaseElement {
                     ?disabled=${this._runModalLoading}
                     @click=${() => this._openRunModal()}
                 >
-                    ${this._runModalLoading
-                        ? html`<span class="loading loading-spinner loading-xs"></span>`
-                        : html`<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                              <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
-                              />
-                          </svg>`}
+                    ${
+                        this._runModalLoading
+                            ? html`<span class="loading loading-spinner loading-xs"></span>`
+                            : html`<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                  <path
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"
+                                  />
+                              </svg>`
+                    }
                     ${this._runModalLoading ? 'Laden...' : 'Flow starten'}
                 </button>
                 <fc-info-box
@@ -1196,13 +1223,15 @@ export class FcDev extends BaseElement {
                     <code class="font-mono bg-base-300/50 px-1 rounded">${d.schema?.type}</code>
                     ist noch keine registriert.
                 </span>
-                ${w.handler
-                    ? html`<div class="w-full flex flex-wrap gap-1 mt-0.5 ml-5">
-                          <span class="text-[10px] font-mono text-warning/80 bg-warning/10 px-1.5 py-0.5 rounded" title="${w.handler}"
-                              >${shortClass(w.handler)}</span
-                          >
-                      </div>`
-                    : ''}
+                ${
+                    w.handler
+                        ? html`<div class="w-full flex flex-wrap gap-1 mt-0.5 ml-5">
+                              <span class="text-[10px] font-mono text-warning/80 bg-warning/10 px-1.5 py-0.5 rounded" title="${w.handler}"
+                                  >${shortClass(w.handler)}</span
+                              >
+                          </div>`
+                        : ''
+                }
             </div>
         `
     }
@@ -1288,32 +1317,36 @@ export class FcDev extends BaseElement {
                                     const isSelected = selected?.type === v.type
                                     return html`
                                         <button
-                                            class="rounded-lg px-3 py-2 text-left transition-all ${isSelected
-                                                ? 'bg-info/15 border border-info/30'
-                                                : 'hover:bg-base-100 border border-transparent'}"
+                                            class="rounded-lg px-3 py-2 text-left transition-all ${
+                                                isSelected
+                                                    ? 'bg-info/15 border border-info/30'
+                                                    : 'hover:bg-base-100 border border-transparent'
+                                            }"
                                             @click=${() => (this._versionsSelected = v)}
                                         >
                                             <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                                                 <span class="font-mono text-xs font-semibold">${v.type}</span>
                                                 ${isCurrent ? html`<span class="badge badge-xs badge-primary">aktuell</span>` : ''}
-                                                ${v.fromImport
-                                                    ? html`<fc-tooltip
-                                                          text="Aus Schema Import"
-                                                          .content=${html`<svg
-                                                              class="w-3.5 h-3.5 text-warning/70 shrink-0"
-                                                              fill="none"
-                                                              stroke="currentColor"
-                                                              stroke-width="2"
-                                                              viewBox="0 0 24 24"
-                                                          >
-                                                              <path
-                                                                  stroke-linecap="round"
-                                                                  stroke-linejoin="round"
-                                                                  d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
-                                                              />
-                                                          </svg>`}
-                                                      ></fc-tooltip>`
-                                                    : ''}
+                                                ${
+                                                    v.fromImport
+                                                        ? html`<fc-tooltip
+                                                              text="Aus Schema Import"
+                                                              .content=${html`<svg
+                                                                  class="w-3.5 h-3.5 text-warning/70 shrink-0"
+                                                                  fill="none"
+                                                                  stroke="currentColor"
+                                                                  stroke-width="2"
+                                                                  viewBox="0 0 24 24"
+                                                              >
+                                                                  <path
+                                                                      stroke-linecap="round"
+                                                                      stroke-linejoin="round"
+                                                                      d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
+                                                                  />
+                                                              </svg>`}
+                                                          ></fc-tooltip>`
+                                                        : ''
+                                                }
                                             </div>
                                             <div class="text-[10px] text-base-content/40 mt-0.5">${(v.steps ?? []).length} Steps</div>
                                         </button>
@@ -1342,216 +1375,292 @@ export class FcDev extends BaseElement {
                             }}
                         ></div>
                         <div class="flex-1 overflow-y-auto p-4">
-                            ${selected
-                                ? html`
-                                      <div class="flex items-center gap-2 mb-3">
-                                          <span class="font-mono text-sm font-semibold">${selected.type}</span>
-                                          ${selected.type === d.schema.type
-                                              ? html`<span class="badge badge-xs badge-primary">aktuell</span>`
-                                              : ''}
-                                          ${selected.fromImport
-                                              ? html`<fc-tooltip
-                                                    text="Aus Schema Import"
-                                                    .content=${html`<svg
-                                                        class="w-3.5 h-3.5 text-warning/70 shrink-0"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        stroke-width="2"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path
-                                                            stroke-linecap="round"
-                                                            stroke-linejoin="round"
-                                                            d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
-                                                        />
-                                                    </svg>`}
-                                                ></fc-tooltip>`
-                                              : ''}
-                                          ${(selected.hash ?? selected.storedHash)
-                                              ? html`<span class="text-[10px] font-mono text-base-content/30 ml-auto"
-                                                    >${(selected.hash ?? selected.storedHash).slice(0, 12)}</span
-                                                >`
-                                              : ''}
-                                      </div>
-                                      <div class="space-y-1.5">
-                                          ${(selected.steps ?? []).map(s => {
-                                              const inCurrent = currentSources.has(s.source)
-                                              const gradientColor = !inCurrent ? 'from-error/10 to-info/5' : 'from-primary/10 to-info/5'
-                                              return html`
-                                                  <details
-                                                      open
-                                                      class="rounded-lg border cursor-pointer overflow-hidden ${inCurrent
-                                                          ? 'border-base-300/60'
-                                                          : 'border-error/20'}"
-                                                  >
-                                                      <summary class="px-3 py-2 flex items-center gap-2 bg-gradient-to-r ${gradientColor}">
-                                                          ${!inCurrent
-                                                              ? html`<span class="text-[10px] font-mono text-error shrink-0">−</span>`
-                                                              : ''}
-                                                          <div class="min-w-0 flex-1">
-                                                              <div
-                                                                  class="text-[10px] font-mono text-base-content/30 truncate leading-tight"
-                                                              >
-                                                                  ${s.source.split('\\').slice(0, -1).join('\\')}
-                                                              </div>
-                                                              <div class="text-xs font-mono font-semibold text-base-content/80 truncate">
-                                                                  ${shortClass(s.source)}
-                                                              </div>
-                                                          </div>
-                                                          <span class="text-[10px] text-base-content/30">${s.messageEnum ?? ''}</span>
-                                                      </summary>
-                                                      <div
-                                                          class="px-3 pb-2 pt-1.5 border-t border-base-300/30 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[10px]"
-                                                      >
-                                                          <span class="text-base-content/35">Messages</span>
-                                                          <span class="font-mono truncate">
-                                                              ${s.messages?.length
-                                                                  ? s.messages.map(
-                                                                        (m, i) =>
-                                                                            html`${i > 0 ? ', ' : ''}<span class="text-base-content/35"
-                                                                                    >${m.split('\\').slice(0, -1).join('\\')
-                                                                                        ? m.split('\\').slice(0, -1).join('\\') + '\\'
-                                                                                        : ''}</span
-                                                                                ><span class="text-base-content/70">${shortClass(m)}</span>`
-                                                                    )
-                                                                  : html`<span class="text-base-content/25 italic">keine</span>`}
-                                                          </span>
-                                                          <span class="text-base-content/35">Returns</span>
-                                                          <span class="font-mono truncate">
-                                                              ${s.returnTypes?.length
-                                                                  ? s.returnTypes.map(
-                                                                        (r, i) =>
-                                                                            html`${i > 0 ? ', ' : ''}<span class="text-base-content/35"
-                                                                                    >${r.split('\\').slice(0, -1).join('\\')
-                                                                                        ? r.split('\\').slice(0, -1).join('\\') + '\\'
-                                                                                        : ''}</span
-                                                                                ><span class="text-base-content/70">${shortClass(r)}</span>`
-                                                                    )
-                                                                  : html`<span class="text-base-content/50">boolesche Rückgabe</span>`}
-                                                          </span>
-                                                          ${s.retries
-                                                              ? html`
-                                                                    <span class="text-base-content/35">Retries</span>
-                                                                    <span class="font-mono text-base-content/50">${s.retries}</span>
-                                                                `
-                                                              : ''}
-                                                          ${s.delay
-                                                              ? html`
-                                                                    <span class="text-base-content/35">Delay</span>
-                                                                    <span class="font-mono text-base-content/50">${s.delay}ms</span>
-                                                                `
-                                                              : ''}
-                                                          ${s.runOnce
-                                                              ? html`
-                                                                    <span class="text-base-content/35">RunOnce</span>
-                                                                    <span class="font-mono text-base-content/50">ja</span>
-                                                                `
-                                                              : ''}
-                                                      </div>
-                                                  </details>
-                                              `
-                                          })}
-                                          ${selected.type !== d.schema.type
-                                              ? [...currentSources]
-                                                    .filter(s => !selectedSources.has(s))
-                                                    .map(src => {
-                                                        const cs = (d.schema.steps ?? []).find(st => st.source === src)
-                                                        return html`
-                                                            <details
-                                                                open
-                                                                class="rounded-lg border border-success/20 cursor-pointer overflow-hidden"
+                            ${
+                                selected
+                                    ? html`
+                                          <div class="flex items-center gap-2 mb-3">
+                                              <span class="font-mono text-sm font-semibold">${selected.type}</span>
+                                              ${
+                                                  selected.type === d.schema.type
+                                                      ? html`<span class="badge badge-xs badge-primary">aktuell</span>`
+                                                      : ''
+                                              }
+                                              ${
+                                                  selected.fromImport
+                                                      ? html`<fc-tooltip
+                                                            text="Aus Schema Import"
+                                                            .content=${html`<svg
+                                                                class="w-3.5 h-3.5 text-warning/70 shrink-0"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                stroke-width="2"
+                                                                viewBox="0 0 24 24"
                                                             >
-                                                                <summary
-                                                                    class="px-3 py-2 flex items-center gap-2 bg-gradient-to-r from-success/10 to-info/5"
-                                                                >
-                                                                    <span class="text-[10px] font-mono text-success shrink-0">+</span>
-                                                                    <div class="min-w-0 flex-1">
-                                                                        <div
-                                                                            class="text-[10px] font-mono text-base-content/30 truncate leading-tight"
+                                                                <path
+                                                                    stroke-linecap="round"
+                                                                    stroke-linejoin="round"
+                                                                    d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
+                                                                />
+                                                            </svg>`}
+                                                        ></fc-tooltip>`
+                                                      : ''
+                                              }
+                                              ${
+                                                  (selected.hash ?? selected.storedHash)
+                                                      ? html`<span class="text-[10px] font-mono text-base-content/30 ml-auto"
+                                                            >${(selected.hash ?? selected.storedHash).slice(0, 12)}</span
+                                                        >`
+                                                      : ''
+                                              }
+                                          </div>
+                                          <div class="space-y-1.5">
+                                              ${(selected.steps ?? []).map(s => {
+                                                  const inCurrent = currentSources.has(s.source)
+                                                  const gradientColor = !inCurrent ? 'from-error/10 to-info/5' : 'from-primary/10 to-info/5'
+                                                  return html`
+                                                      <details
+                                                          open
+                                                          class="rounded-lg border cursor-pointer overflow-hidden ${
+                                                              inCurrent ? 'border-base-300/60' : 'border-error/20'
+                                                          }"
+                                                      >
+                                                          <summary
+                                                              class="px-3 py-2 flex items-center gap-2 bg-gradient-to-r ${gradientColor}"
+                                                          >
+                                                              ${
+                                                                  !inCurrent
+                                                                      ? html`<span class="text-[10px] font-mono text-error shrink-0"
+                                                                            >−</span
+                                                                        >`
+                                                                      : ''
+                                                              }
+                                                              <div class="min-w-0 flex-1">
+                                                                  <div
+                                                                      class="text-[10px] font-mono text-base-content/30 truncate leading-tight"
+                                                                  >
+                                                                      ${s.source.split('\\').slice(0, -1).join('\\')}
+                                                                  </div>
+                                                                  <div
+                                                                      class="text-xs font-mono font-semibold text-base-content/80 truncate"
+                                                                  >
+                                                                      ${shortClass(s.source)}
+                                                                  </div>
+                                                              </div>
+                                                              <span class="text-[10px] text-base-content/30">${s.messageEnum ?? ''}</span>
+                                                          </summary>
+                                                          <div
+                                                              class="px-3 pb-2 pt-1.5 border-t border-base-300/30 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[10px]"
+                                                          >
+                                                              <span class="text-base-content/35">Messages</span>
+                                                              <span class="font-mono truncate">
+                                                                  ${
+                                                                      s.messages?.length
+                                                                          ? s.messages.map(
+                                                                                (m, i) =>
+                                                                                    html`${i > 0 ? ', ' : ''}<span
+                                                                                            class="text-base-content/35"
+                                                                                            >${
+                                                                                                m.split('\\').slice(0, -1).join('\\')
+                                                                                                    ? m
+                                                                                                          .split('\\')
+                                                                                                          .slice(0, -1)
+                                                                                                          .join('\\') + '\\'
+                                                                                                    : ''
+                                                                                            }</span
+                                                                                        ><span class="text-base-content/70"
+                                                                                            >${shortClass(m)}</span
+                                                                                        >`
+                                                                            )
+                                                                          : html`<span class="text-base-content/25 italic">keine</span>`
+                                                                  }
+                                                              </span>
+                                                              <span class="text-base-content/35">Returns</span>
+                                                              <span class="font-mono truncate">
+                                                                  ${
+                                                                      s.returnTypes?.length
+                                                                          ? s.returnTypes.map(
+                                                                                (r, i) =>
+                                                                                    html`${i > 0 ? ', ' : ''}<span
+                                                                                            class="text-base-content/35"
+                                                                                            >${
+                                                                                                r.split('\\').slice(0, -1).join('\\')
+                                                                                                    ? r
+                                                                                                          .split('\\')
+                                                                                                          .slice(0, -1)
+                                                                                                          .join('\\') + '\\'
+                                                                                                    : ''
+                                                                                            }</span
+                                                                                        ><span class="text-base-content/70"
+                                                                                            >${shortClass(r)}</span
+                                                                                        >`
+                                                                            )
+                                                                          : html`<span class="text-base-content/50"
+                                                                                >boolesche Rückgabe</span
+                                                                            >`
+                                                                  }
+                                                              </span>
+                                                              ${
+                                                                  s.retries
+                                                                      ? html`
+                                                                            <span class="text-base-content/35">Retries</span>
+                                                                            <span class="font-mono text-base-content/50">${s.retries}</span>
+                                                                        `
+                                                                      : ''
+                                                              }
+                                                              ${
+                                                                  s.delay
+                                                                      ? html`
+                                                                            <span class="text-base-content/35">Delay</span>
+                                                                            <span class="font-mono text-base-content/50">${s.delay}ms</span>
+                                                                        `
+                                                                      : ''
+                                                              }
+                                                              ${
+                                                                  s.runOnce
+                                                                      ? html`
+                                                                            <span class="text-base-content/35">RunOnce</span>
+                                                                            <span class="font-mono text-base-content/50">ja</span>
+                                                                        `
+                                                                      : ''
+                                                              }
+                                                          </div>
+                                                      </details>
+                                                  `
+                                              })}
+                                              ${
+                                                  selected.type !== d.schema.type
+                                                      ? [...currentSources]
+                                                            .filter(s => !selectedSources.has(s))
+                                                            .map(src => {
+                                                                const cs = (d.schema.steps ?? []).find(st => st.source === src)
+                                                                return html`
+                                                                    <details
+                                                                        open
+                                                                        class="rounded-lg border border-success/20 cursor-pointer overflow-hidden"
+                                                                    >
+                                                                        <summary
+                                                                            class="px-3 py-2 flex items-center gap-2 bg-gradient-to-r from-success/10 to-info/5"
                                                                         >
-                                                                            ${src.split('\\').slice(0, -1).join('\\')}
-                                                                        </div>
+                                                                            <span class="text-[10px] font-mono text-success shrink-0"
+                                                                                >+</span
+                                                                            >
+                                                                            <div class="min-w-0 flex-1">
+                                                                                <div
+                                                                                    class="text-[10px] font-mono text-base-content/30 truncate leading-tight"
+                                                                                >
+                                                                                    ${src.split('\\').slice(0, -1).join('\\')}
+                                                                                </div>
+                                                                                <div
+                                                                                    class="text-xs font-mono font-semibold text-base-content/80 truncate"
+                                                                                >
+                                                                                    ${shortClass(src)}
+                                                                                </div>
+                                                                            </div>
+                                                                            <span class="text-[10px] text-success/60">neu</span>
+                                                                        </summary>
                                                                         <div
-                                                                            class="text-xs font-mono font-semibold text-base-content/80 truncate"
+                                                                            class="px-3 pb-2 pt-1.5 border-t border-success/20 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[10px]"
                                                                         >
-                                                                            ${shortClass(src)}
+                                                                            <span class="text-base-content/35">Messages</span>
+                                                                            <span class="font-mono truncate">
+                                                                                ${
+                                                                                    cs?.messages?.length
+                                                                                        ? cs.messages.map(
+                                                                                              (m, i) =>
+                                                                                                  html`${i > 0 ? ', ' : ''}<span
+                                                                                                          class="text-base-content/35"
+                                                                                                          >${
+                                                                                                              m
+                                                                                                                  .split('\\')
+                                                                                                                  .slice(0, -1)
+                                                                                                                  .join('\\')
+                                                                                                                  ? m
+                                                                                                                        .split('\\')
+                                                                                                                        .slice(0, -1)
+                                                                                                                        .join('\\') + '\\'
+                                                                                                                  : ''
+                                                                                                          }</span
+                                                                                                      ><span class="text-base-content/70"
+                                                                                                          >${shortClass(m)}</span
+                                                                                                      >`
+                                                                                          )
+                                                                                        : html`<span class="text-base-content/25 italic"
+                                                                                              >keine</span
+                                                                                          >`
+                                                                                }
+                                                                            </span>
+                                                                            <span class="text-base-content/35">Returns</span>
+                                                                            <span class="font-mono truncate">
+                                                                                ${
+                                                                                    cs?.returnTypes?.length
+                                                                                        ? cs.returnTypes.map(
+                                                                                              (r, i) =>
+                                                                                                  html`${i > 0 ? ', ' : ''}<span
+                                                                                                          class="text-base-content/35"
+                                                                                                          >${
+                                                                                                              r
+                                                                                                                  .split('\\')
+                                                                                                                  .slice(0, -1)
+                                                                                                                  .join('\\')
+                                                                                                                  ? r
+                                                                                                                        .split('\\')
+                                                                                                                        .slice(0, -1)
+                                                                                                                        .join('\\') + '\\'
+                                                                                                                  : ''
+                                                                                                          }</span
+                                                                                                      ><span class="text-base-content/70"
+                                                                                                          >${shortClass(r)}</span
+                                                                                                      >`
+                                                                                          )
+                                                                                        : html`<span class="text-base-content/50"
+                                                                                              >boolesche Rückgabe</span
+                                                                                          >`
+                                                                                }
+                                                                            </span>
+                                                                            ${
+                                                                                cs?.retries
+                                                                                    ? html`
+                                                                                          <span class="text-base-content/35">Retries</span>
+                                                                                          <span class="font-mono text-base-content/50"
+                                                                                              >${cs.retries}</span
+                                                                                          >
+                                                                                      `
+                                                                                    : ''
+                                                                            }
+                                                                            ${
+                                                                                cs?.delay
+                                                                                    ? html`
+                                                                                          <span class="text-base-content/35">Delay</span>
+                                                                                          <span class="font-mono text-base-content/50"
+                                                                                              >${cs.delay}ms</span
+                                                                                          >
+                                                                                      `
+                                                                                    : ''
+                                                                            }
+                                                                            ${
+                                                                                cs?.runOnce
+                                                                                    ? html`
+                                                                                          <span class="text-base-content/35">RunOnce</span>
+                                                                                          <span class="font-mono text-base-content/50"
+                                                                                              >ja</span
+                                                                                          >
+                                                                                      `
+                                                                                    : ''
+                                                                            }
                                                                         </div>
-                                                                    </div>
-                                                                    <span class="text-[10px] text-success/60">neu</span>
-                                                                </summary>
-                                                                <div
-                                                                    class="px-3 pb-2 pt-1.5 border-t border-success/20 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[10px]"
-                                                                >
-                                                                    <span class="text-base-content/35">Messages</span>
-                                                                    <span class="font-mono truncate">
-                                                                        ${cs?.messages?.length
-                                                                            ? cs.messages.map(
-                                                                                  (m, i) =>
-                                                                                      html`${i > 0 ? ', ' : ''}<span
-                                                                                              class="text-base-content/35"
-                                                                                              >${m.split('\\').slice(0, -1).join('\\')
-                                                                                                  ? m.split('\\').slice(0, -1).join('\\') +
-                                                                                                    '\\'
-                                                                                                  : ''}</span
-                                                                                          ><span class="text-base-content/70"
-                                                                                              >${shortClass(m)}</span
-                                                                                          >`
-                                                                              )
-                                                                            : html`<span class="text-base-content/25 italic">keine</span>`}
-                                                                    </span>
-                                                                    <span class="text-base-content/35">Returns</span>
-                                                                    <span class="font-mono truncate">
-                                                                        ${cs?.returnTypes?.length
-                                                                            ? cs.returnTypes.map(
-                                                                                  (r, i) =>
-                                                                                      html`${i > 0 ? ', ' : ''}<span
-                                                                                              class="text-base-content/35"
-                                                                                              >${r.split('\\').slice(0, -1).join('\\')
-                                                                                                  ? r.split('\\').slice(0, -1).join('\\') +
-                                                                                                    '\\'
-                                                                                                  : ''}</span
-                                                                                          ><span class="text-base-content/70"
-                                                                                              >${shortClass(r)}</span
-                                                                                          >`
-                                                                              )
-                                                                            : html`<span class="text-base-content/50"
-                                                                                  >boolesche Rückgabe</span
-                                                                              >`}
-                                                                    </span>
-                                                                    ${cs?.retries
-                                                                        ? html`
-                                                                              <span class="text-base-content/35">Retries</span>
-                                                                              <span class="font-mono text-base-content/50"
-                                                                                  >${cs.retries}</span
-                                                                              >
-                                                                          `
-                                                                        : ''}
-                                                                    ${cs?.delay
-                                                                        ? html`
-                                                                              <span class="text-base-content/35">Delay</span>
-                                                                              <span class="font-mono text-base-content/50"
-                                                                                  >${cs.delay}ms</span
-                                                                              >
-                                                                          `
-                                                                        : ''}
-                                                                    ${cs?.runOnce
-                                                                        ? html`
-                                                                              <span class="text-base-content/35">RunOnce</span>
-                                                                              <span class="font-mono text-base-content/50">ja</span>
-                                                                          `
-                                                                        : ''}
-                                                                </div>
-                                                            </details>
-                                                        `
-                                                    })
-                                              : ''}
-                                      </div>
-                                  `
-                                : html`
-                                      <div class="flex items-center justify-center h-full text-base-content/30 text-sm">
-                                          Version auswählen
-                                      </div>
-                                  `}
+                                                                    </details>
+                                                                `
+                                                            })
+                                                      : ''
+                                              }
+                                          </div>
+                                      `
+                                    : html`
+                                          <div class="flex items-center justify-center h-full text-base-content/30 text-sm">
+                                              Version auswählen
+                                          </div>
+                                      `
+                            }
                         </div>
                     </div>
                 </div>
@@ -1616,251 +1725,273 @@ export class FcDev extends BaseElement {
                                     />
                                 </svg>
                             </div>
-                            ${allVersions.length >= 1
-                                ? html`<fc-tooltip
-                                      class="mt-auto"
-                                      text="${allVersions.length} Versionen"
-                                      .content=${html`
-                                          <button
-                                              class="w-9 h-9 rounded-lg bg-info/10 text-info flex items-center justify-center hover:bg-info/20 transition-colors cursor-pointer"
-                                              @click=${() => this._openVersionsModal()}
-                                          >
-                                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                  <path
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round"
-                                                      d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                                                  />
-                                              </svg>
-                                          </button>
-                                      `}
-                                  ></fc-tooltip>`
-                                : ''}
+                            ${
+                                allVersions.length >= 1
+                                    ? html`<fc-tooltip
+                                          class="mt-auto"
+                                          text="${allVersions.length} Versionen"
+                                          .content=${html`
+                                              <button
+                                                  class="w-9 h-9 rounded-lg bg-info/10 text-info flex items-center justify-center hover:bg-info/20 transition-colors cursor-pointer"
+                                                  @click=${() => this._openVersionsModal()}
+                                              >
+                                                  <svg
+                                                      class="w-4 h-4"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                      viewBox="0 0 24 24"
+                                                  >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                                                      />
+                                                  </svg>
+                                              </button>
+                                          `}
+                                      ></fc-tooltip>`
+                                    : ''
+                            }
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-2">
                                 <div class="font-bold text-base leading-tight">${shortClass(this._selected)}</div>
-                                ${d.ephemeral !== null && d.ephemeral !== undefined
-                                    ? html`<span class="fc-ephemeral-badge">
-                                          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                              <path
-                                                  stroke-linecap="round"
-                                                  stroke-linejoin="round"
-                                                  d="M7.5 3.75H6A2.25 2.25 0 003.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0120.25 6v1.5m0 9V18A2.25 2.25 0 0118 20.25h-1.5m-9 0H6A2.25 2.25 0 013.75 18v-1.5M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                              />
-                                          </svg>
-                                          Ephemeral<span class="fc-ephemeral-sep">·</span>${d.ephemeral} Tage
-                                      </span>`
-                                    : ''}
+                                ${
+                                    d.ephemeral !== null && d.ephemeral !== undefined
+                                        ? html`<span class="fc-ephemeral-badge">
+                                              <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M7.5 3.75H6A2.25 2.25 0 003.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0120.25 6v1.5m0 9V18A2.25 2.25 0 0118 20.25h-1.5m-9 0H6A2.25 2.25 0 013.75 18v-1.5M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                  />
+                                              </svg>
+                                              Ephemeral<span class="fc-ephemeral-sep">·</span>${d.ephemeral} Tage
+                                          </span>`
+                                        : ''
+                                }
                             </div>
                             ${d.schema?.type ? html`<div class="text-xs font-mono text-base-content/50 mt-0.5">${d.schema.type}</div>` : ''}
-                            ${selectedFlow?.file
-                                ? html`<div class="text-[10px] text-base-content/30 mt-1 truncate font-mono">${selectedFlow.file}</div>`
-                                : ''}
+                            ${
+                                selectedFlow?.file
+                                    ? html`<div class="text-[10px] text-base-content/30 mt-1 truncate font-mono">${selectedFlow.file}</div>`
+                                    : ''
+                            }
                             <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
                                 ${this._renderStatusIcon(cfg)} ${this._renderStatusLine(status, d)}
                                 ${cfg.showButton ? this._renderRunButton(cfg.buttonColor) : ''}
                             </div>
                             ${this._renderChangedMessages(status, d)} ${this._renderProjectionVersionWarning(d)}
                         </div>
-                        ${d.hash
-                            ? html`
-                                  <div class="flex flex-col items-end gap-0.5 shrink-0">
-                                      <span class="text-[10px] text-base-content/30 uppercase tracking-wide">Schema-Hash</span>
-                                      <span class="text-xs font-mono text-base-content/40">${d.hash}</span>
-                                  </div>
-                              `
-                            : ''}
+                        ${
+                            d.hash
+                                ? html`
+                                      <div class="flex flex-col items-end gap-0.5 shrink-0">
+                                          <span class="text-[10px] text-base-content/30 uppercase tracking-wide">Schema-Hash</span>
+                                          <span class="text-xs font-mono text-base-content/40">${d.hash}</span>
+                                      </div>
+                                  `
+                                : ''
+                        }
                     </div>
                 </div>
 
                 <!-- Graph -->
-                ${d.valid && d.schema
-                    ? html`
-                          ${this._lastRunFlow
-                              ? (() => {
-                                    const run = buildRuns(this._lastRunFlow).at(-1) ?? null
-                                    const dur = run?.duration ?? null
-                                    const durLabel = dur === null ? '' : dur < 1000 ? `${dur}ms` : `${(dur / 1000).toFixed(1)}s`
-                                    return html`
-                                        <div
-                                            class="flex items-center justify-between px-3 py-1.5 bg-success/10 border-b border-success/20 text-xs shrink-0"
-                                        >
-                                            <div class="flex items-center gap-2">
-                                                <span class="text-success font-semibold">Run-Ergebnis</span>
-                                                ${this._lastRunMemory
-                                                    ? html`<span class="text-base-content/40 font-mono"
-                                                          >${formatBytes(this._lastRunMemory.used)} /
-                                                          ${formatBytes(this._lastRunMemory.peak)} Peak</span
-                                                      >`
-                                                    : ''}
-                                                ${durLabel ? html`<span class="text-base-content/40 font-mono">${durLabel}</span>` : ''}
-                                            </div>
-                                            <div class="flex items-center gap-1">
-                                                <fc-tooltip
-                                                    text="Raw JSON"
-                                                    .content=${html`
-                                                        <button
-                                                            class="btn btn-ghost btn-xs btn-circle"
-                                                            @click=${() => {
-                                                                this._devRawModal = true
-                                                                this.updateComplete.then(() =>
-                                                                    this.querySelector('#fc-dev-raw-modal')?.showModal()
-                                                                )
-                                                            }}
-                                                        >
-                                                            <svg
-                                                                class="w-3.5 h-3.5"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                stroke-width="2"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    stroke-linecap="round"
-                                                                    stroke-linejoin="round"
-                                                                    d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
-                                                                />
-                                                            </svg>
-                                                        </button>
-                                                    `}
-                                                ></fc-tooltip>
-                                                <fc-tooltip
-                                                    text="Schema-Ansicht"
-                                                    .content=${html`
-                                                        <button
-                                                            class="btn btn-ghost btn-xs btn-circle"
-                                                            @click=${() => {
-                                                                this._lastRunFlow = null
-                                                                this._lastRunMemory = null
-                                                            }}
-                                                        >
-                                                            <svg
-                                                                class="w-3.5 h-3.5"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                stroke-width="2"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    stroke-linecap="round"
-                                                                    stroke-linejoin="round"
-                                                                    d="M6 18L18 6M6 6l12 12"
-                                                                />
-                                                            </svg>
-                                                        </button>
-                                                    `}
-                                                ></fc-tooltip>
-                                            </div>
-                                        </div>
-                                    `
-                                })()
-                              : ''}
-                          <div class="flex-1 overflow-auto m-3">
-                              ${(() => {
-                                  const graphRun = this._lastRunFlow ? (buildRuns(this._lastRunFlow).at(-1) ?? null) : null
-                                  const graphFlow = this._lastRunFlow ?? this._syntheticFlow(d.schema)
-                                  const stepDiff = this._lastRunFlow
-                                      ? null
-                                      : (() => {
-                                            const messageDriftMap = Object.fromEntries((d.changedMessages ?? []).map(m => [m.class, m]))
-                                            const messageDriftClasses = new Set(Object.keys(messageDriftMap))
-                                            const base = d.storedSchema
-                                                ? d.hashDrift
-                                                    ? computeStepDiff(d.schema.steps, d.storedSchema.steps)
-                                                    : Object.fromEntries(
-                                                          (d.schema.steps ?? []).map(s => [
-                                                              s.source,
-                                                              { status: 'unchanged', changes: null },
-                                                          ])
-                                                      )
-                                                : status.storedNone
-                                                  ? Object.fromEntries(
-                                                        (d.schema.steps ?? []).map(s => [s.source, { status: 'added', changes: null }])
+                ${
+                    d.valid && d.schema
+                        ? html`
+                              ${
+                                  this._lastRunFlow
+                                      ? (() => {
+                                            const run = buildRuns(this._lastRunFlow).at(-1) ?? null
+                                            const dur = run?.duration ?? null
+                                            const durLabel = dur === null ? '' : dur < 1000 ? `${dur}ms` : `${(dur / 1000).toFixed(1)}s`
+                                            return html`
+                                                <div
+                                                    class="flex items-center justify-between px-3 py-1.5 bg-success/10 border-b border-success/20 text-xs shrink-0"
+                                                >
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-success font-semibold">Run-Ergebnis</span>
+                                                        ${
+                                                            this._lastRunMemory
+                                                                ? html`<span class="text-base-content/40 font-mono"
+                                                                      >${formatBytes(this._lastRunMemory.used)} /
+                                                                      ${formatBytes(this._lastRunMemory.peak)} Peak</span
+                                                                  >`
+                                                                : ''
+                                                        }
+                                                        ${durLabel ? html`<span class="text-base-content/40 font-mono">${durLabel}</span>` : ''}
+                                                    </div>
+                                                    <div class="flex items-center gap-1">
+                                                        <fc-tooltip
+                                                            text="Raw JSON"
+                                                            .content=${html`
+                                                                <button
+                                                                    class="btn btn-ghost btn-xs btn-circle"
+                                                                    @click=${() => {
+                                                                        this._devRawModal = true
+                                                                        this.updateComplete.then(() =>
+                                                                            this.querySelector('#fc-dev-raw-modal')?.showModal()
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    <svg
+                                                                        class="w-3.5 h-3.5"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        stroke-width="2"
+                                                                        viewBox="0 0 24 24"
+                                                                    >
+                                                                        <path
+                                                                            stroke-linecap="round"
+                                                                            stroke-linejoin="round"
+                                                                            d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
+                                                                        />
+                                                                    </svg>
+                                                                </button>
+                                                            `}
+                                                        ></fc-tooltip>
+                                                        <fc-tooltip
+                                                            text="Schema-Ansicht"
+                                                            .content=${html`
+                                                                <button
+                                                                    class="btn btn-ghost btn-xs btn-circle"
+                                                                    @click=${() => {
+                                                                        this._lastRunFlow = null
+                                                                        this._lastRunMemory = null
+                                                                    }}
+                                                                >
+                                                                    <svg
+                                                                        class="w-3.5 h-3.5"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        stroke-width="2"
+                                                                        viewBox="0 0 24 24"
+                                                                    >
+                                                                        <path
+                                                                            stroke-linecap="round"
+                                                                            stroke-linejoin="round"
+                                                                            d="M6 18L18 6M6 6l12 12"
+                                                                        />
+                                                                    </svg>
+                                                                </button>
+                                                            `}
+                                                        ></fc-tooltip>
+                                                    </div>
+                                                </div>
+                                            `
+                                        })()
+                                      : ''
+                              }
+                              <div class="flex-1 overflow-auto m-3">
+                                  ${(() => {
+                                      const graphRun = this._lastRunFlow ? (buildRuns(this._lastRunFlow).at(-1) ?? null) : null
+                                      const graphFlow = this._lastRunFlow ?? this._syntheticFlow(d.schema)
+                                      const stepDiff = this._lastRunFlow
+                                          ? null
+                                          : (() => {
+                                                const messageDriftMap = Object.fromEntries((d.changedMessages ?? []).map(m => [m.class, m]))
+                                                const messageDriftClasses = new Set(Object.keys(messageDriftMap))
+                                                const base = d.storedSchema
+                                                    ? d.hashDrift
+                                                        ? computeStepDiff(d.schema.steps, d.storedSchema.steps)
+                                                        : Object.fromEntries(
+                                                              (d.schema.steps ?? []).map(s => [
+                                                                  s.source,
+                                                                  { status: 'unchanged', changes: null },
+                                                              ])
+                                                          )
+                                                    : status.storedNone
+                                                      ? Object.fromEntries(
+                                                            (d.schema.steps ?? []).map(s => [s.source, { status: 'added', changes: null }])
+                                                        )
+                                                      : {}
+                                                const diff = { ...base }
+                                                for (const step of d.schema.steps ?? []) {
+                                                    const affectedMessages = [...step.messages, ...step.returnTypes].filter(m =>
+                                                        messageDriftClasses.has(m)
                                                     )
-                                                  : {}
-                                            const diff = { ...base }
-                                            for (const step of d.schema.steps ?? []) {
-                                                const affectedMessages = [...step.messages, ...step.returnTypes].filter(m =>
-                                                    messageDriftClasses.has(m)
-                                                )
-                                                if (affectedMessages.length > 0 && diff[step.source]?.status !== 'added') {
-                                                    diff[step.source] = {
-                                                        status: 'messageDrift',
-                                                        changes: {
-                                                            properties: affectedMessages.map(m => ({
-                                                                class: m,
-                                                                live: messageDriftMap[m]?.liveProperties ?? [],
-                                                                stored: messageDriftMap[m]?.storedProperties ?? [],
-                                                                livePropertyNames: messageDriftMap[m]?.livePropertyNames ?? {},
-                                                                storedPropertyNames: messageDriftMap[m]?.storedPropertyNames ?? {},
-                                                            })),
-                                                        },
+                                                    if (affectedMessages.length > 0 && diff[step.source]?.status !== 'added') {
+                                                        diff[step.source] = {
+                                                            status: 'messageDrift',
+                                                            changes: {
+                                                                properties: affectedMessages.map(m => ({
+                                                                    class: m,
+                                                                    live: messageDriftMap[m]?.liveProperties ?? [],
+                                                                    stored: messageDriftMap[m]?.storedProperties ?? [],
+                                                                    livePropertyNames: messageDriftMap[m]?.livePropertyNames ?? {},
+                                                                    storedPropertyNames: messageDriftMap[m]?.storedPropertyNames ?? {},
+                                                                })),
+                                                            },
+                                                        }
                                                     }
                                                 }
-                                            }
-                                            return Object.keys(diff).length > 0 ? diff : null
-                                        })()
-                                  return html`
-                                      <fc-flow-graph
-                                          .flow=${graphFlow}
-                                          .runId=${graphRun?.runId ?? null}
-                                          .runMessages=${graphRun?.messages ?? null}
-                                          .runExceptions=${graphRun?.exceptions ?? null}
-                                          .runResults=${graphRun?.results ?? null}
-                                          .projectionHandler=${this._projectionHandler}
-                                          .projectionMessageMethods=${this._projectionMessageMethods}
-                                          .readonly=${true}
-                                          .showStepConfig=${true}
-                                          .stepDiff=${stepDiff}
-                                          .messageSchemas=${this._lastRunFlow ? null : (this._detail?.messageSchemas ?? null)}
-                                          @source-requested=${e => this._handleSourceRequested(e)}
-                                      ></fc-flow-graph>
-                                  `
-                              })()}
-                          </div>
-                      `
-                    : html`
-                          <div class="flex-1 flex items-center justify-center text-base-content/25 text-sm">
-                              Kein Graph verfügbar — Schema ungültig
-                          </div>
-                      `}
+                                                return Object.keys(diff).length > 0 ? diff : null
+                                            })()
+                                      return html`
+                                          <fc-flow-graph
+                                              .flow=${graphFlow}
+                                              .runId=${graphRun?.runId ?? null}
+                                              .runMessages=${graphRun?.messages ?? null}
+                                              .runExceptions=${graphRun?.exceptions ?? null}
+                                              .runResults=${graphRun?.results ?? null}
+                                              .projectionHandler=${this._projectionHandler}
+                                              .projectionMessageMethods=${this._projectionMessageMethods}
+                                              .readonly=${true}
+                                              .showStepConfig=${true}
+                                              .stepDiff=${stepDiff}
+                                              .messageSchemas=${this._lastRunFlow ? null : (this._detail?.messageSchemas ?? null)}
+                                              @source-requested=${e => this._handleSourceRequested(e)}
+                                          ></fc-flow-graph>
+                                      `
+                                  })()}
+                              </div>
+                          `
+                        : html`
+                              <div class="flex-1 flex items-center justify-center text-base-content/25 text-sm">
+                                  Kein Graph verfügbar — Schema ungültig
+                              </div>
+                          `
+                }
 
                 <!-- Removed steps banner -->
-                ${d.hashDrift && d.storedSchema && removedSteps(d.schema.steps, d.storedSchema.steps).length > 0
-                    ? html`
-                          <div class="px-5 py-3 border-t border-error/30 bg-error/5 shrink-0">
-                              <div class="flex items-start gap-3">
-                                  <svg
-                                      class="w-5 h-5 text-error shrink-0 mt-0.5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      stroke-width="2"
-                                      viewBox="0 0 24 24"
-                                  >
-                                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                  <div class="flex-1 min-w-0">
-                                      <div class="font-semibold text-error text-sm">Entfernte Steps</div>
-                                      <div class="text-xs text-base-content/60 mt-1">
-                                          Folgende Steps existieren nicht mehr im aktuellen Schema.
+                ${
+                    d.hashDrift && d.storedSchema && removedSteps(d.schema.steps, d.storedSchema.steps).length > 0
+                        ? html`
+                              <div class="px-5 py-3 border-t border-error/30 bg-error/5 shrink-0">
+                                  <div class="flex items-start gap-3">
+                                      <svg
+                                          class="w-5 h-5 text-error shrink-0 mt-0.5"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          stroke-width="2"
+                                          viewBox="0 0 24 24"
+                                      >
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                      <div class="flex-1 min-w-0">
+                                          <div class="font-semibold text-error text-sm">Entfernte Steps</div>
+                                          <div class="text-xs text-base-content/60 mt-1">
+                                              Folgende Steps existieren nicht mehr im aktuellen Schema.
+                                          </div>
+                                          <ul class="mt-2 flex flex-col gap-0.5">
+                                              ${removedSteps(d.schema.steps, d.storedSchema.steps).map(
+                                                  step => html`
+                                                      <li class="text-xs font-mono text-error/80 flex items-center gap-1.5">
+                                                          <span class="text-error font-bold">−</span>
+                                                          ${shortClass(step.source)}
+                                                          <span class="text-base-content/30" title="${step.source}">${step.source}</span>
+                                                      </li>
+                                                  `
+                                              )}
+                                          </ul>
                                       </div>
-                                      <ul class="mt-2 flex flex-col gap-0.5">
-                                          ${removedSteps(d.schema.steps, d.storedSchema.steps).map(
-                                              step => html`
-                                                  <li class="text-xs font-mono text-error/80 flex items-center gap-1.5">
-                                                      <span class="text-error font-bold">−</span>
-                                                      ${shortClass(step.source)}
-                                                      <span class="text-base-content/30" title="${step.source}">${step.source}</span>
-                                                  </li>
-                                              `
-                                          )}
-                                      </ul>
                                   </div>
                               </div>
-                          </div>
-                      `
-                    : ''}
+                          `
+                        : ''
+                }
             </div>
         `
     }
@@ -1993,21 +2124,23 @@ export class FcDev extends BaseElement {
                                                 ?disabled=${this._runModalLoading}
                                                 @click=${() => this._loadRunModalData(true)}
                                             >
-                                                ${this._runModalLoading
-                                                    ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                                    : html`<svg
-                                                          class="w-3.5 h-3.5"
-                                                          fill="none"
-                                                          stroke="currentColor"
-                                                          stroke-width="2"
-                                                          viewBox="0 0 24 24"
-                                                      >
-                                                          <path
-                                                              stroke-linecap="round"
-                                                              stroke-linejoin="round"
-                                                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                                          />
-                                                      </svg>`}
+                                                ${
+                                                    this._runModalLoading
+                                                        ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                                        : html`<svg
+                                                              class="w-3.5 h-3.5"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              stroke-width="2"
+                                                              viewBox="0 0 24 24"
+                                                          >
+                                                              <path
+                                                                  stroke-linecap="round"
+                                                                  stroke-linejoin="round"
+                                                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                                              />
+                                                          </svg>`
+                                                }
                                             </button>
                                         `}
                                     ></fc-tooltip>
@@ -2015,147 +2148,157 @@ export class FcDev extends BaseElement {
                             </div>
                             <!-- Property list -->
                             <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5">
-                                ${this._detail?.initMessageTypes && Object.keys(this._detail.initMessageTypes).length > 0
-                                    ? Object.entries(this._detail.initMessageTypes).map(([name, type]) => {
-                                          const nullable = type.startsWith('?')
-                                          const base = nullable ? type.slice(1) : type
-                                          const suffix = base.endsWith('[]') ? '[]' : ''
-                                          const element = base.replace(/\[\]$/, '')
-                                          const typeColor =
-                                              element === 'string'
-                                                  ? 'text-sky-400'
-                                                  : element === 'int' || element === 'float'
-                                                    ? 'text-amber-400'
-                                                    : element === 'bool'
-                                                      ? 'text-violet-400'
-                                                      : element === 'array'
-                                                        ? 'text-orange-400'
-                                                        : 'text-base-content/50'
-                                          return html`
-                                              <div class="rounded-lg bg-base-100 border border-base-300/60 px-3 py-2 flex flex-col gap-0.5">
-                                                  <span class="text-xs font-mono font-semibold text-base-content/90">${name}</span>
-                                                  <span class="text-[10px] font-mono ${typeColor}"
-                                                      >${nullable ? html`<span class="text-base-content/30">?</span>` : ''}${element
-                                                          .split('\\')
-                                                          .pop()}${suffix}</span
+                                ${
+                                    this._detail?.initMessageTypes && Object.keys(this._detail.initMessageTypes).length > 0
+                                        ? Object.entries(this._detail.initMessageTypes).map(([name, type]) => {
+                                              const nullable = type.startsWith('?')
+                                              const base = nullable ? type.slice(1) : type
+                                              const suffix = base.endsWith('[]') ? '[]' : ''
+                                              const element = base.replace(/\[\]$/, '')
+                                              const typeColor =
+                                                  element === 'string'
+                                                      ? 'text-sky-400'
+                                                      : element === 'int' || element === 'float'
+                                                        ? 'text-amber-400'
+                                                        : element === 'bool'
+                                                          ? 'text-violet-400'
+                                                          : element === 'array'
+                                                            ? 'text-orange-400'
+                                                            : 'text-base-content/50'
+                                              return html`
+                                                  <div
+                                                      class="rounded-lg bg-base-100 border border-base-300/60 px-3 py-2 flex flex-col gap-0.5"
                                                   >
+                                                      <span class="text-xs font-mono font-semibold text-base-content/90">${name}</span>
+                                                      <span class="text-[10px] font-mono ${typeColor}"
+                                                          >${nullable ? html`<span class="text-base-content/30">?</span>` : ''}${element
+                                                              .split('\\')
+                                                              .pop()}${suffix}</span
+                                                      >
+                                                  </div>
+                                              `
+                                          })
+                                        : html`
+                                              <div class="flex flex-col items-center justify-center h-full gap-2 text-center py-6">
+                                                  <svg
+                                                      class="w-8 h-8 text-base-content/15"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="1.5"
+                                                      viewBox="0 0 24 24"
+                                                  >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                                                      />
+                                                  </svg>
+                                                  <span class="text-xs text-base-content/30">Keine Properties</span>
                                               </div>
                                           `
-                                      })
-                                    : html`
-                                          <div class="flex flex-col items-center justify-center h-full gap-2 text-center py-6">
-                                              <svg
-                                                  class="w-8 h-8 text-base-content/15"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  stroke-width="1.5"
-                                                  viewBox="0 0 24 24"
-                                              >
-                                                  <path
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round"
-                                                      d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-                                                  />
-                                              </svg>
-                                              <span class="text-xs text-base-content/30">Keine Properties</span>
-                                          </div>
-                                      `}
+                                }
                             </div>
                         </div>
                         <!-- Right: JSON editor + result -->
                         <div class="flex-1 min-w-0 flex flex-col p-4 gap-3 overflow-hidden">
-                            ${this._detail?.schema
-                                ? (() => {
-                                      const isEmptyInit = shortClass(this._initMessageClass(this._detail?.schema)) === 'EmptyInitMessage'
-                                      return html`
-                                          <div class="flex flex-col gap-1.5 flex-1 min-h-0">
-                                              <div class="flex items-center gap-2">
-                                                  <span class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest"
-                                                      >Payload</span
-                                                  >
-                                                  <span class="text-[10px] font-mono text-base-content/25"
-                                                      >${shortClass(this._initMessageClass(this._detail?.schema))}</span
-                                                  >
-                                                  ${isEmptyInit
-                                                      ? ''
-                                                      : html`
-                                                            <div class="flex items-center gap-0.5 ml-auto">
-                                                                <fc-tooltip
-                                                                    text="Inhalt kopieren"
-                                                                    .content=${html`
-                                                                        <button
-                                                                            class="btn btn-xs btn-ghost btn-circle"
-                                                                            @click=${() => navigator.clipboard.writeText(this._runPayload)}
-                                                                        >
-                                                                            <svg
-                                                                                class="w-3.5 h-3.5"
-                                                                                fill="none"
-                                                                                stroke="currentColor"
-                                                                                stroke-width="2"
-                                                                                viewBox="0 0 24 24"
-                                                                            >
-                                                                                <rect
-                                                                                    x="9"
-                                                                                    y="9"
-                                                                                    width="13"
-                                                                                    height="13"
-                                                                                    rx="2"
-                                                                                    ry="2"
-                                                                                ></rect>
-                                                                                <path
-                                                                                    d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
-                                                                                ></path>
-                                                                            </svg>
-                                                                        </button>
-                                                                    `}
-                                                                ></fc-tooltip>
-                                                                <fc-tooltip
-                                                                    text="Aus Zwischenablage einfügen"
-                                                                    .content=${html`
-                                                                        <button
-                                                                            class="btn btn-xs btn-ghost btn-circle"
-                                                                            @click=${async () => {
-                                                                                try {
-                                                                                    const text = await navigator.clipboard.readText()
-                                                                                    this._runPayload = text
-                                                                                } catch {
-                                                                                    // Clipboard-Zugriff verweigert
-                                                                                }
-                                                                            }}
-                                                                        >
-                                                                            <svg
-                                                                                class="w-3.5 h-3.5"
-                                                                                fill="none"
-                                                                                stroke="currentColor"
-                                                                                stroke-width="2"
-                                                                                viewBox="0 0 24 24"
-                                                                            >
-                                                                                <path
-                                                                                    stroke-linecap="round"
-                                                                                    stroke-linejoin="round"
-                                                                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                                                                                />
-                                                                            </svg>
-                                                                        </button>
-                                                                    `}
-                                                                ></fc-tooltip>
-                                                            </div>
-                                                        `}
+                            ${
+                                this._detail?.schema
+                                    ? (() => {
+                                          const isEmptyInit =
+                                              shortClass(this._initMessageClass(this._detail?.schema)) === 'EmptyInitMessage'
+                                          return html`
+                                              <div class="flex flex-col gap-1.5 flex-1 min-h-0">
+                                                  <div class="flex items-center gap-2">
+                                                      <span class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest"
+                                                          >Payload</span
+                                                      >
+                                                      <span class="text-[10px] font-mono text-base-content/25"
+                                                          >${shortClass(this._initMessageClass(this._detail?.schema))}</span
+                                                      >
+                                                      ${
+                                                          isEmptyInit
+                                                              ? ''
+                                                              : html`
+                                                                    <div class="flex items-center gap-0.5 ml-auto">
+                                                                        <fc-tooltip
+                                                                            text="Inhalt kopieren"
+                                                                            .content=${html`
+                                                                                <button
+                                                                                    class="btn btn-xs btn-ghost btn-circle"
+                                                                                    @click=${() => navigator.clipboard.writeText(this._runPayload)}
+                                                                                >
+                                                                                    <svg
+                                                                                        class="w-3.5 h-3.5"
+                                                                                        fill="none"
+                                                                                        stroke="currentColor"
+                                                                                        stroke-width="2"
+                                                                                        viewBox="0 0 24 24"
+                                                                                    >
+                                                                                        <rect
+                                                                                            x="9"
+                                                                                            y="9"
+                                                                                            width="13"
+                                                                                            height="13"
+                                                                                            rx="2"
+                                                                                            ry="2"
+                                                                                        ></rect>
+                                                                                        <path
+                                                                                            d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                                                        ></path>
+                                                                                    </svg>
+                                                                                </button>
+                                                                            `}
+                                                                        ></fc-tooltip>
+                                                                        <fc-tooltip
+                                                                            text="Aus Zwischenablage einfügen"
+                                                                            .content=${html`
+                                                                                <button
+                                                                                    class="btn btn-xs btn-ghost btn-circle"
+                                                                                    @click=${async () => {
+                                                                                        try {
+                                                                                            const text =
+                                                                                                await navigator.clipboard.readText()
+                                                                                            this._runPayload = text
+                                                                                        } catch {
+                                                                                            // Clipboard-Zugriff verweigert
+                                                                                        }
+                                                                                    }}
+                                                                                >
+                                                                                    <svg
+                                                                                        class="w-3.5 h-3.5"
+                                                                                        fill="none"
+                                                                                        stroke="currentColor"
+                                                                                        stroke-width="2"
+                                                                                        viewBox="0 0 24 24"
+                                                                                    >
+                                                                                        <path
+                                                                                            stroke-linecap="round"
+                                                                                            stroke-linejoin="round"
+                                                                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                                                                                        />
+                                                                                    </svg>
+                                                                                </button>
+                                                                            `}
+                                                                        ></fc-tooltip>
+                                                                    </div>
+                                                                `
+                                                      }
+                                                  </div>
+                                                  <fc-json-editor
+                                                      class="flex-1 min-h-0"
+                                                      .value=${this._runPayload}
+                                                      .readonly=${isEmptyInit}
+                                                      @change=${e => {
+                                                          this._runPayload = e.detail.value
+                                                          this._runMessage = e.detail.valid ? e.detail.value : this._runMessage
+                                                          this._runMessageValid = e.detail.valid
+                                                      }}
+                                                  ></fc-json-editor>
                                               </div>
-                                              <fc-json-editor
-                                                  class="flex-1 min-h-0"
-                                                  .value=${this._runPayload}
-                                                  .readonly=${isEmptyInit}
-                                                  @change=${e => {
-                                                      this._runPayload = e.detail.value
-                                                      this._runMessage = e.detail.valid ? e.detail.value : this._runMessage
-                                                      this._runMessageValid = e.detail.valid
-                                                  }}
-                                              ></fc-json-editor>
-                                          </div>
-                                      `
-                                  })()
-                                : ''}
+                                          `
+                                      })()
+                                    : ''
+                            }
                             ${this._renderRunError()}
                         </div>
                     </div>
@@ -2178,20 +2321,26 @@ export class FcDev extends BaseElement {
                                     Ausführen
                                 </span>
                                 <span class="col-start-1 row-start-1 flex items-center justify-center gap-1.5">
-                                    ${this._runSending
-                                        ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                        : html`<svg
-                                              class="w-3.5 h-3.5"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              stroke-width="2"
-                                              viewBox="0 0 24 24"
-                                          >
-                                              <path stroke-linecap="round" stroke-linejoin="round" d="M5 3l14 9-14 9V3z" />
-                                          </svg>`}
-                                    Ausführen${this._runSending
-                                        ? html`<span class="font-mono tabular-nums ml-1">${this._formatElapsed(this._runElapsed)}</span>`
-                                        : ''}
+                                    ${
+                                        this._runSending
+                                            ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                            : html`<svg
+                                                  class="w-3.5 h-3.5"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 3l14 9-14 9V3z" />
+                                              </svg>`
+                                    }
+                                    Ausführen${
+                                        this._runSending
+                                            ? html`<span class="font-mono tabular-nums ml-1"
+                                                  >${this._formatElapsed(this._runElapsed)}</span
+                                              >`
+                                            : ''
+                                    }
                                 </span>
                             </button>
                         </div>
@@ -2237,98 +2386,105 @@ export class FcDev extends BaseElement {
                         </div>
                     </div>
                     <!-- Tabs (nur wenn auch Console Output vorhanden) -->
-                    ${(this._lastRunOutput ?? []).length
-                        ? html`
-                              <div role="tablist" class="tabs tabs-border px-5 shrink-0 border-b border-base-300/50">
-                                  <button
-                                      role="tab"
-                                      class="tab gap-1.5 ${this._errorModalTab === 'error' ? 'tab-active' : ''}"
-                                      @click=${() => {
-                                          this._errorModalTab = 'error'
-                                      }}
-                                  >
-                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                          <path
-                                              stroke-linecap="round"
-                                              stroke-linejoin="round"
-                                              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-                                          />
-                                      </svg>
-                                      Fehlerdetails
-                                  </button>
-                                  <button
-                                      role="tab"
-                                      class="tab gap-1.5 ${this._errorModalTab === 'output' ? 'tab-active' : ''}"
-                                      @click=${() => {
-                                          this._errorModalTab = 'output'
-                                      }}
-                                  >
-                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                          <path
-                                              stroke-linecap="round"
-                                              stroke-linejoin="round"
-                                              d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                          />
-                                      </svg>
-                                      Console Output
-                                  </button>
-                              </div>
-                          `
-                        : ''}
+                    ${
+                        (this._lastRunOutput ?? []).length
+                            ? html`
+                                  <div role="tablist" class="tabs tabs-border px-5 shrink-0 border-b border-base-300/50">
+                                      <button
+                                          role="tab"
+                                          class="tab gap-1.5 ${this._errorModalTab === 'error' ? 'tab-active' : ''}"
+                                          @click=${() => {
+                                              this._errorModalTab = 'error'
+                                          }}
+                                      >
+                                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                              <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                                              />
+                                          </svg>
+                                          Fehlerdetails
+                                      </button>
+                                      <button
+                                          role="tab"
+                                          class="tab gap-1.5 ${this._errorModalTab === 'output' ? 'tab-active' : ''}"
+                                          @click=${() => {
+                                              this._errorModalTab = 'output'
+                                          }}
+                                      >
+                                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                              <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                              />
+                                          </svg>
+                                          Console Output
+                                      </button>
+                                  </div>
+                              `
+                            : ''
+                    }
                     <!-- Body -->
                     <div class="overflow-y-auto flex-1 ${this._errorModalTab === 'output' ? 'flex flex-col min-h-0 p-0' : 'p-6'}">
-                        ${this._errorModalTab === 'error' || !(this._lastRunOutput ?? []).length
-                            ? (() => {
-                                  const err = this._resolveRunError()
-                                  if (!err) return ''
-                                  return html` ${renderApiError(err, { detailed: true })} `
-                              })()
-                            : html`
-                                  <div class="flex flex-1 min-h-0 overflow-hidden">
-                                      ${(this._lastRunOutput ?? []).length > 1
-                                          ? html`
-                                                <div
-                                                    class="w-48 shrink-0 border-r border-base-300/60 bg-base-200/40 flex flex-col overflow-y-auto"
-                                                >
-                                                    <div class="flex flex-col py-1.5 gap-0.5 px-2">
-                                                        ${(this._lastRunOutput ?? []).map(entry => {
-                                                            const key = `step:${entry.class}`
-                                                            return html`
-                                                                <button
-                                                                    class="px-3 py-1.5 text-left text-xs font-mono rounded-lg truncate transition-colors ${this
-                                                                        ._outputModalSelectedStep === key
-                                                                        ? 'bg-base-300/60 text-base-content font-medium'
-                                                                        : 'hover:bg-base-300/50 text-base-content/70'}"
-                                                                    @click=${() => {
-                                                                        this._outputModalSelectedStep = key
-                                                                    }}
-                                                                >
-                                                                    ${entry.class.split('\\').at(-1)}
-                                                                </button>
-                                                            `
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            `
-                                          : ''}
-                                      <div
-                                          class="flex-1 overflow-auto p-4 font-mono text-xs whitespace-pre-wrap [&_pre]:whitespace-pre-wrap [&_pre]:m-0 text-base-content/80"
-                                      >
-                                          ${(() => {
-                                              const sel = this._outputModalSelectedStep ?? ''
-                                              const cls = sel.startsWith('step:') ? sel.slice('step:'.length) : sel
-                                              const allStyles = (this._lastRunOutput ?? [])
-                                                  .flatMap(e => [...e.content.matchAll(/<style[\s\S]*?<\/style>/gi)])
-                                                  .map(m => m[0])
-                                                  .join('')
-                                              const selected = (
-                                                  (this._lastRunOutput ?? []).find(e => e.class === cls)?.content ?? ''
-                                              ).trim()
-                                              return unsafeHTML(allStyles + selected)
-                                          })()}
+                        ${
+                            this._errorModalTab === 'error' || !(this._lastRunOutput ?? []).length
+                                ? (() => {
+                                      const err = this._resolveRunError()
+                                      if (!err) return ''
+                                      return html` ${renderApiError(err, { detailed: true })} `
+                                  })()
+                                : html`
+                                      <div class="flex flex-1 min-h-0 overflow-hidden">
+                                          ${
+                                              (this._lastRunOutput ?? []).length > 1
+                                                  ? html`
+                                                        <div
+                                                            class="w-48 shrink-0 border-r border-base-300/60 bg-base-200/40 flex flex-col overflow-y-auto"
+                                                        >
+                                                            <div class="flex flex-col py-1.5 gap-0.5 px-2">
+                                                                ${(this._lastRunOutput ?? []).map(entry => {
+                                                                    const key = `step:${entry.class}`
+                                                                    return html`
+                                                                        <button
+                                                                            class="px-3 py-1.5 text-left text-xs font-mono rounded-lg truncate transition-colors ${
+                                                                                this._outputModalSelectedStep === key
+                                                                                    ? 'bg-base-300/60 text-base-content font-medium'
+                                                                                    : 'hover:bg-base-300/50 text-base-content/70'
+                                                                            }"
+                                                                            @click=${() => {
+                                                                                this._outputModalSelectedStep = key
+                                                                            }}
+                                                                        >
+                                                                            ${entry.class.split('\\').at(-1)}
+                                                                        </button>
+                                                                    `
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    `
+                                                  : ''
+                                          }
+                                          <div
+                                              class="flex-1 overflow-auto p-4 font-mono text-xs whitespace-pre-wrap [&_pre]:whitespace-pre-wrap [&_pre]:m-0 text-base-content/80"
+                                          >
+                                              ${(() => {
+                                                  const sel = this._outputModalSelectedStep ?? ''
+                                                  const cls = sel.startsWith('step:') ? sel.slice('step:'.length) : sel
+                                                  const allStyles = (this._lastRunOutput ?? [])
+                                                      .flatMap(e => [...e.content.matchAll(/<style[\s\S]*?<\/style>/gi)])
+                                                      .map(m => m[0])
+                                                      .join('')
+                                                  const selected = (
+                                                      (this._lastRunOutput ?? []).find(e => e.class === cls)?.content ?? ''
+                                                  ).trim()
+                                                  return unsafeHTML(allStyles + selected)
+                                              })()}
+                                          </div>
                                       </div>
-                                  </div>
-                              `}
+                                  `
+                        }
                     </div>
                     <!-- Footer -->
                     <div class="px-5 pb-4 pt-3 border-t border-base-300/50 flex justify-end shrink-0">
@@ -2401,79 +2557,87 @@ export class FcDev extends BaseElement {
                             class="shrink-0 border-r border-base-300 bg-base-200/40 flex flex-col overflow-y-auto"
                         >
                             <div class="flex flex-col flex-1 overflow-y-auto py-1.5 gap-0.5">
-                                ${(this._lastRunOutput ?? []).length
-                                    ? html`
-                                          <div class="px-4 pt-2 pb-1.5">
-                                              <div class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest">
-                                                  Steps mit Output
+                                ${
+                                    (this._lastRunOutput ?? []).length
+                                        ? html`
+                                              <div class="px-4 pt-2 pb-1.5">
+                                                  <div class="text-[10px] font-semibold text-base-content/40 uppercase tracking-widest">
+                                                      Steps mit Output
+                                                  </div>
                                               </div>
-                                          </div>
-                                          <div class="flex flex-col gap-0.5 px-2">
-                                              ${(this._lastRunOutput ?? []).map(entry => {
-                                                  const key = `step:${entry.class}`
-                                                  return html`
-                                                      <fc-tooltip
-                                                          class="block"
-                                                          position="right"
-                                                          text=${entry.class}
-                                                          .content=${html`
-                                                              <button
-                                                                  class="w-full px-3 py-2 text-left text-xs font-mono rounded-lg truncate transition-colors ${this
-                                                                      ._outputModalSelectedStep === key
-                                                                      ? 'bg-base-300/60 text-base-content font-medium'
-                                                                      : 'hover:bg-base-300/50 text-base-content/70'}"
-                                                                  @click=${() => {
-                                                                      this._outputModalSelectedStep = key
-                                                                  }}
-                                                              >
-                                                                  ${entry.class.split('\\').at(-1)}
-                                                              </button>
-                                                          `}
-                                                      ></fc-tooltip>
-                                                  `
-                                              })}
-                                          </div>
-                                      `
-                                    : ''}
-                                ${this._visibleProjectionEntries().length
-                                    ? html`
-                                          <div class="px-4 pt-3 pb-1.5">
-                                              <div class="text-[10px] font-semibold text-secondary/60 uppercase tracking-widest">
-                                                  Projections
+                                              <div class="flex flex-col gap-0.5 px-2">
+                                                  ${(this._lastRunOutput ?? []).map(entry => {
+                                                      const key = `step:${entry.class}`
+                                                      return html`
+                                                          <fc-tooltip
+                                                              class="block"
+                                                              position="right"
+                                                              text=${entry.class}
+                                                              .content=${html`
+                                                                  <button
+                                                                      class="w-full px-3 py-2 text-left text-xs font-mono rounded-lg truncate transition-colors ${
+                                                                          this._outputModalSelectedStep === key
+                                                                              ? 'bg-base-300/60 text-base-content font-medium'
+                                                                              : 'hover:bg-base-300/50 text-base-content/70'
+                                                                      }"
+                                                                      @click=${() => {
+                                                                          this._outputModalSelectedStep = key
+                                                                      }}
+                                                                  >
+                                                                      ${entry.class.split('\\').at(-1)}
+                                                                  </button>
+                                                              `}
+                                                          ></fc-tooltip>
+                                                      `
+                                                  })}
                                               </div>
-                                          </div>
-                                          <div class="flex flex-col gap-0.5 px-2">
-                                              ${this._visibleProjectionEntries().map(({ entry, i }) => {
-                                                  const key = `projection:${i}`
-                                                  return html`
-                                                      <fc-tooltip
-                                                          class="block"
-                                                          position="right"
-                                                          text=${`${entry.messageSource} → ${entry.handler}::${entry.method}`}
-                                                          .content=${html`
-                                                              <button
-                                                                  class="w-full px-3 py-2 text-left text-xs font-mono rounded-lg truncate transition-colors flex items-center gap-1.5 ${this
-                                                                      ._outputModalSelectedStep === key
-                                                                      ? 'bg-base-300/60 text-base-content font-medium'
-                                                                      : 'hover:bg-base-300/50 text-base-content/70'}"
-                                                                  @click=${() => {
-                                                                      this._outputModalSelectedStep = key
-                                                                  }}
-                                                              >
-                                                                  ${entry.throwable
-                                                                      ? html`<span
-                                                                            class="w-1.5 h-1.5 rounded-full bg-error shrink-0"
-                                                                        ></span>`
-                                                                      : ''}
-                                                                  <span class="truncate">${entry.method}</span>
-                                                              </button>
-                                                          `}
-                                                      ></fc-tooltip>
-                                                  `
-                                              })}
-                                          </div>
-                                      `
-                                    : ''}
+                                          `
+                                        : ''
+                                }
+                                ${
+                                    this._visibleProjectionEntries().length
+                                        ? html`
+                                              <div class="px-4 pt-3 pb-1.5">
+                                                  <div class="text-[10px] font-semibold text-secondary/60 uppercase tracking-widest">
+                                                      Projections
+                                                  </div>
+                                              </div>
+                                              <div class="flex flex-col gap-0.5 px-2">
+                                                  ${this._visibleProjectionEntries().map(({ entry, i }) => {
+                                                      const key = `projection:${i}`
+                                                      return html`
+                                                          <fc-tooltip
+                                                              class="block"
+                                                              position="right"
+                                                              text=${`${entry.messageSource} → ${entry.handler}::${entry.method}`}
+                                                              .content=${html`
+                                                                  <button
+                                                                      class="w-full px-3 py-2 text-left text-xs font-mono rounded-lg truncate transition-colors flex items-center gap-1.5 ${
+                                                                          this._outputModalSelectedStep === key
+                                                                              ? 'bg-base-300/60 text-base-content font-medium'
+                                                                              : 'hover:bg-base-300/50 text-base-content/70'
+                                                                      }"
+                                                                      @click=${() => {
+                                                                          this._outputModalSelectedStep = key
+                                                                      }}
+                                                                  >
+                                                                      ${
+                                                                          entry.throwable
+                                                                              ? html`<span
+                                                                                    class="w-1.5 h-1.5 rounded-full bg-error shrink-0"
+                                                                                ></span>`
+                                                                              : ''
+                                                                      }
+                                                                      <span class="truncate">${entry.method}</span>
+                                                                  </button>
+                                                              `}
+                                                          ></fc-tooltip>
+                                                      `
+                                                  })}
+                                              </div>
+                                          `
+                                        : ''
+                                }
                             </div>
                         </div>
                         <!-- Resize handle -->
@@ -2483,11 +2647,13 @@ export class FcDev extends BaseElement {
                         ></div>
                         <!-- Right: Output content -->
                         <div class="flex-1 overflow-auto p-4 font-mono text-xs text-base-content/80 flex flex-col gap-3">
-                            ${this._projectionRunError
-                                ? html`<div class="rounded-lg bg-error/8 border border-error/25 px-3 py-2 text-error">
-                                      Projection-Discovery fehlgeschlagen: ${this._projectionRunError}
-                                  </div>`
-                                : ''}
+                            ${
+                                this._projectionRunError
+                                    ? html`<div class="rounded-lg bg-error/8 border border-error/25 px-3 py-2 text-error">
+                                          Projection-Discovery fehlgeschlagen: ${this._projectionRunError}
+                                      </div>`
+                                    : ''
+                            }
                             ${(() => {
                                 const sel = this._outputModalSelectedStep ?? ''
                                 // Symfony's HtmlDumper emits its <style>/<script> only on the
@@ -2511,9 +2677,11 @@ export class FcDev extends BaseElement {
                                     const proj = (this._lastRunProjectionOutput ?? [])[idx]
                                     if (!proj) return ''
                                     return html`
-                                        ${proj.throwable
-                                            ? renderApiError({ message: proj.throwable.error, ...proj.throwable }, { detailed: true })
-                                            : ''}${dump((proj.content ?? '').trim())}
+                                        ${
+                                            proj.throwable
+                                                ? renderApiError({ message: proj.throwable.error, ...proj.throwable }, { detailed: true })
+                                                : ''
+                                        }${dump((proj.content ?? '').trim())}
                                     `
                                 }
                                 const cls = sel.startsWith('step:') ? sel.slice('step:'.length) : sel
@@ -2550,89 +2718,95 @@ export class FcDev extends BaseElement {
                     this._devRawModal = false
                 }}
             >
-                ${this._devRawModal && this._lastRunFlow
-                    ? html`
-                          <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
-                              <!-- Header -->
-                              <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0">
-                                  <div class="flex items-center justify-between">
-                                      <div class="flex items-center gap-3">
-                                          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                              <svg
-                                                  class="w-5 h-5 text-primary"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  stroke-width="2"
-                                                  viewBox="0 0 24 24"
-                                              >
-                                                  <path
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round"
-                                                      d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
-                                                  />
-                                              </svg>
-                                          </div>
-                                          <div>
-                                              <h3 class="font-bold text-base leading-tight">Raw JSON</h3>
-                                              <div class="flex items-center gap-2">
-                                                  <span class="font-mono text-xs text-base-content/50">${this._lastRunFlow.flowHash}</span>
-                                                  <span class="font-mono text-xs text-base-content/40">·</span>
-                                                  <span class="font-mono text-xs text-base-content/40"
-                                                      >${(() => {
-                                                          const bytes = new Blob([JSON.stringify(this._lastRunFlow, null, 2)]).size
-                                                          return bytes >= 1024 * 1024
-                                                              ? `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-                                                              : `${(bytes / 1024).toFixed(2)} KB`
-                                                      })()}</span
+                ${
+                    this._devRawModal && this._lastRunFlow
+                        ? html`
+                              <div class="modal-box w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
+                                  <!-- Header -->
+                                  <div
+                                      class="bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent px-5 pt-4 pb-3 flex-shrink-0"
+                                  >
+                                      <div class="flex items-center justify-between">
+                                          <div class="flex items-center gap-3">
+                                              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                  <svg
+                                                      class="w-5 h-5 text-primary"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      stroke-width="2"
+                                                      viewBox="0 0 24 24"
                                                   >
+                                                      <path
+                                                          stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
+                                                      />
+                                                  </svg>
+                                              </div>
+                                              <div>
+                                                  <h3 class="font-bold text-base leading-tight">Raw JSON</h3>
+                                                  <div class="flex items-center gap-2">
+                                                      <span class="font-mono text-xs text-base-content/50"
+                                                          >${this._lastRunFlow.flowHash}</span
+                                                      >
+                                                      <span class="font-mono text-xs text-base-content/40">·</span>
+                                                      <span class="font-mono text-xs text-base-content/40"
+                                                          >${(() => {
+                                                              const bytes = new Blob([JSON.stringify(this._lastRunFlow, null, 2)]).size
+                                                              return bytes >= 1024 * 1024
+                                                                  ? `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+                                                                  : `${(bytes / 1024).toFixed(2)} KB`
+                                                          })()}</span
+                                                      >
+                                                  </div>
                                               </div>
                                           </div>
-                                      </div>
-                                      <div class="flex items-center gap-2">
-                                          <fc-tooltip
-                                              text="JSON kopieren"
-                                              .content=${html`
-                                                  <button
-                                                      class="btn btn-ghost btn-sm"
-                                                      @click=${() =>
-                                                          navigator.clipboard.writeText(JSON.stringify(this._lastRunFlow, null, 2))}
-                                                  >
-                                                      <svg
-                                                          class="w-4 h-4"
-                                                          fill="none"
-                                                          stroke="currentColor"
-                                                          stroke-width="2"
-                                                          viewBox="0 0 24 24"
+                                          <div class="flex items-center gap-2">
+                                              <fc-tooltip
+                                                  text="JSON kopieren"
+                                                  .content=${html`
+                                                      <button
+                                                          class="btn btn-ghost btn-sm"
+                                                          @click=${() =>
+                                                              navigator.clipboard.writeText(JSON.stringify(this._lastRunFlow, null, 2))}
                                                       >
-                                                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
-                                                      </svg>
-                                                  </button>
-                                              `}
-                                          ></fc-tooltip>
-                                          <button
-                                              class="btn btn-ghost btn-sm btn-square btn-circle"
-                                              @click=${() => this.querySelector('#fc-dev-raw-modal')?.close()}
-                                          >
-                                              ✕
-                                          </button>
+                                                          <svg
+                                                              class="w-4 h-4"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              stroke-width="2"
+                                                              viewBox="0 0 24 24"
+                                                          >
+                                                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                                          </svg>
+                                                      </button>
+                                                  `}
+                                              ></fc-tooltip>
+                                              <button
+                                                  class="btn btn-ghost btn-sm btn-square btn-circle"
+                                                  @click=${() => this.querySelector('#fc-dev-raw-modal')?.close()}
+                                              >
+                                                  ✕
+                                              </button>
+                                          </div>
                                       </div>
                                   </div>
+                                  <!-- Editor -->
+                                  <div class="flex-1 overflow-hidden relative">
+                                      <fc-json-editor
+                                          .value=${JSON.stringify(this._lastRunFlow, null, 2)}
+                                          .readonly=${true}
+                                          .search=${true}
+                                      ></fc-json-editor>
+                                  </div>
                               </div>
-                              <!-- Editor -->
-                              <div class="flex-1 overflow-hidden relative">
-                                  <fc-json-editor
-                                      .value=${JSON.stringify(this._lastRunFlow, null, 2)}
-                                      .readonly=${true}
-                                      .search=${true}
-                                  ></fc-json-editor>
-                              </div>
-                          </div>
-                          <form method="dialog" class="modal-backdrop">
-                              <button @click=${() => this.querySelector('#fc-dev-raw-modal')?.close()}>close</button>
-                          </form>
-                      `
-                    : ''}
+                              <form method="dialog" class="modal-backdrop">
+                                  <button @click=${() => this.querySelector('#fc-dev-raw-modal')?.close()}>close</button>
+                              </form>
+                          `
+                        : ''
+                }
             </dialog>
 
             <!-- Prod Import Modal -->
@@ -2703,11 +2877,13 @@ export class FcDev extends BaseElement {
                                     @input=${e => (this._importSecret = e.target.value)}
                                 />
                             </div>
-                            ${this._importModalError
-                                ? html`<div class="text-xs text-error bg-error/5 border border-error/20 rounded-lg px-3 py-2">
-                                      ${this._importModalError}
-                                  </div>`
-                                : ''}
+                            ${
+                                this._importModalError
+                                    ? html`<div class="text-xs text-error bg-error/5 border border-error/20 rounded-lg px-3 py-2">
+                                          ${this._importModalError}
+                                      </div>`
+                                    : ''
+                            }
                             <button
                                 class="btn btn-sm btn-primary mt-auto w-full"
                                 ?disabled=${this._importModalLoading || !this._importUrl}
@@ -2728,65 +2904,79 @@ export class FcDev extends BaseElement {
                                     }
                                 }}
                             >
-                                ${this._importModalLoading
-                                    ? html`<span class="loading loading-spinner loading-xs"></span> Importiere…`
-                                    : html`<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                              <path
-                                                  stroke-linecap="round"
-                                                  stroke-linejoin="round"
-                                                  d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
-                                              />
-                                          </svg>
-                                          Daten importieren`}
+                                ${
+                                    this._importModalLoading
+                                        ? html`<span class="loading loading-spinner loading-xs"></span> Importiere…`
+                                        : html`<svg
+                                                  class="w-3.5 h-3.5"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  stroke-width="2"
+                                                  viewBox="0 0 24 24"
+                                              >
+                                                  <path
+                                                      stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M12 16v-8m0 8l-3-3m3 3l3-3M3 17v1a2 2 0 002 2h14a2 2 0 002-2v-1"
+                                                  />
+                                              </svg>
+                                              Daten importieren`
+                                }
                             </button>
                         </div>
                         <!-- Right: Aktueller Import -->
                         <div class="flex flex-col p-5 w-64 shrink-0">
                             <span class="text-xs font-semibold text-base-content/60 uppercase tracking-wide mb-3">Aktueller Import</span>
-                            ${this._devImport
-                                ? html`
-                                      <div class="flex flex-col gap-2 text-xs flex-1">
-                                          <div class="flex flex-col gap-0.5">
-                                              <span class="text-base-content/40 uppercase tracking-wide text-[10px]">Quelle</span>
+                            ${
+                                this._devImport
+                                    ? html`
+                                          <div class="flex flex-col gap-2 text-xs flex-1">
+                                              <div class="flex flex-col gap-0.5">
+                                                  <span class="text-base-content/40 uppercase tracking-wide text-[10px]">Quelle</span>
+                                                  <button
+                                                      class="font-mono text-base-content/70 break-all text-left hover:text-primary hover:underline cursor-pointer transition-colors"
+                                                      @click=${() => (this._importUrl = this._devImport.sourceUrl)}
+                                                  >
+                                                      ${this._devImport.sourceUrl}
+                                                  </button>
+                                              </div>
+                                              <div class="flex flex-col gap-0.5">
+                                                  <span class="text-base-content/40 uppercase tracking-wide text-[10px]"
+                                                      >Importiert am</span
+                                                  >
+                                                  <span class="text-base-content/70"
+                                                      >${new Date(this._devImport.importedAt).toLocaleString('de-DE')}</span
+                                                  >
+                                              </div>
+                                              <div class="flex flex-col gap-0.5">
+                                                  <span class="text-base-content/40 uppercase tracking-wide text-[10px]">Schemas</span>
+                                                  <span class="font-semibold text-success">${this._devImport.schemaCount}</span>
+                                              </div>
+                                              <div class="flex flex-col gap-0.5">
+                                                  <span class="text-base-content/40 uppercase tracking-wide text-[10px]"
+                                                      >Message Sources</span
+                                                  >
+                                                  <span
+                                                      class="font-semibold ${
+                                                          this._devImport.messageSourceCount > 0 ? 'text-success' : 'text-base-content/30'
+                                                      }"
+                                                      >${this._devImport.messageSourceCount ?? 0}</span
+                                                  >
+                                              </div>
                                               <button
-                                                  class="font-mono text-base-content/70 break-all text-left hover:text-primary hover:underline cursor-pointer transition-colors"
-                                                  @click=${() => (this._importUrl = this._devImport.sourceUrl)}
+                                                  class="btn btn-sm btn-error btn-outline mt-auto"
+                                                  @click=${async () => {
+                                                      await api.clearDevImport()
+                                                      this._devImport = null
+                                                      if (this._selected) this._selectFlow(this._selected)
+                                                  }}
                                               >
-                                                  ${this._devImport.sourceUrl}
+                                                  Import löschen
                                               </button>
                                           </div>
-                                          <div class="flex flex-col gap-0.5">
-                                              <span class="text-base-content/40 uppercase tracking-wide text-[10px]">Importiert am</span>
-                                              <span class="text-base-content/70"
-                                                  >${new Date(this._devImport.importedAt).toLocaleString('de-DE')}</span
-                                              >
-                                          </div>
-                                          <div class="flex flex-col gap-0.5">
-                                              <span class="text-base-content/40 uppercase tracking-wide text-[10px]">Schemas</span>
-                                              <span class="font-semibold text-success">${this._devImport.schemaCount}</span>
-                                          </div>
-                                          <div class="flex flex-col gap-0.5">
-                                              <span class="text-base-content/40 uppercase tracking-wide text-[10px]">Message Sources</span>
-                                              <span
-                                                  class="font-semibold ${this._devImport.messageSourceCount > 0
-                                                      ? 'text-success'
-                                                      : 'text-base-content/30'}"
-                                                  >${this._devImport.messageSourceCount ?? 0}</span
-                                              >
-                                          </div>
-                                          <button
-                                              class="btn btn-sm btn-error btn-outline mt-auto"
-                                              @click=${async () => {
-                                                  await api.clearDevImport()
-                                                  this._devImport = null
-                                                  if (this._selected) this._selectFlow(this._selected)
-                                              }}
-                                          >
-                                              Import löschen
-                                          </button>
-                                      </div>
-                                  `
-                                : html`<p class="text-xs text-base-content/30 italic">Kein Import vorhanden</p>`}
+                                      `
+                                    : html`<p class="text-xs text-base-content/30 italic">Kein Import vorhanden</p>`
+                            }
                         </div>
                     </div>
                 </div>
@@ -2831,9 +3021,11 @@ export class FcDev extends BaseElement {
                             ?disabled=${this._importModalLoading}
                             @click=${() => this._applyImportRefresh()}
                         >
-                            ${this._importModalLoading
-                                ? html`<span class="loading loading-spinner loading-xs"></span> Importiere…`
-                                : 'Import'}
+                            ${
+                                this._importModalLoading
+                                    ? html`<span class="loading loading-spinner loading-xs"></span> Importiere…`
+                                    : 'Import'
+                            }
                         </button>
                     </div>
                 </div>
@@ -2849,23 +3041,27 @@ export class FcDev extends BaseElement {
                         <div class="flex items-center justify-between">
                             <div>
                                 <h3 class="font-bold text-base">Step Source</h3>
-                                ${this._srcSource
-                                    ? html`<p class="text-xs font-mono text-base-content/50 mt-0.5 truncate">${this._srcSource}</p>`
-                                    : ''}
+                                ${
+                                    this._srcSource
+                                        ? html`<p class="text-xs font-mono text-base-content/50 mt-0.5 truncate">${this._srcSource}</p>`
+                                        : ''
+                                }
                             </div>
                             <button class="btn btn-sm btn-ghost btn-circle" @click=${() => this._closeSourceModal()}>✕</button>
                         </div>
                     </div>
                     <div class="flex-1 overflow-hidden">
-                        ${this._srcLoading
-                            ? html`<div class="flex items-center justify-center h-full">
-                                  <span class="loading loading-spinner loading-md"></span>
-                              </div>`
-                            : this._srcError
-                              ? html`<div class="p-4">${renderApiError(this._srcError, { compact: true })}</div>`
-                              : this._srcContent !== null
-                                ? html`<fc-source-viewer class="block h-full" .value=${this._srcContent}></fc-source-viewer>`
-                                : ''}
+                        ${
+                            this._srcLoading
+                                ? html`<div class="flex items-center justify-center h-full">
+                                      <span class="loading loading-spinner loading-md"></span>
+                                  </div>`
+                                : this._srcError
+                                  ? html`<div class="p-4">${renderApiError(this._srcError, { compact: true })}</div>`
+                                  : this._srcContent !== null
+                                    ? html`<fc-source-viewer class="block h-full" .value=${this._srcContent}></fc-source-viewer>`
+                                    : ''
+                        }
                     </div>
                 </div>
                 <form method="dialog" class="modal-backdrop backdrop-blur-sm">

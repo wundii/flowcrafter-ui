@@ -9,6 +9,7 @@ import './fc-tooltip.js'
 
 const PAGE_SIZE = 20
 const LOAD_MORE_COOLDOWN = 500
+const CANCEL_AFTER_MS = 5000
 const GROUP_WINDOW_MS = 15 * 60 * 1000
 
 const STATUS_OPTIONS = [
@@ -68,6 +69,8 @@ export class FcExceptionList extends BaseElement {
         _hasMore: { state: true },
         _items: { state: true },
         _loadingMore: { state: true },
+        _loadMoreCancelable: { state: true },
+        _loadMorePaused: { state: true },
         _offset: { state: true },
         _statusFilter: { state: true },
         _total: { state: true },
@@ -88,10 +91,15 @@ export class FcExceptionList extends BaseElement {
         this._typeFilter = 'ALL'
         this.dateFrom = null
         this.dateTo = null
+        this._cancelableTimer = null
         this._hasMore = false
         this._items = []
         this._lastLoadMore = 0
         this._loadingMore = false
+        this._loadMoreAbort = null
+        this._loadMoreCancelable = false
+        this._loadMorePaused = false
+        this._loadStreakStart = 0
         this._observer = null
         this._offset = 0
         this._total = null
@@ -108,6 +116,8 @@ export class FcExceptionList extends BaseElement {
         super.disconnectedCallback()
         this._observer?.disconnect()
         this._observer = null
+        this._loadMoreAbort?.abort()
+        this._endLoadStreak()
     }
 
     updated(changed) {
@@ -170,6 +180,9 @@ export class FcExceptionList extends BaseElement {
         this.error = null
         this._items = []
         this._offset = 0
+        this._loadMoreAbort?.abort()
+        this._loadMorePaused = false
+        this._endLoadStreak()
         try {
             const isNotFailed = this._statusFilter === 'NOT_FAILED'
             const dateOpts = {}
@@ -201,20 +214,25 @@ export class FcExceptionList extends BaseElement {
     }
 
     async _loadMore() {
-        if (!this._hasMore || this._loadingMore) return
+        if (!this._hasMore || this._loadingMore || this._loadMorePaused) return
         if (Date.now() - this._lastLoadMore < LOAD_MORE_COOLDOWN) return
         this._loadingMore = true
+        this._startLoadStreak()
+        this._loadMoreAbort = new AbortController()
         try {
             const isNotFailed = this._statusFilter === 'NOT_FAILED'
             const dateOpts = {}
             this._buildDateOpts(dateOpts)
-            const res = await api.getExceptions({
-                sort: 'desc',
-                top: PAGE_SIZE,
-                skip: this._offset,
-                status: isNotFailed ? undefined : this._statusFilter || undefined,
-                ...dateOpts,
-            })
+            const res = await api.getExceptions(
+                {
+                    sort: 'desc',
+                    top: PAGE_SIZE,
+                    skip: this._offset,
+                    status: isNotFailed ? undefined : this._statusFilter || undefined,
+                    ...dateOpts,
+                },
+                this._loadMoreAbort.signal
+            )
             let newItems = res.items ?? []
             if (isNotFailed) {
                 newItems = newItems.filter(i => !(i.type === 'flow' && i.flowStatus === 'FAILED'))
@@ -227,15 +245,79 @@ export class FcExceptionList extends BaseElement {
             this._total = isNotFailed ? this._items.length + newItems.length : (res.total ?? null)
             this._items = [...this._items, ...newItems]
         } catch (err) {
-            this.error = err
+            if (err.name !== 'AbortError') this.error = err
         } finally {
             this._lastLoadMore = Date.now()
             this._loadingMore = false
+            this._loadMoreAbort = null
+            if (!this._hasMore || this._loadMorePaused || this.error) this._endLoadStreak()
         }
         await this.updateComplete
-        if (this._hasMore && this._isSentinelVisible()) {
+        if (this._hasMore && !this._loadMorePaused && this._isSentinelVisible()) {
             setTimeout(() => this._loadMore(), LOAD_MORE_COOLDOWN)
         }
+    }
+
+    // Eine "Lade-Serie" umfasst auch die automatisch verketteten Nachlade-Requests;
+    // dauert sie länger als CANCEL_AFTER_MS, wird der Abbrechen-Button eingeblendet
+    _startLoadStreak() {
+        if (this._loadStreakStart !== 0 && Date.now() - this._lastLoadMore <= 2000) return
+        this._loadStreakStart = Date.now()
+        this._loadMoreCancelable = false
+        clearTimeout(this._cancelableTimer)
+        this._cancelableTimer = setTimeout(() => {
+            this._loadMoreCancelable = true
+        }, CANCEL_AFTER_MS)
+    }
+
+    _endLoadStreak() {
+        clearTimeout(this._cancelableTimer)
+        this._cancelableTimer = null
+        this._loadStreakStart = 0
+        this._loadMoreCancelable = false
+    }
+
+    _cancelLoadMore() {
+        this._loadMorePaused = true
+        this._loadMoreAbort?.abort()
+        this._endLoadStreak()
+    }
+
+    _resumeLoadMore() {
+        this._loadMorePaused = false
+        this._lastLoadMore = 0
+        this._loadMore()
+    }
+
+    _renderLoadMoreSpinner(padClass) {
+        return html`
+            <div class="flex flex-col items-center gap-2 ${padClass}">
+                <span class="loading loading-spinner loading-md"></span>
+                ${
+                    this._loadMoreCancelable
+                        ? html`
+                              <button class="btn btn-xs btn-ghost text-base-content/50 hover:text-error" @click=${this._cancelLoadMore}>
+                                  Laden abbrechen
+                              </button>
+                          `
+                        : ''
+                }
+            </div>
+        `
+    }
+
+    _renderLoadMoreResume(padClass) {
+        return html`
+            <div class="flex flex-col items-center gap-2 ${padClass}">
+                <span class="text-xs text-base-content/50">Laden abgebrochen</span>
+                <button
+                    class="btn btn-sm btn-ghost border border-base-content/30 hover:border-base-content/50"
+                    @click=${this._resumeLoadMore}
+                >
+                    Weiter laden
+                </button>
+            </div>
+        `
     }
 
     _isSentinelVisible() {
@@ -376,11 +458,13 @@ export class FcExceptionList extends BaseElement {
                             <span class="font-semibold text-sm text-base-content truncate" title="${ex.stepSource}">
                                 ${shortClass(ex.stepSource)}
                             </span>
-                            ${ex.flowStatus
-                                ? html`<span class="badge badge-xs ${STATUS_COLORS[ex.flowStatus] ?? 'badge-ghost'}"
-                                      >${ex.flowStatus}</span
-                                  >`
-                                : ''}
+                            ${
+                                ex.flowStatus
+                                    ? html`<span class="badge badge-xs ${STATUS_COLORS[ex.flowStatus] ?? 'badge-ghost'}"
+                                          >${ex.flowStatus}</span
+                                      >`
+                                    : ''
+                            }
                         </div>
                         ${this._renderTimeDisplay(ex)}
                     </div>
@@ -389,13 +473,15 @@ export class FcExceptionList extends BaseElement {
                     <!-- Row 3: File + FlowHash + Trace toggle -->
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-baseline gap-3 min-w-0 text-xs text-base-content/50">
-                            ${ex.file
-                                ? html`
-                                      <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
-                                          ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
-                                      </span>
-                                  `
-                                : ''}
+                            ${
+                                ex.file
+                                    ? html`
+                                          <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
+                                              ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
+                                          </span>
+                                      `
+                                    : ''
+                            }
                             <fc-tooltip
                                 text="Flow ${ex.flowHash} öffnen"
                                 .content=${html`
@@ -415,17 +501,18 @@ export class FcExceptionList extends BaseElement {
                         ${this._renderRowAction(ex, id, hasTrace, open)}
                     </div>
                 </div>
-                ${open && hasTrace
-                    ? html`
-                          <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
-                              <pre
-                                  class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
-                              >
-${ex.traceString}</pre
-                              >
-                          </div>
-                      `
-                    : ''}
+                ${
+                    open && hasTrace
+                        ? html`
+                              <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
+                                  <pre
+                                      class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
+                                  >
+${ex.traceString}</pre>
+                              </div>
+                          `
+                        : ''
+                }
             </div>
         `
     }
@@ -455,28 +542,31 @@ ${ex.traceString}</pre
                             <span class="font-mono flex-shrink-0" style="font-size:11px;" title="${ex.observerMessageSource}">
                                 ${shortClass(ex.observerMessageSource)}
                             </span>
-                            ${ex.file
-                                ? html`
-                                      <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
-                                          ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
-                                      </span>
-                                  `
-                                : ''}
+                            ${
+                                ex.file
+                                    ? html`
+                                          <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
+                                              ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
+                                          </span>
+                                      `
+                                    : ''
+                            }
                         </div>
                         ${this._renderRowAction(ex, id, hasTrace, open)}
                     </div>
                 </div>
-                ${open && hasTrace
-                    ? html`
-                          <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
-                              <pre
-                                  class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
-                              >
-${ex.traceString}</pre
-                              >
-                          </div>
-                      `
-                    : ''}
+                ${
+                    open && hasTrace
+                        ? html`
+                              <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
+                                  <pre
+                                      class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
+                                  >
+${ex.traceString}</pre>
+                              </div>
+                          `
+                        : ''
+                }
             </div>
         `
     }
@@ -504,28 +594,31 @@ ${ex.traceString}</pre
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-baseline gap-3 min-w-0 text-xs text-base-content/50">
                             <span class="font-mono flex-shrink-0" style="font-size:11px;">${ex.scheduleExpression}</span>
-                            ${ex.file
-                                ? html`
-                                      <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
-                                          ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
-                                      </span>
-                                  `
-                                : ''}
+                            ${
+                                ex.file
+                                    ? html`
+                                          <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
+                                              ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
+                                          </span>
+                                      `
+                                    : ''
+                            }
                         </div>
                         ${this._renderRowAction(ex, id, hasTrace, open)}
                     </div>
                 </div>
-                ${open && hasTrace
-                    ? html`
-                          <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
-                              <pre
-                                  class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
-                              >
-${ex.traceString}</pre
-                              >
-                          </div>
-                      `
-                    : ''}
+                ${
+                    open && hasTrace
+                        ? html`
+                              <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
+                                  <pre
+                                      class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
+                                  >
+${ex.traceString}</pre>
+                              </div>
+                          `
+                        : ''
+                }
             </div>
         `
     }
@@ -553,47 +646,52 @@ ${ex.traceString}</pre
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-baseline gap-3 min-w-0 text-xs text-base-content/50">
                             <span class="font-mono flex-shrink-0" style="font-size:11px;">${ex.flowType}</span>
-                            ${ex.flowHash
-                                ? html`
-                                      <fc-tooltip
-                                          text="Flow ${ex.flowHash} öffnen"
-                                          .content=${html`
-                                              <button
-                                                  class="font-mono text-primary/70 hover:text-primary flex-shrink-0"
-                                                  style="font-size:11px;"
-                                                  @click=${e => {
-                                                      e.stopPropagation()
-                                                      this._navigateToFlow(ex.flowHash)
-                                                  }}
-                                              >
-                                                  ⤢ ${ex.flowHash}
-                                              </button>
-                                          `}
-                                      ></fc-tooltip>
-                                  `
-                                : ''}
-                            ${ex.file
-                                ? html`
-                                      <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
-                                          ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
-                                      </span>
-                                  `
-                                : ''}
+                            ${
+                                ex.flowHash
+                                    ? html`
+                                          <fc-tooltip
+                                              text="Flow ${ex.flowHash} öffnen"
+                                              .content=${html`
+                                                  <button
+                                                      class="font-mono text-primary/70 hover:text-primary flex-shrink-0"
+                                                      style="font-size:11px;"
+                                                      @click=${e => {
+                                                          e.stopPropagation()
+                                                          this._navigateToFlow(ex.flowHash)
+                                                      }}
+                                                  >
+                                                      ⤢ ${ex.flowHash}
+                                                  </button>
+                                              `}
+                                          ></fc-tooltip>
+                                      `
+                                    : ''
+                            }
+                            ${
+                                ex.file
+                                    ? html`
+                                          <span class="font-mono truncate" style="font-size:11px;" title="${ex.file}">
+                                              ${ex.file.split('/').slice(-2).join('/')}:${ex.line}
+                                          </span>
+                                      `
+                                    : ''
+                            }
                         </div>
                         ${this._renderRowAction(ex, id, hasTrace, open)}
                     </div>
                 </div>
-                ${open && hasTrace
-                    ? html`
-                          <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
-                              <pre
-                                  class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
-                              >
-${ex.traceString}</pre
-                              >
-                          </div>
-                      `
-                    : ''}
+                ${
+                    open && hasTrace
+                        ? html`
+                              <div class="border-t border-base-300 px-4 py-3 bg-base-300/50">
+                                  <pre
+                                      class="text-xs font-mono text-base-content/60 whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed"
+                                  >
+${ex.traceString}</pre>
+                              </div>
+                          `
+                        : ''
+                }
             </div>
         `
     }
@@ -663,26 +761,32 @@ ${ex.traceString}</pre
                             ↵
                         </button>
                     </div>
-                    ${this._dateFrom || this._dateTo
-                        ? html`
-                              <button
-                                  class="btn btn-sm btn-ghost text-base-content/50 hover:text-base-content ml-1"
-                                  @click=${this._clearDateFilter}
-                              >
-                                  ✕
-                              </button>
-                          `
-                        : ''}
+                    ${
+                        this._dateFrom || this._dateTo
+                            ? html`
+                                  <button
+                                      class="btn btn-sm btn-ghost text-base-content/50 hover:text-base-content ml-1"
+                                      @click=${this._clearDateFilter}
+                                  >
+                                      ✕
+                                  </button>
+                              `
+                            : ''
+                    }
                 </div>
 
                 <!-- Rechts: Datenanzeige + Reload -->
                 <div class="flex items-center gap-3 flex-shrink-0 ml-auto">
-                    ${isEmpty
-                        ? ''
-                        : html`<span class="text-sm text-base-content/60">
-                              ${groupCount} ${groupCount === 1 ? 'Gruppe' : 'Gruppen'}
-                              <span class="text-base-content/40">· ${loadedCount} ${loadedCount === 1 ? 'Exception' : 'Exceptions'}</span>
-                          </span>`}
+                    ${
+                        isEmpty
+                            ? ''
+                            : html`<span class="text-sm text-base-content/60">
+                                  ${groupCount} ${groupCount === 1 ? 'Gruppe' : 'Gruppen'}
+                                  <span class="text-base-content/40"
+                                      >· ${loadedCount} ${loadedCount === 1 ? 'Exception' : 'Exceptions'}</span
+                                  >
+                              </span>`
+                    }
                     <fc-tooltip
                         text="Neu laden"
                         .content=${html`
@@ -703,23 +807,29 @@ ${ex.traceString}</pre
                 </div>
             </div>
 
-            ${isEmpty
-                ? html`<fc-empty-state
-                      message=${this._dateFrom || this._dateTo
-                          ? 'Keine Exceptions für den gewählten Zeitraum gefunden.'
-                          : 'Keine Exceptions gefunden.'}
-                  ></fc-empty-state>`
-                : html`
-                      <!-- Exception cards -->
-                      <div class="flex flex-col gap-2">${displayItems.map((ex, idx) => this._renderWithGroup(ex, idx))}</div>
+            ${
+                isEmpty
+                    ? html`<fc-empty-state
+                          message=${
+                              this._dateFrom || this._dateTo
+                                  ? 'Keine Exceptions für den gewählten Zeitraum gefunden.'
+                                  : 'Keine Exceptions gefunden.'
+                          }
+                      ></fc-empty-state>`
+                    : html`
+                          <!-- Exception cards -->
+                          <div class="flex flex-col gap-2">${displayItems.map((ex, idx) => this._renderWithGroup(ex, idx))}</div>
 
-                      ${this._loadingMore
-                          ? html`<div class="flex justify-center py-4">
-                                <span class="loading loading-spinner loading-md"></span>
-                            </div>`
-                          : ''}
-                      <div id="exception-scroll-sentinel" style="height:1px"></div>
-                  `}
+                          ${
+                              this._loadingMore
+                                  ? this._renderLoadMoreSpinner('py-4')
+                                  : this._loadMorePaused && this._hasMore
+                                    ? this._renderLoadMoreResume('py-4')
+                                    : ''
+                          }
+                          <div id="exception-scroll-sentinel" style="height:1px"></div>
+                      `
+            }
         `
     }
 }

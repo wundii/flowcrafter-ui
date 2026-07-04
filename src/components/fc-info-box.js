@@ -31,14 +31,16 @@ export class FcInfoBox extends BaseElement {
             <div class="rounded-box border border-base-300 bg-base-100 shadow-lg">
                 <div class="bg-base-200 px-4 py-3 rounded-t-box">
                     <span class="text-xs font-semibold uppercase ${this.titleColor}">${this.title}</span>
-                    ${this.subtitle
-                        ? html`<div
-                              class="text-[10px] text-base-content/40 font-normal font-mono truncate mt-0.5 min-w-0 max-w-full"
-                              title="${this.subtitle}"
-                          >
-                              ${this.subtitle}
-                          </div>`
-                        : ''}
+                    ${
+                        this.subtitle
+                            ? html`<div
+                                  class="text-[10px] text-base-content/40 font-normal font-mono truncate mt-0.5 min-w-0 max-w-full"
+                                  title="${this.subtitle}"
+                              >
+                                  ${this.subtitle}
+                              </div>`
+                            : ''
+                    }
                 </div>
                 <div class="px-4 py-3">${this.content}</div>
             </div>

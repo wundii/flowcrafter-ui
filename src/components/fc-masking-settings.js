@@ -89,37 +89,39 @@ export class FcMaskingSettings extends BaseElement {
             </div>
 
             <!-- Custom rules -->
-            ${customRules.length > 0
-                ? html`
-                      <div class="mb-6">
-                          <h3 class="text-sm font-semibold text-base-content/50 uppercase tracking-wide mb-3">Eigene Regeln</h3>
-                          <div class="flex flex-wrap gap-2">
-                              ${customRules.map(rule => {
-                                  const idx = this._rules.indexOf(rule)
-                                  return html`
-                                      <div
-                                          class="badge badge-lg gap-2 ${rule.enabled
-                                              ? 'badge-primary'
-                                              : 'badge-ghost opacity-50'} cursor-pointer select-none"
-                                          @click=${() => this._toggleRule(idx)}
-                                      >
-                                          ${rule.field}
-                                          <button
-                                              class="btn btn-ghost btn-xs px-0 hover:text-error"
-                                              @click=${e => {
-                                                  e.stopPropagation()
-                                                  this._removeRule(idx)
-                                              }}
+            ${
+                customRules.length > 0
+                    ? html`
+                          <div class="mb-6">
+                              <h3 class="text-sm font-semibold text-base-content/50 uppercase tracking-wide mb-3">Eigene Regeln</h3>
+                              <div class="flex flex-wrap gap-2">
+                                  ${customRules.map(rule => {
+                                      const idx = this._rules.indexOf(rule)
+                                      return html`
+                                          <div
+                                              class="badge badge-lg gap-2 ${
+                                                  rule.enabled ? 'badge-primary' : 'badge-ghost opacity-50'
+                                              } cursor-pointer select-none"
+                                              @click=${() => this._toggleRule(idx)}
                                           >
-                                              ✕
-                                          </button>
-                                      </div>
-                                  `
-                              })}
+                                              ${rule.field}
+                                              <button
+                                                  class="btn btn-ghost btn-xs px-0 hover:text-error"
+                                                  @click=${e => {
+                                                      e.stopPropagation()
+                                                      this._removeRule(idx)
+                                                  }}
+                                              >
+                                                  ✕
+                                              </button>
+                                          </div>
+                                      `
+                                  })}
+                              </div>
                           </div>
-                      </div>
-                  `
-                : ''}
+                      `
+                    : ''
+            }
 
             <!-- Default rules -->
             <div>
@@ -129,9 +131,9 @@ export class FcMaskingSettings extends BaseElement {
                         const idx = this._rules.indexOf(rule)
                         return html`
                             <div
-                                class="badge badge-lg ${rule.enabled
-                                    ? 'badge-neutral'
-                                    : 'badge-ghost opacity-50'} cursor-pointer select-none"
+                                class="badge badge-lg ${
+                                    rule.enabled ? 'badge-neutral' : 'badge-ghost opacity-50'
+                                } cursor-pointer select-none"
                                 @click=${() => this._toggleRule(idx)}
                                 title="${rule.enabled ? 'Klicken zum Deaktivieren' : 'Klicken zum Aktivieren'}"
                             >

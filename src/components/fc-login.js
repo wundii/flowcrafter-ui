@@ -137,42 +137,48 @@ export class FcLogin extends BaseElement {
                                     />
                                 </div>
 
-                                ${isSetup
-                                    ? html`
-                                          <div class="form-control">
-                                              <label class="label py-1">
-                                                  <span class="label-text text-xs">Passwort wiederholen</span>
-                                              </label>
-                                              <input
-                                                  type="password"
-                                                  class="input input-bordered input-sm"
-                                                  placeholder="••••••••"
-                                                  autocomplete="new-password"
-                                                  .value=${this._confirm}
-                                                  @input=${e => {
-                                                      this._confirm = e.target.value
-                                                      this._error = null
-                                                  }}
-                                                  ?disabled=${this._loading}
-                                                  required
-                                              />
-                                          </div>
-                                      `
-                                    : ''}
-                                ${this._error
-                                    ? html`
-                                          <div class="alert alert-error py-2 px-3 text-xs">
-                                              <span>${this._error}</span>
-                                          </div>
-                                      `
-                                    : ''}
+                                ${
+                                    isSetup
+                                        ? html`
+                                              <div class="form-control">
+                                                  <label class="label py-1">
+                                                      <span class="label-text text-xs">Passwort wiederholen</span>
+                                                  </label>
+                                                  <input
+                                                      type="password"
+                                                      class="input input-bordered input-sm"
+                                                      placeholder="••••••••"
+                                                      autocomplete="new-password"
+                                                      .value=${this._confirm}
+                                                      @input=${e => {
+                                                          this._confirm = e.target.value
+                                                          this._error = null
+                                                      }}
+                                                      ?disabled=${this._loading}
+                                                      required
+                                                  />
+                                              </div>
+                                          `
+                                        : ''
+                                }
+                                ${
+                                    this._error
+                                        ? html`
+                                              <div class="alert alert-error py-2 px-3 text-xs">
+                                                  <span>${this._error}</span>
+                                              </div>
+                                          `
+                                        : ''
+                                }
 
                                 <button type="submit" class="btn btn-primary btn-sm mt-1" ?disabled=${this._loading}>
-                                    ${this._loading
-                                        ? html`<span class="loading loading-spinner loading-xs"></span>`
-                                        : isSetup
-                                          ? 'Passwort speichern'
-                                          : 'Anmelden'}
+                                    ${
+                                        this._loading
+                                            ? html`<span class="loading loading-spinner loading-xs"></span>`
+                                            : isSetup
+                                              ? 'Passwort speichern'
+                                              : 'Anmelden'
+                                    }
                                 </button>
                             </form>
                         </div>

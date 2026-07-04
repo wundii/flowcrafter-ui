@@ -87,17 +87,24 @@ function clearConnection() {
 
 // ─── AI config store ─────────────────────────────────────────────────────────
 const AI_MODELS_ANTHROPIC = [
-    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4', provider: 'anthropic' },
-    { id: 'claude-opus-4-20250514', label: 'Claude Opus 4', provider: 'anthropic' },
-    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', provider: 'anthropic' },
+    { id: 'claude-opus-4-8', label: 'Claude Opus 4.8', provider: 'anthropic' },
+    { id: 'claude-sonnet-5', label: 'Claude Sonnet 5', provider: 'anthropic' },
+    { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', provider: 'anthropic' },
 ]
-const DEFAULT_MODEL = 'claude-sonnet-4-20250514'
+const DEFAULT_MODEL = 'claude-sonnet-5'
 const DEFAULT_OLLAMA_URL = 'http://localhost:11434'
+// Abgeschaltete Modell-IDs aus älteren Configs auf die Nachfolger umleiten
+const LEGACY_MODEL_MAP = {
+    'claude-sonnet-4-20250514': 'claude-sonnet-5',
+    'claude-opus-4-20250514': 'claude-opus-4-8',
+    'claude-haiku-4-5-20251001': 'claude-haiku-4-5',
+}
 
 function loadAiConfig() {
     if (!existsSync(AI_FILE)) return { provider: null, encryptedApiKey: null, model: null, ollamaUrl: null }
     const cfg = JSON.parse(readFileSync(AI_FILE, 'utf8'))
     cfg.ollamaUrl = cfg.ollamaUrl ?? null
+    if (cfg.provider === 'anthropic' && LEGACY_MODEL_MAP[cfg.model]) cfg.model = LEGACY_MODEL_MAP[cfg.model]
     return cfg
 }
 
@@ -261,6 +268,31 @@ const ANALYSIS_TOOLS_OPENAI = [
     },
 ]
 
+// JSON-Schema fuer Structured Outputs (nur Anthropic) — erzwingt das Antwortformat aus dem System-Prompt
+const ANALYSIS_OUTPUT_SCHEMA = {
+    type: 'object',
+    properties: {
+        summary: { type: 'string' },
+        findings: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    category: { type: 'string', enum: ['error', 'warning', 'performance', 'info'] },
+                    severity: { type: 'string', enum: ['high', 'medium', 'low'] },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    affectedStep: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+                },
+                required: ['category', 'severity', 'title', 'description', 'affectedStep'],
+                additionalProperties: false,
+            },
+        },
+    },
+    required: ['summary', 'findings'],
+    additionalProperties: false,
+}
+
 function shortClassName(fqn) {
     return fqn?.split('\\').pop() ?? fqn
 }
@@ -290,11 +322,23 @@ async function fetchStepSource(stepHash, className, phpUrl, phpHeaders, onProgre
 async function analyzeFlowAnthropic(apiKey, model, flowData, runtimeHash, phpUrl, phpHeaders, onProgress, signal) {
     const client = new Anthropic({ apiKey })
     const messages = [{ role: 'user', content: buildUserPrompt(flowData, runtimeHash) }]
-    const callAnthropic = msgs =>
-        client.messages.create(
-            { model, max_tokens: 4096, system: ANALYSIS_SYSTEM_PROMPT, tools: ANALYSIS_TOOLS, messages: msgs },
+    const callAnthropic = msgs => {
+        const stream = client.messages.stream(
+            {
+                model,
+                max_tokens: 16000,
+                system: ANALYSIS_SYSTEM_PROMPT,
+                tools: ANALYSIS_TOOLS,
+                messages: msgs,
+                output_config: { format: { type: 'json_schema', schema: ANALYSIS_OUTPUT_SCHEMA } },
+                // Auto-Caching: Folge-Requests der Tool-Schleife lesen System-Prompt + Flow-Daten aus dem Cache
+                cache_control: { type: 'ephemeral' },
+            },
             { signal }
         )
+        stream.on('text', text => onProgress({ type: 'delta', text }))
+        return stream.finalMessage()
+    }
 
     onProgress({ type: 'status', message: 'Flow-Daten werden analysiert…' })
 
@@ -321,11 +365,16 @@ async function analyzeFlowAnthropic(apiKey, model, flowData, runtimeHash, phpUrl
         outputTokens += response.usage?.output_tokens ?? 0
     }
 
+    if (response.stop_reason === 'max_tokens') {
+        throw new Error('Die Analyse wurde am Token-Limit abgeschnitten. Bitte erneut versuchen oder einen einzelnen Run analysieren.')
+    }
+
     const text = response.content
         .filter(b => b.type === 'text')
         .map(b => b.text)
         .join('')
-    return { analysis: extractJsonFromText(text), usage: { inputTokens, outputTokens } }
+    // Structured Outputs garantieren valides JSON nach ANALYSIS_OUTPUT_SCHEMA
+    return { analysis: JSON.parse(text), usage: { inputTokens, outputTokens } }
 }
 
 async function ollamaUnloadModel(ollamaUrl, model) {
@@ -774,16 +823,14 @@ const server = createServer(async (req, res) => {
                     return json(res, { ok: true })
                 }
 
-                // Anthropic
+                // Anthropic — Key und Modell-ID validieren (models.retrieve ist kostenlos)
                 const selectedModel = AI_MODELS_ANTHROPIC.some(m => m.id === model) ? model : DEFAULT_MODEL
-                if (apiKey) {
+                const existingConfig = loadAiConfig()
+                const keyToValidate = apiKey ?? (existingConfig.encryptedApiKey ? decryptSecret(existingConfig.encryptedApiKey) : null)
+                if (keyToValidate) {
                     try {
-                        const client = new Anthropic({ apiKey })
-                        await client.messages.create({
-                            model: selectedModel,
-                            max_tokens: 10,
-                            messages: [{ role: 'user', content: 'ping' }],
-                        })
+                        const client = new Anthropic({ apiKey: keyToValidate })
+                        await client.models.retrieve(selectedModel)
                     } catch (err) {
                         const msg = err.error?.error?.message ?? err.message ?? 'API-Key ungültig.'
                         return json(res, { error: msg }, 400)

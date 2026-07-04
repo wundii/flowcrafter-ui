@@ -70,11 +70,13 @@ export function renderApiError(error, opts = {}) {
                         <div class="font-semibold text-error text-sm">Fehler aufgetreten</div>
                         <p class="text-[11px] font-mono text-base-content/40 mt-0.5 truncate">${fileLine}</p>
                     </div>
-                    ${retry
-                        ? html`<button class="btn btn-xs btn-ghost text-error/70 hover:text-error shrink-0" @click=${retry}>
-                              Erneut versuchen
-                          </button>`
-                        : ''}
+                    ${
+                        retry
+                            ? html`<button class="btn btn-xs btn-ghost text-error/70 hover:text-error shrink-0" @click=${retry}>
+                                  Erneut versuchen
+                              </button>`
+                            : ''
+                    }
                 </div>
 
                 <div class="p-6 flex flex-col gap-6">
@@ -85,50 +87,58 @@ export function renderApiError(error, opts = {}) {
                         >
                     </div>
 
-                    ${fileContext?.length
-                        ? html`
-                              <div>
-                                  <div class="text-xs font-semibold text-base-content/40 uppercase tracking-wider mb-1.5">Quelldatei</div>
-                                  <div class="rounded-lg border border-base-300 overflow-hidden text-xs font-mono leading-relaxed">
-                                      ${fileContext.map(
-                                          l => html`
-                                              <div
-                                                  class="flex gap-0 ${l.highlighted
-                                                      ? 'bg-error/10 border-l-2 border-error'
-                                                      : 'border-l-2 border-transparent'}"
-                                              >
-                                                  <span
-                                                      class="select-none w-12 shrink-0 px-3 py-0.5 text-right ${l.highlighted
-                                                          ? 'text-error font-bold'
-                                                          : 'text-base-content/25'} border-r border-base-300"
-                                                      >${l.number}</span
+                    ${
+                        fileContext?.length
+                            ? html`
+                                  <div>
+                                      <div class="text-xs font-semibold text-base-content/40 uppercase tracking-wider mb-1.5">
+                                          Quelldatei
+                                      </div>
+                                      <div class="rounded-lg border border-base-300 overflow-hidden text-xs font-mono leading-relaxed">
+                                          ${fileContext.map(
+                                              l => html`
+                                                  <div
+                                                      class="flex gap-0 ${
+                                                          l.highlighted
+                                                              ? 'bg-error/10 border-l-2 border-error'
+                                                              : 'border-l-2 border-transparent'
+                                                      }"
                                                   >
-                                                  <pre
-                                                      class="flex-1 px-4 py-0.5 ${l.highlighted
-                                                          ? 'text-error/90'
-                                                          : 'text-base-content/70'} overflow-x-auto whitespace-pre"
-                                                  >
-${l.content}</pre
-                                                  >
-                                              </div>
-                                          `
-                                      )}
+                                                      <span
+                                                          class="select-none w-12 shrink-0 px-3 py-0.5 text-right ${
+                                                              l.highlighted ? 'text-error font-bold' : 'text-base-content/25'
+                                                          } border-r border-base-300"
+                                                          >${l.number}</span
+                                                      >
+                                                      <pre
+                                                          class="flex-1 px-4 py-0.5 ${
+                                                              l.highlighted ? 'text-error/90' : 'text-base-content/70'
+                                                          } overflow-x-auto whitespace-pre"
+                                                      >
+${l.content}</pre>
+                                                  </div>
+                                              `
+                                          )}
+                                      </div>
                                   </div>
-                              </div>
-                          `
-                        : ''}
-                    ${trace
-                        ? html`
-                              <div>
-                                  <div class="text-xs font-semibold text-base-content/40 uppercase tracking-wider mb-1.5">Stack Trace</div>
-                                  <pre
-                                      class="text-xs font-mono text-base-content/50 bg-base-200/50 border border-base-300 rounded-lg px-4 py-3 overflow-auto max-h-64 whitespace-pre leading-relaxed"
-                                  >
-${trace}</pre
-                                  >
-                              </div>
-                          `
-                        : ''}
+                              `
+                            : ''
+                    }
+                    ${
+                        trace
+                            ? html`
+                                  <div>
+                                      <div class="text-xs font-semibold text-base-content/40 uppercase tracking-wider mb-1.5">
+                                          Stack Trace
+                                      </div>
+                                      <pre
+                                          class="text-xs font-mono text-base-content/50 bg-base-200/50 border border-base-300 rounded-lg px-4 py-3 overflow-auto max-h-64 whitespace-pre leading-relaxed"
+                                      >
+${trace}</pre>
+                                  </div>
+                              `
+                            : ''
+                    }
                 </div>
             </div>
         `
@@ -143,20 +153,27 @@ ${trace}</pre
                     <div class="text-sm font-semibold text-error">${msg}</div>
                     ${fileLine ? html`<div class="text-xs font-mono text-base-content/40 mt-0.5 truncate">${fileLine}</div>` : ''}
                 </div>
-                ${retry
-                    ? html`<button class="btn btn-xs btn-ghost text-error/70 hover:text-error shrink-0" @click=${retry}>↻ Retry</button>`
-                    : ''}
+                ${
+                    retry
+                        ? html`<button class="btn btn-xs btn-ghost text-error/70 hover:text-error shrink-0" @click=${retry}>
+                              ↻ Retry
+                          </button>`
+                        : ''
+                }
             </div>
-            ${trace
-                ? html`
-                      <details class="border-t border-error/20">
-                          <summary class="px-4 py-2 text-xs text-base-content/40 cursor-pointer select-none hover:text-base-content/60">
-                              Stack Trace anzeigen
-                          </summary>
-                          <pre class="px-4 pb-3 text-xs font-mono text-base-content/50 overflow-auto whitespace-pre max-h-48">${trace}</pre>
-                      </details>
-                  `
-                : ''}
+            ${
+                trace
+                    ? html`
+                          <details class="border-t border-error/20">
+                              <summary class="px-4 py-2 text-xs text-base-content/40 cursor-pointer select-none hover:text-base-content/60">
+                                  Stack Trace anzeigen
+                              </summary>
+                              <pre class="px-4 pb-3 text-xs font-mono text-base-content/50 overflow-auto whitespace-pre max-h-48">
+${trace}</pre>
+                          </details>
+                      `
+                    : ''
+            }
         </div>
     `
 }

@@ -34,16 +34,18 @@ export class FcTime extends BaseElement {
         if (!isRelative(this.iso)) return html`<span>${formatAbsolute(this.iso)}</span>`
         return html`
             <span @mouseenter=${this._onEnter} @mouseleave=${this._onLeave}>${formatRelative(this.iso)}</span>
-            ${this._hover
-                ? html`
-                      <span
-                          class="fixed z-[9999] -translate-x-1/2 -translate-y-full -mt-1 px-2 py-1 rounded bg-base-300/95 backdrop-blur-sm text-base-content border border-base-content/10 text-xs whitespace-nowrap shadow-lg pointer-events-none"
-                          style="left:${this._x}px;top:${this._y}px"
-                      >
-                          ${formatAbsolute(this.iso)}
-                      </span>
-                  `
-                : ''}
+            ${
+                this._hover
+                    ? html`
+                          <span
+                              class="fixed z-[9999] -translate-x-1/2 -translate-y-full -mt-1 px-2 py-1 rounded bg-base-300/95 backdrop-blur-sm text-base-content border border-base-content/10 text-xs whitespace-nowrap shadow-lg pointer-events-none"
+                              style="left:${this._x}px;top:${this._y}px"
+                          >
+                              ${formatAbsolute(this.iso)}
+                          </span>
+                      `
+                    : ''
+            }
         `
     }
 }
